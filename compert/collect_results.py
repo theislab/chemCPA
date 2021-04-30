@@ -5,7 +5,7 @@ import json
 import pprint
 import argparse
 import numpy as np
-from model_selection import *
+from .model_selection import *
 
 def run_collect_results(save_dir, one_line, metric='onlyDEmeans'):
     records = []
@@ -34,7 +34,7 @@ def run_collect_results(save_dir, one_line, metric='onlyDEmeans'):
                 if metric == 'all':
                     this_score = np.mean(epoch["evaluation_stats"]["test"])
                 elif metric == 'onlyDEmeans':
-                    this_score = epoch["evaluation_stats"]["test"][1]                
+                    this_score = epoch["evaluation_stats"]["test"][1]
                 elif metric == 'onlyDE':
                     this_score = epoch["evaluation_stats"]["test"][1]+\
                     epoch["evaluation_stats"]["test"][3]
