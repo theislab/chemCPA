@@ -47,7 +47,7 @@ class Dataset:
         perturbation_key=None,
         dose_key=None,
         cell_type_key=None,
-        gene_sets_key=None,
+        # gene_sets_key=None,
         smiles_key=None,
         split_key="split",
         mol_featurizer="canonical",
@@ -60,7 +60,7 @@ class Dataset:
         self.perturbation_key = perturbation_key
         self.dose_key = dose_key
         self.cell_type_key = cell_type_key
-        self.gene_sets_key = gene_sets_key
+        # self.gene_sets_key = gene_sets_key
         self.smiles_key = smiles_key
 
         self.genes = torch.Tensor(data.X.A)
@@ -71,12 +71,12 @@ class Dataset:
         ), f"mol_featurizer must be one of {mol_featurizers}"
         self.mol_featurizer = mol_featurizer
 
-        if gene_sets_key is not None:
-            self.scores = torch.Tensor(data.obsm[gene_sets_key])
-            self.pathway_genes = None  # TODO gene sets listed each pathway
-        else:
-            self.scores = None
-            self.pathway_genes = None
+        # if gene_sets_key is not None:
+        #     self.scores = torch.Tensor(data.obsm[gene_sets_key])
+        #     self.pathway_genes = None  # TODO gene sets listed each pathway
+        # else:
+        #     self.scores = None
+        #     self.pathway_genes = None
 
         if perturbation_key is not None:
             self.pert_categories = np.array(data.obs["cov_drug_dose_name"].values)
@@ -192,7 +192,7 @@ class Dataset:
         )
         self.num_genes = self.genes.shape[1]
         self.num_drugs = len(self.drugs_names_unique) if self.drugs is not None else 0
-        self.num_gene_sets = self.scores.shape[1] if self.scores is not None else 0
+        # self.num_gene_sets = self.scores.shape[1] if self.scores is not None else 0
 
         self.indices = {
             "all": list(range(len(self.genes))),
@@ -212,7 +212,7 @@ class Dataset:
             self.genes[i],
             indx(self.drugs, i),
             indx(self.cell_types, i),
-            indx(self.scores, i),
+            # indx(self.scores, i),
         )
 
     def __len__(self):
@@ -228,7 +228,7 @@ class SubDataset:
         self.perturbation_key = dataset.perturbation_key
         self.dose_key = dataset.dose_key
         self.covars_key = dataset.cell_type_key
-        self.gene_sets_key = dataset.gene_sets_key
+        # self.gene_sets_key = dataset.gene_sets_key
         self.smiles_key = dataset.smiles_key
 
         self.batched_graph_collection = dataset.batched_graph_collection
@@ -241,7 +241,7 @@ class SubDataset:
         self.genes = dataset.genes[indices]
         self.drugs = indx(dataset.drugs, indices)
         self.cell_types = indx(dataset.cell_types, indices)
-        self.scores = indx(dataset.scores, indices)
+        # self.scores = indx(dataset.scores, indices)
 
         self.drugs_names = indx(dataset.drugs_names, indices)
         self.pert_categories = indx(dataset.pert_categories, indices)
@@ -254,15 +254,15 @@ class SubDataset:
         self.num_cell_types = dataset.num_cell_types
         self.num_genes = dataset.num_genes
         self.num_drugs = dataset.num_drugs
-        self.num_gene_sets = dataset.num_gene_sets
-        self.pathway_genes = dataset.pathway_genes
+        # self.num_gene_sets = dataset.num_gene_sets
+        # self.pathway_genes = dataset.pathway_genes
 
     def __getitem__(self, i):
         return (
             self.genes[i],
             indx(self.drugs, i),
             indx(self.cell_types, i),
-            indx(self.scores, i),
+            # indx(self.scores, i),
         )
 
     def __len__(self):
@@ -273,8 +273,8 @@ def load_dataset_splits(
     dataset_path,
     perturbation_key,
     dose_key,
-    cell_type_key,
-    gene_sets_key,
+    covariate_keys,
+    # gene_sets_key,
     smiles_key,
     split_key,
     mol_featurizer,
@@ -285,8 +285,8 @@ def load_dataset_splits(
         dataset_path,
         perturbation_key,
         dose_key,
-        cell_type_key,
-        gene_sets_key,
+        covariate_keys,
+        # gene_sets_key,
         smiles_key,
         split_key,
         mol_featurizer,

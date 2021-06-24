@@ -212,7 +212,7 @@ def prepare_compert(args, state_dict=None):
         args["perturbation_key"],
         args["dose_key"],
         args["cell_type_key"],
-        args["gene_sets_key"],
+        # args["gene_sets_key"],
         args["smiles_key"],
         args["split_key"],
         args["mol_featurizer"],
@@ -233,13 +233,13 @@ def prepare_compert(args, state_dict=None):
         datasets["training"].num_genes,
         datasets["training"].num_drugs,
         datasets["training"].num_cell_types,
-        datasets["training"].num_gene_sets,
+        # datasets["training"].num_gene_sets,
         device=device,
         seed=args["seed"],
         loss_ae=args["loss_ae"],
         doser_type=args["doser_type"],
-        scorer_type=args["scorer_type"],
-        scores_discretizer=args["scores_discretizer"],
+        # scorer_type=args["scorer_type"],
+        # scores_discretizer=args["scores_discretizer"],
         patience=args["patience"],
         hparams=args["hparams"],
         decoder_activation=args["decoder_activation"],
@@ -289,10 +289,8 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
     for epoch in range(args["max_epochs"]):
         epoch_training_stats = defaultdict(float)
 
-        for genes, drugs, cell_types, scores in datasets["loader_tr"]:
-            minibatch_training_stats = autoencoder.update(
-                genes, drugs, cell_types, scores
-            )
+        for genes, drugs, cell_types in datasets["loader_tr"]:
+            minibatch_training_stats = autoencoder.update(genes, drugs, cell_types)
 
             for key, val in minibatch_training_stats.items():
                 epoch_training_stats[key] += val
@@ -372,7 +370,7 @@ def parse_arguments():
     parser.add_argument("--perturbation_key", type=str, default="condition")
     parser.add_argument("--dose_key", type=str, default="dose_val")
     parser.add_argument("--cell_type_key", type=str, default="cell_type")
-    parser.add_argument("--gene_sets_key", type=str, default="scores_tr")
+    # parser.add_argument("--gene_sets_key", type=str, default="scores_tr")
     parser.add_argument("--split_key", type=str, default="split")
     parser.add_argument("--loss_ae", type=str, default="gauss")
     parser.add_argument("--doser_type", type=str, default="sigm")
@@ -409,7 +407,7 @@ if __name__ == "__main__":
                 "split_key": "split",  # necessary field for train, test, ood splits.
                 "perturbation_key": "condition",  # necessary field for perturbations
                 "dose_key": "dose",  # necessary field for dose. Fill in with dummy variable if dose is the same.
-                "gene_sets_key": None,
+                # "gene_sets_key": None,
                 "gnn_model": model,
                 "smiles_key": "SMILES",
                 "mol_featurizer": "canonical",
