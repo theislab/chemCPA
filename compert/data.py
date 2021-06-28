@@ -48,7 +48,6 @@ class Dataset:
         perturbation_key=None,
         dose_key=None,
         covariate_keys=None,
-        # gene_sets_key=None,
         smiles_key=None,
         split_key="split",
         mol_featurizer="canonical",
@@ -63,17 +62,9 @@ class Dataset:
         if isinstance(covariate_keys, str):
             covariate_keys = [covariate_keys]
         self.covariate_keys = covariate_keys
-        # self.gene_sets_key = gene_sets_key
         self.smiles_key = smiles_key
         mol_featurizers = ["canonical", "AttentiveFP", "Pretrain"]
         self.mol_featurizer = mol_featurizer
-
-        # if gene_sets_key is not None:
-        #     self.scores = torch.Tensor(data.obsm[gene_sets_key])
-        #     self.pathway_genes = None  # TODO gene sets listed each pathway
-        # else:
-        #     self.scores = None
-        #     self.pathway_genes = None
 
         if perturbation_key is not None:
             if dose_key is None:
@@ -204,7 +195,6 @@ class Dataset:
             self.num_covariates = [0]
         self.num_genes = self.genes.shape[1]
         self.num_drugs = len(self.drugs_names_unique) if self.drugs is not None else 0
-        # self.num_gene_sets = self.scores.shape[1] if self.scores is not None else 0
 
         self.indices = {
             "all": list(range(len(self.genes))),
@@ -224,7 +214,6 @@ class Dataset:
             self.genes[i],
             indx(self.drugs, i),
             *[indx(cov, i) for cov in self.covariates],
-            # indx(self.scores, i),
         )
 
     def __len__(self):
@@ -240,7 +229,6 @@ class SubDataset:
         self.perturbation_key = dataset.perturbation_key
         self.dose_key = dataset.dose_key
         self.covariate_keys = dataset.covariate_keys
-        # self.gene_sets_key = dataset.gene_sets_key
         self.smiles_key = dataset.smiles_key
 
         self.batched_graph_collection = dataset.batched_graph_collection
@@ -253,7 +241,6 @@ class SubDataset:
         self.genes = dataset.genes[indices]
         self.drugs = indx(dataset.drugs, indices)
         self.covariates = [indx(cov, indices) for cov in dataset.covariates]
-        # self.scores = indx(dataset.scores, indices)
 
         self.drugs_names = indx(dataset.drugs_names, indices)
         self.pert_categories = indx(dataset.pert_categories, indices)
@@ -268,15 +255,12 @@ class SubDataset:
         self.num_covariates = dataset.num_covariates
         self.num_genes = dataset.num_genes
         self.num_drugs = dataset.num_drugs
-        # self.num_gene_sets = dataset.num_gene_sets
-        # self.pathway_genes = dataset.pathway_genes
 
     def __getitem__(self, i):
         return (
             self.genes[i],
             indx(self.drugs, i),
             *[indx(cov, i) for cov in self.covariates],
-            # indx(self.scores, i),
         )
 
     def __len__(self):
@@ -288,7 +272,6 @@ def load_dataset_splits(
     perturbation_key: Union[str, None],
     dose_key: Union[str, None],
     covariate_keys: Union[list, str, None],
-    # gene_sets_key,
     smiles_key: Union[str, None],
     split_key: str,
     mol_featurizer: str,
@@ -300,7 +283,6 @@ def load_dataset_splits(
         perturbation_key,
         dose_key,
         covariate_keys,
-        # gene_sets_key,
         smiles_key,
         split_key,
         mol_featurizer,

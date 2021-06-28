@@ -118,7 +118,9 @@ def evaluate_r2(autoencoder, dataset, genes_control):
 
         if len(idx) > 30:
             emb_drugs = dataset.drugs[idx][0].view(1, -1).repeat(num, 1).clone()
-            emb_cts = dataset.cell_types[idx][0].view(1, -1).repeat(num, 1).clone()
+            emb_cts = (
+                dataset.cell_types[idx][0].view(1, -1).repeat(num, 1).clone()
+            )  # TODO: Adjust evaluation to covariates
 
             genes_predict = (
                 autoencoder.predict(genes_control, emb_drugs, emb_cts).detach().cpu()
@@ -212,7 +214,6 @@ def prepare_compert(args, state_dict=None):
         args["perturbation_key"],
         args["dose_key"],
         args["covariate_keys"],
-        # args["gene_sets_key"],
         args["smiles_key"],
         args["split_key"],
         args["mol_featurizer"],
@@ -233,13 +234,10 @@ def prepare_compert(args, state_dict=None):
         datasets["training"].num_genes,
         datasets["training"].num_drugs,
         datasets["training"].num_covariates,
-        # datasets["training"].num_gene_sets,
         device=device,
         seed=args["seed"],
         loss_ae=args["loss_ae"],
         doser_type=args["doser_type"],
-        # scorer_type=args["scorer_type"],
-        # scores_discretizer=args["scores_discretizer"],
         patience=args["patience"],
         hparams=args["hparams"],
         decoder_activation=args["decoder_activation"],
@@ -279,8 +277,6 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
             )
         }
     )
-
-    # args.pop("scores_discretizer", None)
 
     pjson({"training_args": args})
     pjson({"autoencoder_params": autoencoder.hparams})
@@ -371,7 +367,6 @@ def parse_arguments():
     parser.add_argument("--perturbation_key", type=str, default="condition")
     parser.add_argument("--dose_key", type=str, default="dose_val")
     parser.add_argument("--covariate_keys", type=str, default="cell_type")
-    # parser.add_argument("--gene_sets_key", type=str, default="scores_tr")
     parser.add_argument("--split_key", type=str, default="split")
     parser.add_argument("--loss_ae", type=str, default="gauss")
     parser.add_argument("--doser_type", type=str, default="sigm")
@@ -410,7 +405,6 @@ if __name__ == "__main__":
                 "split_key": "split",  # necessary field for train, test, ood splits.
                 "perturbation_key": "condition",  # necessary field for perturbations
                 "dose_key": "dose",  # necessary field for dose. Fill in with dummy variable if dose is the same.
-                # "gene_sets_key": None,
                 "gnn_model": model,
                 "smiles_key": "SMILES",
                 "mol_featurizer": "canonical",
@@ -421,8 +415,6 @@ if __name__ == "__main__":
                 "patience": 20,  # patience for early stopping
                 "loss_ae": "gauss",  # loss (currently only gaussian loss is supported)
                 "doser_type": None,  # non-linearity for doser function
-                "scorer_type": "linear",
-                "scores_discretizer": None,
                 "save_dir": "notebooks/tmp_save_dir/",  # directory to save the model
                 "decoder_activation": "linear",  # last layer of the decoder
                 "seed": 0,  # random seed

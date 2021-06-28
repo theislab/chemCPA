@@ -169,14 +169,11 @@ class ComPert(torch.nn.Module):
         num_genes,
         num_drugs,
         num_covariates,
-        # num_gene_sets,
         device="cpu",
         seed=0,
         patience=5,
         loss_ae="gauss",
         doser_type="logsigm",
-        # scorer_type="linear",
-        scores_discretizer=None,
         decoder_activation="linear",
         hparams="",
         drug_embeddings: Union[None, Drugemb] = None,
@@ -186,7 +183,6 @@ class ComPert(torch.nn.Module):
         self.num_genes = num_genes
         self.num_drugs = num_drugs
         self.num_covariates = num_covariates
-        # self.num_gene_sets = num_gene_sets
         self.device = device
         self.seed = seed
         self.loss_ae = loss_ae
@@ -194,13 +190,6 @@ class ComPert(torch.nn.Module):
         self.patience = patience
         self.best_score = -1e3
         self.patience_trials = 0
-
-        # if scores_discretizer == "kbins":
-        #     self.scores_discretizer = KBinsDiscretizer(
-        #         n_bins=self.num_gene_sets, encode="ordinal", strategy="quantile"
-        #     )
-        # else:
-        #     self.scores_discretizer = None
 
         # set hyperparameters
         if isinstance(hparams, dict):
@@ -278,42 +267,6 @@ class ComPert(torch.nn.Module):
                     torch.nn.Embedding(num_covariate, self.hparams["dim"])
                 )
 
-        # if self.num_gene_sets > 0:
-        #     if self.scores_discretizer is None:
-        #         self.loss_adversary_gene_sets = torch.nn.KLDivLoss(
-        #             reduction="batchmean"
-        #         )
-        #         adv_out_dim = self.num_gene_sets
-        #     else:
-        #         self.loss_adversary_gene_sets = torch.nn.CrossEntropyLoss()
-        #         adv_out_dim = self.num_gene_sets * self.scores_discretizer.n_bins
-        #     self.adversary_gene_sets = MLP(
-        #         [self.hparams["dim"]]
-        #         + [self.hparams["adversary_width"]] * self.hparams["adversary_depth"]
-        #         + [adv_out_dim]
-        #     )
-        #     self.gene_set_embeddings = torch.nn.Embedding(
-        #         self.num_gene_sets, self.hparams["dim"]
-        #     )
-        #     # set scorers
-        #     if scorer_type == "mlp":
-        #         self.scorers = torch.nn.ModuleList()
-        #         for _ in range(self.num_gene_sets):
-        #             self.scorers.append(
-        #                 MLP(
-        #                     [1]
-        #                     + [self.hparams["scorers_width"]]
-        #                     * self.hparams["scorers_depth"]
-        #                     + [1],
-        #                     batch_norm=False,
-        #                 )
-        #             )
-        #     else:
-        #         self.scorers = GeneralizedSigmoid(
-        #             self.num_gene_sets, self.device, nonlin=scorer_type
-        #         )
-        #     self.scorer_type = scorer_type
-
         # losses
         if self.loss_ae == "nb":
             self.loss_autoencoder = NBLoss()
@@ -327,7 +280,6 @@ class ComPert(torch.nn.Module):
         # optimizers
         has_drugs = self.num_drugs > 0
         has_covariates = self.num_covariates[0] > 0
-        # has_gene_sets = self.num_gene_sets > 0
         get_params = lambda model, cond: list(model.parameters()) if cond else []
         _parameters = (
             get_params(self.encoder, True)
@@ -336,8 +288,7 @@ class ComPert(torch.nn.Module):
         )
         for emb in self.covariates_embeddings:
             _parameters.extend(get_params(emb, has_covariates))
-        # else [] + list(self.gene_set_embeddings.parameters())
-        # if has_gene_sets
+
         self.optimizer_autoencoder = torch.optim.Adam(
             _parameters,
             lr=self.hparams["autoencoder_lr"],
@@ -360,12 +311,6 @@ class ComPert(torch.nn.Module):
                 lr=self.hparams["dosers_lr"],
                 weight_decay=self.hparams["dosers_wd"],
             )
-        # if has_gene_sets:
-        #     self.optimizer_scorers = torch.optim.Adam(
-        #         self.scorers.parameters(),
-        #         lr=self.hparams["scorers_lr"],
-        #         weight_decay=self.hparams["scorers_wd"],
-        #     )
 
         # learning rate schedulers
         self.scheduler_autoencoder = torch.optim.lr_scheduler.StepLR(
@@ -380,11 +325,6 @@ class ComPert(torch.nn.Module):
             self.scheduler_dosers = torch.optim.lr_scheduler.StepLR(
                 self.optimizer_dosers, step_size=self.hparams["step_size_lr"]
             )
-
-        # if has_gene_sets:
-        #     self.scheduler_scorers = torch.optim.lr_scheduler.StepLR(
-        #         self.optimizer_scorers, step_size=self.hparams["step_size_lr"]
-        #     )
 
         self.history = {"epoch": [], "stats_epoch": []}
 
@@ -404,10 +344,6 @@ class ComPert(torch.nn.Module):
             "dosers_depth": 2 if default else int(np.random.choice([1, 2, 3])),
             "dosers_lr": 1e-3 if default else float(10 ** np.random.uniform(-4, -2)),
             "dosers_wd": 1e-7 if default else float(10 ** np.random.uniform(-8, -5)),
-            # "scorers_width": 4 if default else int(np.random.choice([2, 4, 8, 16])),
-            # "scorers_depth": 2 if default else int(np.random.choice([1, 2, 3])),
-            # "scorers_lr": 1e-3 if default else float(10 ** np.random.uniform(-4, -2)),
-            # "scorers_wd": 1e-7 if default else float(10 ** np.random.uniform(-8, -5)),
             "autoencoder_width": 512
             if default
             else int(np.random.choice([256, 512, 1024])),
@@ -444,13 +380,7 @@ class ComPert(torch.nn.Module):
 
         return self.hparams
 
-    def move_inputs_(
-        self,
-        genes,
-        drugs,
-        covariates,
-        # scores,
-    ):
+    def move_inputs_(self, genes, drugs, covariates):
         """
         Move minibatch tensors to CPU/GPU.
         """
@@ -460,13 +390,7 @@ class ComPert(torch.nn.Module):
                 drugs = drugs.to(self.device)
             if covariates is not None:
                 covariates = [cov.to(self.device) for cov in covariates]
-            # if scores is not None:
-            #     scores = scores.to(self.device)
-        return (
-            genes,
-            drugs,
-            covariates,
-        )  # scores
+        return (genes, drugs, covariates)
 
     def compute_drug_embeddings_(self, drugs):
         """
@@ -488,40 +412,14 @@ class ComPert(torch.nn.Module):
         else:
             return self.dosers(drugs) @ latent_drugs
 
-    # def compute_gene_sets_embeddings_(self, scores):
-    #     """
-    #     Compute sum of gene sets embeddings, each of them multiplied by its
-    #     score-response curve.
-    #     """
-
-    #     if self.scorer_type == "mlp":
-    #         weights = []
-    #         for s in range(scores.size(1)):
-    #             this_score = scores[:, s].view(-1, 1)
-    #             weights.append(self.scorers[s](this_score).sigmoid() * this_score.gt(0))
-    #         return torch.cat(weights, 1) @ self.gene_set_embeddings.weight
-    #     else:
-    #         return self.scorers(scores) @ self.gene_set_embeddings.weight
-
-    def predict(
-        self,
-        genes,
-        drugs,
-        covariates,
-        # scores,
-        return_latent_basal=False,
-    ):
+    def predict(self, genes, drugs, covariates, return_latent_basal=False):
         """
         Predict "what would have the gene expression `genes` been, had the
         cells in `genes` with cell types `cell_types` been treated with
         combination of drugs `drugs`.
         """
 
-        genes, drugs, covariates = self.move_inputs_(
-            genes,
-            drugs,
-            covariates,  # scores
-        )
+        genes, drugs, covariates = self.move_inputs_(genes, drugs, covariates)
 
         latent_basal = self.encoder(genes)
 
@@ -529,8 +427,6 @@ class ComPert(torch.nn.Module):
 
         if self.num_drugs > 0:
             latent_treated = latent_treated + self.compute_drug_embeddings_(drugs)
-        # if self.num_gene_sets > 0:
-        #     latent_treated = latent_treated + self.compute_gene_sets_embeddings_(scores)
         if self.num_covariates[0] > 0:
             for i, emb in enumerate(self.covariates_embeddings):
                 latent_treated = latent_treated + emb(
@@ -565,14 +461,6 @@ class ComPert(torch.nn.Module):
         self.scheduler_adversary.step()
         if self.num_drugs > 0:
             self.scheduler_dosers.step()
-        # if self.num_gene_sets > 0:
-        #     self.scheduler_scorers.step()
-
-        # if score > self.best_score:
-        #     self.best_score = score
-        #     self.patience_trials = 0
-        # else:
-        #     self.patience_trials += 1
 
         return self.patience_trials > self.patience
 
@@ -581,17 +469,10 @@ class ComPert(torch.nn.Module):
         Update ComPert's parameters given a minibatch of genes, drugs, and
         cell types.
         """
-        # if self.scores_discretizer is not None:
-        #     scores_discrete = self.scores_discretizer.transform(scores.cpu())
-        #     scores_discrete = torch.tensor(
-        #         scores_discrete, dtype=torch.long, device=self.device
-        #     )
-
         gene_reconstructions, latent_basal = self.predict(
             genes,
             drugs,
             covariates,
-            # scores,
             return_latent_basal=True,
         )
 
@@ -615,29 +496,9 @@ class ComPert(torch.nn.Module):
                     adversary_covariate_predictions[-1], covariates[i].argmax(1)
                 )
 
-        # adversary_gene_sets_loss = torch.tensor([0.0], device=self.device)
-        # if self.num_gene_sets > 0:
-        #     adversary_gene_sets_predictions = self.adversary_gene_sets(latent_basal)
-        #     if self.scores_discretizer is None:
-        #         adversary_gene_sets_loss = self.loss_adversary_gene_sets(
-        #             adversary_gene_sets_predictions.sigmoid().log(), scores
-        #         )
-        #         adversary_gene_sets_loss += self.loss_adversary_gene_sets(
-        #             (1.0 - adversary_gene_sets_predictions.sigmoid()).log(),
-        #             1.0 - scores,
-        #         )
-        #     else:
-        #         n_bins = self.scores_discretizer.n_bins
-        #         for i in range(self.num_gene_sets):
-        #             sel = slice(i * n_bins, i * n_bins + n_bins)
-        #             adversary_gene_sets_loss += self.loss_adversary_gene_sets(
-        #                 adversary_gene_sets_predictions[:, sel], scores_discrete[:, i]
-        #             )
-
         # two place-holders for when adversary is not executed
         adversary_drugs_penalty = torch.tensor([0.0], device=self.device)
         adversary_covariates_penalty = torch.tensor([0.0], device=self.device)
-        # adversary_gene_sets_penalty = torch.tensor([0.0], device=self.device)
 
         if self.iteration % self.hparams["adversary_steps"]:
 
@@ -658,55 +519,34 @@ class ComPert(torch.nn.Module):
                         pred.sum(), latent_basal
                     )  # TODO: Adding up tensor sum, is that right?
 
-            # if self.num_gene_sets > 0:
-            #     adversary_gene_sets_penalty = (
-            #         torch.autograd.grad(
-            #             adversary_gene_sets_predictions.sum(),
-            #             latent_basal,
-            #             create_graph=True,
-            #         )[0]
-            #         .pow(2)
-            #         .mean()
-            #     )
-
             self.optimizer_adversaries.zero_grad()
             (
                 adversary_drugs_loss
                 + self.hparams["penalty_adversary"] * adversary_drugs_penalty
                 + adversary_covariates_loss
                 + self.hparams["penalty_adversary"] * adversary_covariates_penalty
-                # + adversary_gene_sets_loss
-                # + self.hparams["penalty_adversary"] * adversary_gene_sets_penalty
             ).backward()
             self.optimizer_adversaries.step()
         else:
             self.optimizer_autoencoder.zero_grad()
             if self.num_drugs > 0:
                 self.optimizer_dosers.zero_grad()
-            # if self.num_gene_sets > 0:
-            #     self.optimizer_scorers.zero_grad()
             (
                 reconstruction_loss
                 - self.hparams["reg_adversary"] * adversary_drugs_loss
                 - self.hparams["reg_adversary"] * adversary_covariates_loss
-                # - self.hparams["reg_adversary"] * adversary_gene_sets_loss
             ).backward()
             self.optimizer_autoencoder.step()
             if self.num_drugs > 0:
                 self.optimizer_dosers.step()
-            # if self.num_gene_sets > 0:
-            #     self.optimizer_scorers.step()
-
         self.iteration += 1
 
         return {
             "loss_reconstruction": reconstruction_loss.item(),
             "loss_adv_drugs": adversary_drugs_loss.item(),
             "loss_adv_covariates": adversary_covariates_loss.item(),
-            # "loss_adv_gene_sets": adversary_gene_sets_loss.item(),
             "penalty_adv_drugs": adversary_drugs_penalty.item(),
             "penalty_adv_covariates": adversary_covariates_penalty.item(),
-            # "penalty_adv_gene_sets": adversary_gene_sets_penalty.item(),
         }
 
     @classmethod
