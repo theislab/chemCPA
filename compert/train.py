@@ -211,7 +211,7 @@ def prepare_compert(args, state_dict=None):
         args["dataset_path"],
         args["perturbation_key"],
         args["dose_key"],
-        args["cell_type_key"],
+        args["covariate_keys"],
         # args["gene_sets_key"],
         args["smiles_key"],
         args["split_key"],
@@ -232,7 +232,7 @@ def prepare_compert(args, state_dict=None):
     autoencoder = ComPert(
         datasets["training"].num_genes,
         datasets["training"].num_drugs,
-        datasets["training"].num_cell_types,
+        datasets["training"].num_covariates,
         # datasets["training"].num_gene_sets,
         device=device,
         seed=args["seed"],
@@ -280,7 +280,7 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
         }
     )
 
-    args.pop("scores_discretizer", None)
+    # args.pop("scores_discretizer", None)
 
     pjson({"training_args": args})
     pjson({"autoencoder_params": autoencoder.hparams})
@@ -289,8 +289,9 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
     for epoch in range(args["max_epochs"]):
         epoch_training_stats = defaultdict(float)
 
-        for genes, drugs, cell_types in datasets["loader_tr"]:
-            minibatch_training_stats = autoencoder.update(genes, drugs, cell_types)
+        for data in datasets["loader_tr"]:
+            genes, drugs, covariates = data[0], data[1], data[2:]
+            minibatch_training_stats = autoencoder.update(genes, drugs, covariates)
 
             for key, val in minibatch_training_stats.items():
                 epoch_training_stats[key] += val
@@ -369,7 +370,7 @@ def parse_arguments():
     parser.add_argument("--dataset_path", type=str, required=True)
     parser.add_argument("--perturbation_key", type=str, default="condition")
     parser.add_argument("--dose_key", type=str, default="dose_val")
-    parser.add_argument("--cell_type_key", type=str, default="cell_type")
+    parser.add_argument("--covariate_keys", type=str, default="cell_type")
     # parser.add_argument("--gene_sets_key", type=str, default="scores_tr")
     parser.add_argument("--split_key", type=str, default="split")
     parser.add_argument("--loss_ae", type=str, default="gauss")
@@ -403,7 +404,9 @@ if __name__ == "__main__":
         for model in gnn_models:
             args = {
                 "dataset_path": "datasets/trapnell_cpa_subset.h5ad",  # full path to the anndata dataset
-                "cell_type_key": "cell_type",  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+                "covariate_keys": [
+                    "cell_type"
+                ],  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
                 "split_key": "split",  # necessary field for train, test, ood splits.
                 "perturbation_key": "condition",  # necessary field for perturbations
                 "dose_key": "dose",  # necessary field for dose. Fill in with dummy variable if dose is the same.

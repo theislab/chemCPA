@@ -11,6 +11,7 @@ import pandas as pd
 
 from sklearn.preprocessing import OneHotEncoder
 from .helper import graph_from_smiles
+from typing import Union
 
 
 def ranks_to_df(data, key="rank_genes_groups"):
@@ -46,7 +47,7 @@ class Dataset:
         fname,
         perturbation_key=None,
         dose_key=None,
-        cell_type_key=None,
+        covariate_keys=None,
         # gene_sets_key=None,
         smiles_key=None,
         split_key="split",
@@ -54,21 +55,17 @@ class Dataset:
     ):
 
         data = sc.read(fname)
-
+        self.genes = torch.Tensor(data.X.A)
         self.var_names = data.var_names
 
         self.perturbation_key = perturbation_key
         self.dose_key = dose_key
-        self.cell_type_key = cell_type_key
+        if isinstance(covariate_keys, str):
+            covariate_keys = [covariate_keys]
+        self.covariate_keys = covariate_keys
         # self.gene_sets_key = gene_sets_key
         self.smiles_key = smiles_key
-
-        self.genes = torch.Tensor(data.X.A)
-
         mol_featurizers = ["canonical", "AttentiveFP", "Pretrain"]
-        assert (
-            mol_featurizer in mol_featurizers
-        ), f"mol_featurizer must be one of {mol_featurizers}"
         self.mol_featurizer = mol_featurizer
 
         # if gene_sets_key is not None:
@@ -79,6 +76,10 @@ class Dataset:
         #     self.pathway_genes = None
 
         if perturbation_key is not None:
+            if dose_key is None:
+                raise ValueError(
+                    f"A 'dose_key' is required when provided a 'perturbation_key'({perturbation_key})."
+                )
             self.pert_categories = np.array(data.obs["cov_drug_dose_name"].values)
             self.de_genes = data.uns["rank_genes_groups_cov"]
 
@@ -140,6 +141,8 @@ class Dataset:
         if (
             smiles_key is not None
         ):  # TODO: Generalise to more than just SMILES, mol_rep_key
+            if mol_featurizer not in mol_featurizers:
+                raise ValueError(f"mol_featurizer must be one of {mol_featurizers}")
             graph_tuple = graph_from_smiles(
                 data.obs[[self.perturbation_key, self.smiles_key]],
                 self.perturbation_key,
@@ -155,28 +158,34 @@ class Dataset:
             self.idx_wo_smiles = None
             self.graph_feats_shape = None
 
-        if cell_type_key is not None:
-            self.cell_types_names = np.array(data.obs[cell_type_key].values)
-            self.cell_types_names_unique = np.unique(self.cell_types_names)
+        if isinstance(covariate_keys, list) and covariate_keys:
+            if not len(covariate_keys) == len(set(covariate_keys)):
+                raise ValueError(f"Duplicate keys were given in: {covariate_keys}")
+            self.covariate_names = {}
+            self.covariate_names_unique = {}
+            self.atomic_сovars_dict = {}
+            self.covariates = []
+            for cov in covariate_keys:
+                self.covariate_names[cov] = np.array(data.obs[cov].values)
+                self.covariate_names_unique[cov] = np.unique(self.covariate_names[cov])
 
-            encoder_ct = OneHotEncoder(sparse=False)
-            encoder_ct.fit(self.cell_types_names_unique.reshape(-1, 1))
+                names = self.covariate_names_unique[cov]
+                encoder_cov = OneHotEncoder(sparse=False)
+                encoder_cov.fit(names.reshape(-1, 1))
 
-            self.atomic_сovars_dict = dict(
-                zip(
-                    list(self.cell_types_names_unique),
-                    encoder_ct.transform(self.cell_types_names_unique.reshape(-1, 1)),
+                self.atomic_сovars_dict[cov] = dict(
+                    zip(list(names), encoder_cov.transform(names.reshape(-1, 1)))
                 )
-            )
 
-            self.cell_types = torch.Tensor(
-                encoder_ct.transform(self.cell_types_names.reshape(-1, 1))
-            ).float()
+                names = self.covariate_names[cov]
+                self.covariates.append(
+                    torch.Tensor(encoder_cov.transform(names.reshape(-1, 1))).float()
+                )
         else:
-            self.cell_types_names = None
-            self.cell_types_names_unique = None
+            self.covariate_names = None
+            self.covariate_names_unique = None
             self.atomic_сovars_dict = None
-            self.cell_types = None
+            self.covariates = None
 
         self.ctrl = data.obs["control"].values
 
@@ -187,9 +196,12 @@ class Dataset:
         else:
             self.ctrl_name = None
 
-        self.num_cell_types = (
-            len(self.cell_types_names_unique) if self.cell_types is not None else 0
-        )
+        if self.covariates is not None:
+            self.num_covariates = [
+                len(names) for names in self.covariate_names_unique.values()
+            ]
+        else:
+            self.num_covariates = [0]
         self.num_genes = self.genes.shape[1]
         self.num_drugs = len(self.drugs_names_unique) if self.drugs is not None else 0
         # self.num_gene_sets = self.scores.shape[1] if self.scores is not None else 0
@@ -211,7 +223,7 @@ class Dataset:
         return (
             self.genes[i],
             indx(self.drugs, i),
-            indx(self.cell_types, i),
+            *[indx(cov, i) for cov in self.covariates],
             # indx(self.scores, i),
         )
 
@@ -227,7 +239,7 @@ class SubDataset:
     def __init__(self, dataset, indices):
         self.perturbation_key = dataset.perturbation_key
         self.dose_key = dataset.dose_key
-        self.covars_key = dataset.cell_type_key
+        self.covariate_keys = dataset.covariate_keys
         # self.gene_sets_key = dataset.gene_sets_key
         self.smiles_key = dataset.smiles_key
 
@@ -240,18 +252,20 @@ class SubDataset:
 
         self.genes = dataset.genes[indices]
         self.drugs = indx(dataset.drugs, indices)
-        self.cell_types = indx(dataset.cell_types, indices)
+        self.covariates = [indx(cov, indices) for cov in dataset.covariates]
         # self.scores = indx(dataset.scores, indices)
 
         self.drugs_names = indx(dataset.drugs_names, indices)
         self.pert_categories = indx(dataset.pert_categories, indices)
-        self.cell_types_names = indx(dataset.cell_types_names, indices)
+        self.covariate_names = {}
+        for cov in self.covariate_keys:
+            self.covariate_names[cov] = indx(dataset.covariate_names[cov], indices)
 
         self.var_names = dataset.var_names
         self.de_genes = dataset.de_genes
         self.ctrl_name = indx(dataset.ctrl_name, 0)
 
-        self.num_cell_types = dataset.num_cell_types
+        self.num_covariates = dataset.num_covariates
         self.num_genes = dataset.num_genes
         self.num_drugs = dataset.num_drugs
         # self.num_gene_sets = dataset.num_gene_sets
@@ -261,7 +275,7 @@ class SubDataset:
         return (
             self.genes[i],
             indx(self.drugs, i),
-            indx(self.cell_types, i),
+            *[indx(cov, i) for cov in self.covariates],
             # indx(self.scores, i),
         )
 
@@ -270,15 +284,15 @@ class SubDataset:
 
 
 def load_dataset_splits(
-    dataset_path,
-    perturbation_key,
-    dose_key,
-    covariate_keys,
+    dataset_path: str,
+    perturbation_key: Union[str, None],
+    dose_key: Union[str, None],
+    covariate_keys: Union[list, str, None],
     # gene_sets_key,
-    smiles_key,
-    split_key,
-    mol_featurizer,
-    return_dataset=False,
+    smiles_key: Union[str, None],
+    split_key: str,
+    mol_featurizer: str,
+    return_dataset: bool = False,
 ):
 
     dataset = Dataset(
