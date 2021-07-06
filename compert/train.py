@@ -1,13 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-from compert.graph_model.graph_model import Drugemb
 import os
 import json
 import argparse
-
-import torch
-import numpy as np
+import time
 from collections import defaultdict
+
+import numpy as np
+import torch
 
 from compert.data import load_dataset_splits
 from compert.model import ComPert
@@ -18,7 +18,8 @@ from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 
-import time
+
+from compert.graph_model.graph_model import Drugemb
 
 
 def pjson(s):
@@ -71,7 +72,7 @@ def evaluate_disentanglement(autoencoder, dataset, nonlinear=False):
 def evaluate_r2(autoencoder, dataset, genes_control):
     """
     Measures different quality metrics about an ComPert `autoencoder`, when
-    tasked to translate some `genes_control` into each of the drug/cell_type
+    tasked to translate some `genes_control` into each of the drug/covariates
     combinations described in `dataset`.
 
     Considered metrics are R2 score about means and variances for all genes, as
@@ -96,12 +97,13 @@ def evaluate_r2(autoencoder, dataset, genes_control):
 
         if len(idx) > 30:
             emb_drugs = dataset.drugs[idx][0].view(1, -1).repeat(num, 1).clone()
-            emb_cts = (
-                dataset.cell_types[idx][0].view(1, -1).repeat(num, 1).clone()
-            )  # TODO: Adjust evaluation to covariates
+            emb_covars = [
+                covar[idx][0].view(1, -1).repeat(num, 1).clone()
+                for covar in dataset.covariates
+            ]
 
             genes_predict = (
-                autoencoder.predict(genes_control, emb_drugs, emb_cts).detach().cpu()
+                autoencoder.predict(genes_control, emb_drugs, emb_covars).detach().cpu()
             )
 
             mean_predict = genes_predict[:, :dim]
@@ -384,7 +386,7 @@ if __name__ == "__main__":
                 "patience": 20,  # patience for early stopping
                 "loss_ae": "gauss",  # loss (currently only gaussian loss is supported)
                 "doser_type": None,  # non-linearity for doser function
-                "save_dir": "notebooks/tmp_save_dir/",  # directory to save the model
+                "save_dir": "tmp_save_dir/",  # directory to save the model
                 "decoder_activation": "linear",  # last layer of the decoder
                 "seed": 0,  # random seed
                 "sweep_seeds": 0,
