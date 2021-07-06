@@ -429,6 +429,7 @@ class ComPert(torch.nn.Module):
             latent_treated = latent_treated + self.compute_drug_embeddings_(drugs)
         if self.num_covariates[0] > 0:
             for i, emb in enumerate(self.covariates_embeddings):
+                emb = emb.to(self.device)
                 latent_treated = latent_treated + emb(
                     covariates[i].argmax(1)
                 )  # TODO: Why argmax here?
@@ -469,6 +470,8 @@ class ComPert(torch.nn.Module):
         Update ComPert's parameters given a minibatch of genes, drugs, and
         cell types.
         """
+        genes, drugs, covariates = self.move_inputs_(genes, drugs, covariates)
+
         gene_reconstructions, latent_basal = self.predict(
             genes,
             drugs,
@@ -491,6 +494,7 @@ class ComPert(torch.nn.Module):
         if self.num_covariates[0] > 0:
             adversary_covariate_predictions = []
             for i, adv in enumerate(self.adversary_covariates):
+                adv = adv.to(self.device)
                 adversary_covariate_predictions.append(adv(latent_basal))
                 adversary_covariates_loss += self.loss_adversary_covariates[i](
                     adversary_covariate_predictions[-1], covariates[i].argmax(1)
