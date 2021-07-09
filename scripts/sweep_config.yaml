@@ -53,58 +53,72 @@
 
 seml:
   executable: compert/seml_sweep_icb.py
-  name: disc_cpa_pathway
+  name: cpa_graphs
   output_dir: sweeps/logs
   project_root_dir: ..
 
 slurm:
-  experiments_per_job: 1
+  experiments_per_job: 2
+  max_jobs_per_batch: 6
   sbatch_options_template: GPU
   sbatch_options:
     # gres: gpu:1       # num GPUs
-    mem: 16G          # memory
-    cpus-per-task: 2  # num cores
-    time: 0-08:01     # max time, D-HH:MM
+    mem: 80G          # memory
+    cpus-per-task: 6  # num cores
+    time: 1-00:01     # max time, D-HH:MM
 
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
   training.checkpoint_freq: 40 # checkoint frequencty to save intermediate results
-  training.num_epochs: 100 # maximum epochs for training
-  training.max_minutes: 120 # maximum computation time
+  training.num_epochs: 1000 # maximum epochs for training
+  training.max_minutes: 300 # maximum computation time
   training.ignore_evaluation: False
+  training.save_checkpoints: False
+  training.save_dir: null
   
-  model.additonal_params.seed: 0 # random seed
-  model.additonal_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
-  model.additonal_params.patience: 20 # patience for early stopping
-  model.additonal_params.decoder_activation: linear # last layer of the decoder
-  model.additonal_params.doser_type: null # non-linearity for doser function
+  model.additional_params.seed: 0 # random seed
+  model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
+  model.additional_params.patience: 20 # patience for early stopping
+  model.additional_params.decoder_activation: linear # last layer of the decoder
+  model.additional_params.doser_type: null # non-linearity for doser function
+ 
+  dataset.dataset_type: trapnell  
+  dataset.data_params.dataset_path: datasets/trapnell_cpa_subset.h5ad # full path to the anndata dataset 
+  dataset.data_params.perturbation_key: condition
+  dataset.data_params.dose_key: dose
+  dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+  dataset.data_params.smiles_key: SMILES
+  dataset.data_params.split_key: split # necessary field for train, test, ood splits. 
+  
+grid:
+  dataset.data_params.mol_featurizer: 
+    type: choice 
+    options: 
+      - canonical
+      - AttentiveFP 
+      # - Pretrain
 
-
-kang_dataset: 
+gnn_model: 
   fixed: 
-    dataset.dataset_type: kang  
-    dataset.data_params.dataset_path: datasets/kang_preprocessed_scores.h5ad # full path to the anndata dataset 
-    dataset.data_params.perturbation_key: null
-    dataset.data_params.dose_key: null
-    dataset.data_params.cell_type_key: null # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
-    dataset.data_params.gene_sets_key: scores_tr
-    dataset.data_params.split_key: split # necessary field for train, test, ood splits.    
-  grid:
-    model.additonal_params.scorer_type:
+    model.gnn_model.hparams.n_layers: 2
+    model.gnn_model.GCN.hparams.n_layers: 3
+  grid: 
+    # samples: 1
+    # seed: 42
+    model.gnn_model.model_type: 
       type: choice
-      options:
-        - linear
-        - mlp
-    model.additonal_params.scores_discretizer: 
-      type: choice 
       options: 
-        - null
-        - kbins
+        - AttentiveFP
+        - GAT
+        - GCN 
+        - MPNN 
+        - weave 
+
 
 random:
-  samples: 5
-  seed: 7059
+  samples: 1
+  seed: 42
   model.hparams.dropout:
     type: uniform
     min: 0.0
@@ -132,27 +146,6 @@ random:
     min: 1e-4
     max: 1e-2
   model.hparams.dosers_wd: 
-    type: loguniform 
-    min: 1e-8
-    max: 1e-5
-  model.hparams.scorers_width: 
-    type: choice 
-    options: 
-      - 2
-      - 4 
-      - 8
-      - 16
-  model.hparams.scorers_depth: 
-    type: choice 
-    options: 
-      - 1
-      - 2 
-      - 3
-  model.hparams.scorers_lr: 
-    type: loguniform 
-    min: 1e-4
-    max: 1e-2
-  model.hparams.scorers_wd: 
     type: loguniform 
     min: 1e-8
     max: 1e-5

@@ -1,4 +1,5 @@
 import logging
+from random import seed
 from typing import OrderedDict
 from sacred import Experiment
 from collections import defaultdict
@@ -11,6 +12,7 @@ import numpy as np
 from compert.train import custom_collate, evaluate
 from compert.data import load_dataset_splits
 from compert.model import ComPert
+from compert.graph_model.graph_model import Drugemb
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -31,24 +33,6 @@ def config():
         )
 
 
-# class ModelVariant1:
-#     """
-#     A dummy model variant 1, which could, e.g., be a certain model or baseline in practice.
-#     """
-
-#     def __init__(self, hidden_sizes, dropout):
-#         self.hidden_sizes = hidden_sizes
-#         self.dropout = dropout
-
-
-# class ModelVariant2:
-#     """
-#     A dummy model variant 2, which could, e.g., be a certain model or baseline in practice.
-#     """
-
-#     def __init__(self, hidden_sizes, dropout):
-#         self.hidden_sizes = hidden_sizes
-#         self.dropout = dropout
 def pjson(s):
     """
     Prints a string in JSON format and flushes stdout
@@ -67,38 +51,61 @@ class ExperimentWrapper:
         if init_all:
             self.init_all()
 
-    # With the prefix option we can "filter" the configuration for the sub-dictionary under "data".
+    # With the prefix option we can "filter" the configuration for the sub-dictionary under "dataset".
     @ex.capture(prefix="dataset")
     def init_dataset(self, dataset_type: str, data_params: dict):
         """
         Perform dataset loading, preprocessing etc.
-        Since we set prefix="data", this method only gets passed the respective sub-dictionary, enabling a modular
+        Since we set prefix="dataset ", this method only gets passed the respective sub-dictionary, enabling a modular
         experiment design.
         """
         if dataset_type == "kang":
             self.datasets, self.dataset = load_dataset_splits(
                 **data_params, return_dataset=True
             )
+        elif dataset_type == "trapnell":
+            self.datasets, self.dataset = load_dataset_splits(
+                **data_params, return_dataset=True
+            )
 
     @ex.capture(prefix="model")
-    def init_model(self, hparams: dict, additonal_params: dict):
+    def init_drug_embedding(self, gnn_model: dict, hparams: dict):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model_type = gnn_model["model_type"]
+        dim = hparams["dim"]
+        params = gnn_model["hparams"].copy()
+        if model_type in list(gnn_model):
+            for key, value in gnn_model[model_type]["hparams"].items():
+                params[key] = value
+        print(f"\nGNN params: {params}\n")
+        if model_type is not None:
+            self.drug_embeddings = Drugemb(
+                dim=dim,  # TODO: This is set only in Compert model
+                gnn_model=model_type,
+                graph_feats_shape=self.datasets["training"].graph_feats_shape,
+                idx_wo_smiles=self.datasets["training"].idx_wo_smiles,
+                batched_graph_collection=self.datasets[
+                    "training"
+                ].batched_graph_collection,
+                hparams=params,
+                device=device,
+            )
+        else:
+            self.drug_embeddings = None
+
+    @ex.capture(prefix="model")
+    def init_model(self, hparams: dict, additional_params: dict):
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # if training.scorer_type == "linear":
-        # Here we can pass the "model_params" dict to the constructor directly, which can be very useful in
-        # practice, since we don't have to do any model-specific processing of the config dictionary.
         self.autoencoder = ComPert(
             self.datasets["training"].num_genes,
             self.datasets["training"].num_drugs,
-            self.datasets["training"].num_cell_types,
-            self.datasets["training"].num_gene_sets,
+            self.datasets["training"].num_covariates,
             device=device,
+            **additional_params,
             hparams=hparams,
-            **additonal_params,
+            drug_embeddings=self.drug_embeddings,
         )
-        if additonal_params["scores_discretizer"] == "kbins":
-            print("discretizer is not none")
-            self.autoencoder.scores_discretizer.fit(self.dataset.scores)
 
     def update_datasets(self):
         self.datasets.update(
@@ -114,16 +121,14 @@ class ExperimentWrapper:
         # pjson({"training_args": args})
         pjson({"autoencoder_params": self.autoencoder.hparams})
 
-    # @ex.capture(prefix="optimization")
-    # def init_optimizer(self, regularization: dict, optimizer_type: str):
-    #     weight_decay = regularization["weight_decay"]
-    #     self.optimizer = optimizer_type  # initialize optimizer
-
-    def init_all(self):
+    @ex.capture
+    def init_all(self, seed):
         """
         Sequentially run the sub-initializers of the experiment.
         """
+        self.seed = seed
         self.init_dataset()
+        self.init_drug_embedding()
         self.init_model()
         self.update_datasets()
 
@@ -134,14 +139,17 @@ class ExperimentWrapper:
         max_minutes: int,
         checkpoint_freq: int,
         ignore_evaluation: bool,
+        save_checkpoints: bool,
+        save_dir: str,
     ):
         start_time = time.time()
         for epoch in range(num_epochs):
             epoch_training_stats = defaultdict(float)
 
-            for genes, drugs, cell_types, scores in self.datasets["loader_tr"]:
+            for data in self.datasets["loader_tr"]:
+                genes, drugs, covariates = data[0], data[1], data[2:]
                 minibatch_training_stats = self.autoencoder.update(
-                    genes, drugs, cell_types, scores
+                    genes, drugs, covariates
                 )
 
                 for key, val in minibatch_training_stats.items():
@@ -181,22 +189,30 @@ class ExperimentWrapper:
                         "ellapsed_minutes": ellapsed_minutes,
                     }
                 )
+                if save_checkpoints:
+                    if save_dir is None or ~os.path.exists(save_dir):
+                        raise ValueError(
+                            "Please provide a valid directory path in the 'save_dir' argument."
+                        )
+                    torch.save(
+                        (
+                            self.autoencoder.state_dict(),
+                            self.autoencoder.hparams,
+                            self.autoencoder.history,
+                        ),
+                        os.path.join(
+                            save_dir,
+                            "model_seed={}_epoch={}.pt".format(self.seed, epoch),
+                        ),
+                    )
 
-                # torch.save(
-                #     (autoencoder.state_dict(), args, autoencoder.history),
-                #     os.path.join(
-                #         args["save_dir"],
-                #         "model_seed={}_epoch={}.pt".format(args["seed"], epoch),
-                #     ),
-                # )
-
-                # pjson(
-                #     {
-                #         "model_saved": "model_seed={}_epoch={}.pt\n".format(
-                #             args["seed"], epoch
-                #         )
-                #     }
-                # )
+                    pjson(
+                        {
+                            "model_saved": "model_seed={}_epoch={}.pt\n".format(
+                                self.seed, epoch
+                            )
+                        }
+                    )
                 if not ignore_evaluation:
                     stop = stop or self.autoencoder.early_stopping(
                         np.mean(evaluation_stats["test"])
@@ -208,17 +224,6 @@ class ExperimentWrapper:
         results = self.autoencoder.history
         results["total_epochs"] = epoch
         return results
-
-        # # everything is set up
-        # for e in range(num_epochs):
-        #     # simulate training
-        #     continue
-        # results = {
-        #     "test_acc": 0.5 + 0.3 * np.random.randn(),
-        #     "test_loss": np.random.uniform(0, 10),
-        #     # ...
-        # }
-        # return results
 
 
 # We can call this command, e.g., from a Jupyter notebook with init_all=False to get an "empty" experiment wrapper,

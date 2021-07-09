@@ -1,13 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-from compert.graph_model.graph_model import Drugemb
 import os
 import json
 import argparse
-
-import torch
-import numpy as np
+import time
 from collections import defaultdict
+
+import numpy as np
+import torch
 
 from compert.data import load_dataset_splits
 from compert.model import ComPert
@@ -18,7 +18,8 @@ from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 
-import time
+
+from compert.graph_model.graph_model import Drugemb
 
 
 def pjson(s):
@@ -38,8 +39,7 @@ def evaluate_disentanglement(autoencoder, dataset, nonlinear=False):
     _, latent_basal = autoencoder.predict(
         dataset.genes,
         dataset.drugs,
-        dataset.cell_types,
-        dataset.scores,
+        dataset.covariates,
         return_latent_basal=True,
     )
 
@@ -50,50 +50,29 @@ def evaluate_disentanglement(autoencoder, dataset, nonlinear=False):
     else:
         clf = LogisticRegression(solver="liblinear", multi_class="auto", max_iter=10000)
 
-    pert_scores, cov_scores, gene_set_scores = 0, 0, 0
+    pert_scores, cov_scores = 0, []
+
+    def compute_score(labels):
+        scaler = StandardScaler().fit_transform(latent_basal)
+        scorer = make_scorer(balanced_accuracy_score)
+        return cross_val_score(clf, scaler, labels, scoring=scorer, cv=5, n_jobs=-1)
+
     if dataset.perturbation_key is not None:
-        pert_scores = cross_val_score(
-            clf,
-            StandardScaler().fit_transform(latent_basal),
-            dataset.drugs_names,
-            scoring=make_scorer(balanced_accuracy_score),
-            cv=5,
-            n_jobs=-1,
-        )
-
-    if dataset.gene_sets_key is not None and autoencoder.scores_discretizer is not None:
-        gene_set_scores = []
-        disc_scores = autoencoder.scores_discretizer.transform(dataset.scores)
-        for pathway in range(dataset.num_gene_sets):
-            gene_set_scores.append(
-                cross_val_score(
-                    clf,
-                    StandardScaler().fit_transform(latent_basal),
-                    disc_scores[:, pathway],
-                    scoring=make_scorer(balanced_accuracy_score),
-                    cv=5,
-                    n_jobs=-1,
-                )
-            )
-        print(gene_set_scores)
-
-    if len(np.unique(dataset.cell_types_names)) > 1:
-        cov_scores = cross_val_score(
-            clf,
-            StandardScaler().fit_transform(latent_basal),
-            dataset.cell_types_names,
-            scoring=make_scorer(balanced_accuracy_score),
-            cv=5,
-            n_jobs=-1,
-        )
-    else:
-        return np.mean(pert_scores), np.mean(cov_scores), np.mean(gene_set_scores)
+        pert_scores = compute_score(dataset.drugs_names)
+    for cov in list(dataset.covariate_names):
+        cov_scores = []
+        if len(np.unique(dataset.covariate_names[cov])) == 0:
+            cov_scores = [0]
+            break
+        else:
+            cov_scores.append(compute_score(dataset.covariate_names[cov]))
+        return [np.mean(pert_scores), *[np.mean(cov_score) for cov_score in cov_scores]]
 
 
 def evaluate_r2(autoencoder, dataset, genes_control):
     """
     Measures different quality metrics about an ComPert `autoencoder`, when
-    tasked to translate some `genes_control` into each of the drug/cell_type
+    tasked to translate some `genes_control` into each of the drug/covariates
     combinations described in `dataset`.
 
     Considered metrics are R2 score about means and variances for all genes, as
@@ -118,10 +97,13 @@ def evaluate_r2(autoencoder, dataset, genes_control):
 
         if len(idx) > 30:
             emb_drugs = dataset.drugs[idx][0].view(1, -1).repeat(num, 1).clone()
-            emb_cts = dataset.cell_types[idx][0].view(1, -1).repeat(num, 1).clone()
+            emb_covars = [
+                covar[idx][0].view(1, -1).repeat(num, 1).clone()
+                for covar in dataset.covariates
+            ]
 
             genes_predict = (
-                autoencoder.predict(genes_control, emb_drugs, emb_cts).detach().cpu()
+                autoencoder.predict(genes_control, emb_drugs, emb_covars).detach().cpu()
             )
 
             mean_predict = genes_predict[:, :dim]
@@ -144,11 +126,6 @@ def evaluate_r2(autoencoder, dataset, genes_control):
             mean_score_de.append(r2_score(yt_m[de_idx], yp_m[de_idx]))
             var_score_de.append(r2_score(yt_v[de_idx], yp_v[de_idx]))
 
-    for _ in range(dataset.num_gene_sets):
-        if dataset.pathway_genes is None:
-            break
-        # See perturbation for code how to evaluate - needs to be adapted
-
     return [
         np.mean(s) if len(s) else -1
         for s in [mean_score, mean_score_de, var_score, var_score_de]
@@ -167,11 +144,9 @@ def evaluate(autoencoder, datasets):
             autoencoder, datasets["test_treated"], datasets["test_control"].genes
         )
 
-        (
-            stats_disent_pert,
-            stats_disent_cov,
-            stats_disent_pthways,
-        ) = evaluate_disentanglement(autoencoder, datasets["test"])
+        disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
+        stats_disent_pert = disent_scores[0]
+        stats_disent_cov = disent_scores[1:]
 
         evaluation_stats = {
             "training": evaluate_r2(
@@ -188,12 +163,10 @@ def evaluate(autoencoder, datasets):
             if datasets["test"].num_drugs > 0
             else None,
             "covariate disentanglement": stats_disent_cov,
-            "optimal for covariates": 1 / datasets["test"].num_cell_types
-            if datasets["test"].num_cell_types > 0
-            else None,
-            "pathway disentanglement": stats_disent_pthways,
-            "optimal for pathways": 1 / datasets["test"].num_gene_sets
-            if datasets["test"].num_gene_sets > 0
+            "optimal for covariates": [
+                1 / num for num in datasets["test"].num_covariates
+            ]
+            if datasets["test"].num_covariates[0] > 0
             else None,
         }
     autoencoder.train()
@@ -211,8 +184,7 @@ def prepare_compert(args, state_dict=None):
         args["dataset_path"],
         args["perturbation_key"],
         args["dose_key"],
-        args["cell_type_key"],
-        args["gene_sets_key"],
+        args["covariate_keys"],
         args["smiles_key"],
         args["split_key"],
         args["mol_featurizer"],
@@ -232,14 +204,11 @@ def prepare_compert(args, state_dict=None):
     autoencoder = ComPert(
         datasets["training"].num_genes,
         datasets["training"].num_drugs,
-        datasets["training"].num_cell_types,
-        datasets["training"].num_gene_sets,
+        datasets["training"].num_covariates,
         device=device,
         seed=args["seed"],
         loss_ae=args["loss_ae"],
         doser_type=args["doser_type"],
-        scorer_type=args["scorer_type"],
-        scores_discretizer=args["scores_discretizer"],
         patience=args["patience"],
         hparams=args["hparams"],
         decoder_activation=args["decoder_activation"],
@@ -280,8 +249,6 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
         }
     )
 
-    args.pop("scores_discretizer", None)
-
     pjson({"training_args": args})
     pjson({"autoencoder_params": autoencoder.hparams})
 
@@ -289,10 +256,9 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
     for epoch in range(args["max_epochs"]):
         epoch_training_stats = defaultdict(float)
 
-        for genes, drugs, cell_types, scores in datasets["loader_tr"]:
-            minibatch_training_stats = autoencoder.update(
-                genes, drugs, cell_types, scores
-            )
+        for data in datasets["loader_tr"]:
+            genes, drugs, covariates = data[0], data[1], data[2:]
+            minibatch_training_stats = autoencoder.update(genes, drugs, covariates)
 
             for key, val in minibatch_training_stats.items():
                 epoch_training_stats[key] += val
@@ -371,8 +337,7 @@ def parse_arguments():
     parser.add_argument("--dataset_path", type=str, required=True)
     parser.add_argument("--perturbation_key", type=str, default="condition")
     parser.add_argument("--dose_key", type=str, default="dose_val")
-    parser.add_argument("--cell_type_key", type=str, default="cell_type")
-    parser.add_argument("--gene_sets_key", type=str, default="scores_tr")
+    parser.add_argument("--covariate_keys", type=str, default="cell_type")
     parser.add_argument("--split_key", type=str, default="split")
     parser.add_argument("--loss_ae", type=str, default="gauss")
     parser.add_argument("--doser_type", type=str, default="sigm")
@@ -405,11 +370,12 @@ if __name__ == "__main__":
         for model in gnn_models:
             args = {
                 "dataset_path": "datasets/trapnell_cpa_subset.h5ad",  # full path to the anndata dataset
-                "cell_type_key": "cell_type",  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+                "covariate_keys": [
+                    "cell_type"
+                ],  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
                 "split_key": "split",  # necessary field for train, test, ood splits.
                 "perturbation_key": "condition",  # necessary field for perturbations
                 "dose_key": "dose",  # necessary field for dose. Fill in with dummy variable if dose is the same.
-                "gene_sets_key": None,
                 "gnn_model": model,
                 "smiles_key": "SMILES",
                 "mol_featurizer": "canonical",
@@ -420,11 +386,11 @@ if __name__ == "__main__":
                 "patience": 20,  # patience for early stopping
                 "loss_ae": "gauss",  # loss (currently only gaussian loss is supported)
                 "doser_type": None,  # non-linearity for doser function
-                "scorer_type": "linear",
-                "scores_discretizer": None,
-                "save_dir": "notebooks/tmp_save_dir/",  # directory to save the model
+                "save_dir": "tmp_save_dir/",  # directory to save the model
                 "decoder_activation": "linear",  # last layer of the decoder
                 "seed": 0,  # random seed
                 "sweep_seeds": 0,
             }
-            autoencoder, datasets = train_compert(args, return_model=True)
+            autoencoder, datasets = train_compert(
+                args, return_model=True, ignore_evaluation=False
+            )

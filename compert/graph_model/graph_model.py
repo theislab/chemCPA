@@ -24,7 +24,7 @@ class Drugemb(nn.Module):
         graph_feats_shape: tuple,
         idx_wo_smiles: list,
         batched_graph_collection: DGLGraph,
-        hparams: Union[dict, None] = {"n_layers": 2},
+        hparams: Union[dict, None] = None,
         device: str = "cpu",
     ):
 
@@ -49,7 +49,7 @@ class Drugemb(nn.Module):
 
         self.gnn_model = gnn_model
         self.graph_feats_shape = graph_feats_shape
-        self.batched_graph_collection = batched_graph_collection
+        self.graph = batched_graph_collection
         self.idx_wo_smiles = idx_wo_smiles
 
         # Set GNN model
@@ -61,11 +61,11 @@ class Drugemb(nn.Module):
 
     def forward(self):
         # drug embedding matrix of valid drugs
-        latent_drugs = self.graph_embedding(
-            self.batched_graph_collection,
-            self.batched_graph_collection.ndata["h"],
-            self.batched_graph_collection.edata["h"],
-        )
+        graph = self.graph
+        if graph.device.type != self.device:
+            graph = graph.to(self.device)
+
+        latent_drugs = self.graph_embedding(graph, graph.ndata["h"], graph.edata["h"])
         # zero tensor for control cells
         latent_control = torch.zeros(self.dim, device=self.device).view(1, -1)
         # insert zero tensors at positions with invalid graphs
@@ -76,6 +76,8 @@ class Drugemb(nn.Module):
         return latent_drugs
 
     def set_params(self, hparams, model):
+        if hparams is None:
+            hparams = {}
         graph_feats_shape = self.graph_feats_shape
         dim = self.dim
         n_layers = 2 if "n_layers" not in list(hparams) else hparams["n_layers"]
