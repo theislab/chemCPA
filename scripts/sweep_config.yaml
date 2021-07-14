@@ -1,0 +1,220 @@
+# Experiment configuration file.
+#
+# There are two special blocks. The 'seml' block is required for every experiment.
+# It has to contain the following values:
+# executable:        Name of the Python script containing the experiment. The path should be relative to the `project_root_dir`.
+#                    For backward compatibility SEML also supports paths relative to the location of the config file.
+#                    In case there are files present both relative to the project root and the config file,
+#                    the former takes precedence.
+# It can optionally also contain the following values:
+# name:              Prefix for output file and Slurm job name. Default: Collection name
+# output_dir:        Directory to store log files in. Default: Current directory
+# conda_environment: Specifies which Anaconda virtual environment will be activated before the experiment is executed.
+#                    Default: The environment used when queuing.
+# project_root_dir:  (Relative or absolute) path to the root of the project. seml will then upload all the source
+#                    files imported by the experiment to the MongoDB. Moreover, the uploaded source files will be
+#                    downloaded before starting an experiment, so any changes to the source files in the project
+#                    between queueing and starting the experiment will have no effect.
+#
+# The special 'slurm' block contains the slurm parameters. This block and all values are optional. Possible values are:
+# experiments_per_job:  Number of parallel experiments to run in each Slurm job.
+#                       Note that only experiments from the same batch share a job. Default: 1
+# max_jobs_per_batch:   Maximum number of Slurm jobs running per experiment batch. Default: No restriction
+# sbatch_options:       dictionary that contains custom values that will be passed to `sbatch`, specifying e.g.
+#                       the memory and number of GPUs to be allocated (prepended dashes are not required). See
+#                       https://slurm.schedmd.com/sbatch.html for all possible options.
+#
+# Parameters under 'fixed' will be used for all the experiments.
+#
+# Under 'grid' you can define parameters that should be sampled from a regular grid. Options are:
+#   - choice:     List the different values you want to evaluate under 'choices' as in the example below.
+#   - range:      Specify the min, max, and step. Parameter values will be generated using np.arange(min, max, step).
+#   - uniform:    Specify the min, max, and num. Parameter values will be generated using
+#                 np.linspace(min, max, num, endpoint=True)
+#   - loguniform: Specify min, max, and num. Parameter values will be uniformly generated in log space (base 10).
+#
+# Under 'random' you can specify parameters for which you want to try several random values. Specify the number
+# of samples per parameter with the 'samples' value as in the examples below.
+# Specify the the seed under the 'random' dict or directly for the desired parameter(s).
+# Supported parameter types are:
+#   - choice:      Randomly samples <samples> entries (with replacement) from the list in parameter['options']
+#   - uniform:     Uniformly samples between 'min' and 'max' as specified in the parameter dict.
+#   - loguniform:  Uniformly samples in log space between 'min' and 'max' as specified in the parameter dict.
+#   - randint:     Randomly samples integers between 'min' (included) and 'max' (excluded).
+#
+# The configuration file can be nested (as the example below) so that we can run different parameter sets
+# e.g. for different datasets or models.
+# We take the cartesian product of all `grid` parameters on a path and sample all random parameters on the path.
+# The number of random parameters sampled will be max{n_samples} of all n_samples on the path. This is done because
+# we need the same number of samples from all random parameters in a configuration.
+#
+# More specific settings (i.e., further down the hierarchy) always overwrite more general ones.
+
+
+seml:
+  executable: compert/seml_sweep_icb.py
+  name: cpa_graphs
+  output_dir: sweeps/logs
+  project_root_dir: ..
+
+slurm:
+  experiments_per_job: 2
+  max_jobs_per_batch: 6
+  sbatch_options_template: GPU
+  sbatch_options:
+    # gres: gpu:1       # num GPUs
+    mem: 80G          # memory
+    cpus-per-task: 6  # num cores
+    time: 1-00:01     # max time, D-HH:MM
+
+###### BEGIN PARAMETER CONFIGURATION ######
+
+fixed:
+  training.checkpoint_freq: 40 # checkoint frequencty to save intermediate results
+  training.num_epochs: 1000 # maximum epochs for training
+  training.max_minutes: 300 # maximum computation time
+  training.ignore_evaluation: False
+  training.save_checkpoints: False
+  training.save_dir: null
+  
+  model.additional_params.seed: 0 # random seed
+  model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
+  model.additional_params.patience: 20 # patience for early stopping
+  model.additional_params.decoder_activation: linear # last layer of the decoder
+  model.additional_params.doser_type: null # non-linearity for doser function
+ 
+  dataset.dataset_type: trapnell  
+  dataset.data_params.dataset_path: datasets/trapnell_cpa_subset.h5ad # full path to the anndata dataset 
+  dataset.data_params.perturbation_key: condition
+  dataset.data_params.dose_key: dose
+  dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+  dataset.data_params.smiles_key: SMILES
+  dataset.data_params.split_key: split # necessary field for train, test, ood splits. 
+  
+grid:
+  dataset.data_params.mol_featurizer: 
+    type: choice 
+    options: 
+      - canonical
+      - AttentiveFP 
+      # - Pretrain
+
+gnn_model: 
+  fixed: 
+    model.gnn_model.hparams.n_layers: 2
+    model.gnn_model.GCN.hparams.n_layers: 3
+  grid: 
+    # samples: 1
+    # seed: 42
+    model.gnn_model.model_type: 
+      type: choice
+      options: 
+        - AttentiveFP
+        - GAT
+        - GCN 
+        - MPNN 
+        - weave 
+
+
+random:
+  samples: 1
+  seed: 42
+  model.hparams.dropout:
+    type: uniform
+    min: 0.0
+    max: 0.5
+  model.hparams.dim: 
+    type: choice 
+    options: 
+      - 128
+      - 256 
+      - 512
+  model.hparams.dosers_width: 
+    type: choice 
+    options: 
+      - 32
+      - 64 
+      - 128
+  model.hparams.dosers_depth: 
+    type: choice 
+    options: 
+      - 1
+      - 2 
+      - 3
+  model.hparams.dosers_lr: 
+    type: loguniform 
+    min: 1e-4
+    max: 1e-2
+  model.hparams.dosers_wd: 
+    type: loguniform 
+    min: 1e-8
+    max: 1e-5
+  model.hparams.autoencoder_width: 
+    type: choice 
+    options: 
+      - 256
+      - 512
+      - 1024
+  model.hparams.autoencoder_depth: 
+    type: choice 
+    options: 
+      - 3
+      - 4 
+      - 5
+  model.hparams.autoencoder_lr: 
+    type: loguniform 
+    min: 1e-4
+    max: 1e-2
+  model.hparams.autoencoder_wd: 
+    type: loguniform 
+    min: 1e-8
+    max: 1e-5
+  model.hparams.adversary_width: 
+    type: choice 
+    options: 
+      - 64
+      - 128
+      - 256
+  model.hparams.adversary_depth: 
+    type: choice 
+    options: 
+      - 2
+      - 3 
+      - 4
+  model.hparams.adversary_lr: 
+    type: loguniform 
+    min: 1e-5
+    max: 1e-3
+  model.hparams.adversary_wd: 
+    type: loguniform 
+    min: 1e-6
+    max: 1e-3
+  model.hparams.adversary_steps: 
+    type: choice 
+    options: 
+      - 1
+      - 2 
+      - 3
+      - 4
+      - 5
+  model.hparams.reg_adversary: 
+    type: loguniform
+    min: 1e-2 
+    max: 1e2
+  model.hparams.penalty_adversary: 
+    type: loguniform
+    min: 1e-2
+    max: 1e1
+  model.hparams.batch_size: 
+    type: choice 
+    options: 
+      - 64
+      - 128 
+      - 256 
+      - 512
+  model.hparams.step_size_lr: 
+    type: choice 
+    options: 
+      - 15
+      - 25
+      - 45
