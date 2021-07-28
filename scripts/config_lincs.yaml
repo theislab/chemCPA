@@ -53,7 +53,7 @@
 
 seml:
   executable: compert/seml_sweep_icb.py
-  name: chem_cpa_weave
+  name: chem_cpa_noGNN_checkpoints
   output_dir: sweeps/logs
   project_root_dir: ..
 
@@ -72,9 +72,9 @@ slurm:
 fixed:
   training.checkpoint_freq: 40 # checkoint frequencty to save intermediate results
   training.num_epochs: 1000 # maximum epochs for training
-  training.max_minutes: 300 # maximum computation time
+  training.max_minutes: 600 # maximum computation time
   training.ignore_evaluation: False
-  training.save_checkpoints: False
+  training.save_checkpoints: True
   training.save_dir: sweeps/checkpoints
   
   model.additional_params.seed: 0 # random seed
@@ -96,13 +96,13 @@ grid:
     type: choice 
     options: 
       - canonical
-      - AttentiveFP 
+      # - AttentiveFP 
       # - Pretrain
 
 gnn_model: 
   fixed: 
     model.gnn_model.hparams.n_layers: 2
-    model.gnn_model.GCN.hparams.n_layers: 3
+    model.gnn_model.GCN.hparams.n_layers: 2
   grid: 
     # samples: 1
     # seed: 42
@@ -113,11 +113,12 @@ gnn_model:
         # - GAT
         # - GCN 
         # - MPNN 
-        - weave 
+        # - weave
+        - null 
 
 
 random:
-  samples: 2
+  samples: 120
   seed: 42
   model.hparams.dropout:
     type: uniform
