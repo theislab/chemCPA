@@ -261,9 +261,9 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
     pjson({"training_args": args})
     pjson({"autoencoder_params": autoencoder.hparams})
 
-    print(f"CWD: {os.getcwd()}")
+    print(f"\nCWD: {os.getcwd()}")
     print(f"Save dir: {args['save_dir']}")
-    print(f"Is path?: {os.path.exists(args['save_dir'])}")
+    print(f"Got valid path for 'save_dir'?: {os.path.exists(args['save_dir'])}\n")
     start_time = time.time()
     for epoch in tqdm(range(args["max_epochs"])):
         epoch_training_stats = defaultdict(float)
