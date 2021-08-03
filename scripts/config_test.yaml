@@ -96,7 +96,7 @@ grid:
     type: choice 
     options: 
       - canonical
-      - AttentiveFP 
+      # - AttentiveFP 
       # - Pretrain
 
 gnn_model: 

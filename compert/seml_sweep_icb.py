@@ -67,6 +67,10 @@ class ExperimentWrapper:
             self.datasets, self.dataset = load_dataset_splits(
                 **data_params, return_dataset=True
             )
+        elif dataset_type == "lincs":
+            self.datasets, self.dataset = load_dataset_splits(
+                **data_params, return_dataset=True
+            )
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, gnn_model: dict, hparams: dict):
@@ -142,6 +146,9 @@ class ExperimentWrapper:
         save_checkpoints: bool,
         save_dir: str,
     ):
+        print(f"CWD: {os.getcwd()}")
+        print(f"Save dir: {save_dir}")
+        print(f"Is path?: {os.path.exists(save_dir)}")
         start_time = time.time()
         for epoch in range(num_epochs):
             epoch_training_stats = defaultdict(float)
@@ -190,7 +197,9 @@ class ExperimentWrapper:
                     }
                 )
                 if save_checkpoints:
-                    if save_dir is None or ~os.path.exists(save_dir):
+                    if save_dir is None or not os.path.exists(save_dir):
+                        print(os.path.exists(save_dir))
+                        print(not os.path.exists(save_dir))
                         raise ValueError(
                             "Please provide a valid directory path in the 'save_dir' argument."
                         )

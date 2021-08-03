@@ -274,7 +274,7 @@ def load_dataset_splits(
     covariate_keys: Union[list, str, None],
     smiles_key: Union[str, None],
     split_key: str,
-    mol_featurizer: str,
+    mol_featurizer: str = "canonical",
     return_dataset: bool = False,
 ):
 

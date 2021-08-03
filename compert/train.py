@@ -4,6 +4,7 @@ import os
 import json
 import argparse
 import time
+import scanpy as sc
 from collections import defaultdict
 
 import numpy as np
@@ -17,7 +18,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
-
+from tqdm import tqdm
 
 from compert.graph_model.graph_model import Drugemb
 
@@ -79,7 +80,6 @@ def evaluate_r2(autoencoder, dataset, genes_control):
     well as R2 score about means and variances about differentially expressed
     (_de) genes.
     """
-
     mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
     num, dim = genes_control.size(0), genes_control.size(1)
 
@@ -125,28 +125,30 @@ def evaluate_r2(autoencoder, dataset, genes_control):
 
             mean_score_de.append(r2_score(yt_m[de_idx], yp_m[de_idx]))
             var_score_de.append(r2_score(yt_v[de_idx], yp_v[de_idx]))
-
     return [
         np.mean(s) if len(s) else -1
         for s in [mean_score, mean_score_de, var_score, var_score_de]
     ]
 
 
-def evaluate(autoencoder, datasets):
+def evaluate(autoencoder, datasets, disentangle=False):
     """
     Measure quality metrics using `evaluate()` on the training, test, and
     out-of-distributiion (ood) splits.
     """
-
+    start_time = time.time()
     autoencoder.eval()
     with torch.no_grad():
         stats_test = evaluate_r2(
             autoencoder, datasets["test_treated"], datasets["test_control"].genes
         )
-
-        disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
-        stats_disent_pert = disent_scores[0]
-        stats_disent_cov = disent_scores[1:]
+        if disentangle:
+            disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
+            stats_disent_pert = disent_scores[0]
+            stats_disent_cov = disent_scores[1:]
+        else:
+            stats_disent_pert = [0]
+            stats_disent_cov = [0]
 
         evaluation_stats = {
             "training": evaluate_r2(
@@ -170,6 +172,8 @@ def evaluate(autoencoder, datasets):
             else None,
         }
     autoencoder.train()
+    ellapsed_minutes = (time.time() - start_time) / 60
+    print(f"Took {ellapsed_minutes:.1f} min for evaluation.")
     return evaluation_stats
 
 
@@ -190,15 +194,20 @@ def prepare_compert(args, state_dict=None):
         args["mol_featurizer"],
     )
     if args["gnn_model"] is not None:
-        drug_embeddings = Drugemb(
-            dim=256,  # TODO: This is set only in Compert model
-            gnn_model=args["gnn_model"],
-            graph_feats_shape=datasets["training"].graph_feats_shape,
-            idx_wo_smiles=datasets["training"].idx_wo_smiles,
-            batched_graph_collection=datasets["training"].batched_graph_collection,
-            device=device,
-        )
+        if args["smiles_key"] is None:
+            print("No 'smiles_key' provided. Learning parameter embedding for drugs.")
+            drug_embeddings = None
+        else:
+            drug_embeddings = Drugemb(
+                dim=256,  # TODO: This is set only in Compert model
+                gnn_model=args["gnn_model"],
+                graph_feats_shape=datasets["training"].graph_feats_shape,
+                idx_wo_smiles=datasets["training"].idx_wo_smiles,
+                batched_graph_collection=datasets["training"].batched_graph_collection,
+                device=device,
+            )
     else:
+        print("Learning parameter embedding for drugs.")
         drug_embeddings = None
 
     autoencoder = ComPert(
@@ -252,8 +261,11 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
     pjson({"training_args": args})
     pjson({"autoencoder_params": autoencoder.hparams})
 
+    print(f"\nCWD: {os.getcwd()}")
+    print(f"Save dir: {args['save_dir']}")
+    print(f"Got valid path for 'save_dir'?: {os.path.exists(args['save_dir'])}\n")
     start_time = time.time()
-    for epoch in range(args["max_epochs"]):
+    for epoch in tqdm(range(args["max_epochs"])):
         epoch_training_stats = defaultdict(float)
 
         for data in datasets["loader_tr"]:
@@ -365,32 +377,63 @@ if __name__ == "__main__":
     if CLI:
         train_compert(parse_arguments())
     else:
-        max_minutes = 1  # testing
-        gnn_models = ["AttentiveFP", "GAT", "GCN", "MPNN", "weave"]
-        for model in gnn_models:
-            args = {
-                "dataset_path": "datasets/trapnell_cpa_subset.h5ad",  # full path to the anndata dataset
-                "covariate_keys": [
-                    "cell_type"
-                ],  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
-                "split_key": "split",  # necessary field for train, test, ood splits.
-                "perturbation_key": "condition",  # necessary field for perturbations
-                "dose_key": "dose",  # necessary field for dose. Fill in with dummy variable if dose is the same.
-                "gnn_model": model,
-                "smiles_key": "SMILES",
-                "mol_featurizer": "canonical",
-                "checkpoint_freq": 40,  # checkoint frequencty to save intermediate results
-                "hparams": "",  # autoencoder architecture
-                "max_epochs": 20,  # maximum epochs for training
-                "max_minutes": max_minutes,  # maximum computation time
-                "patience": 20,  # patience for early stopping
-                "loss_ae": "gauss",  # loss (currently only gaussian loss is supported)
-                "doser_type": None,  # non-linearity for doser function
-                "save_dir": "tmp_save_dir/",  # directory to save the model
-                "decoder_activation": "linear",  # last layer of the decoder
-                "seed": 0,  # random seed
-                "sweep_seeds": 0,
-            }
-            autoencoder, datasets = train_compert(
-                args, return_model=True, ignore_evaluation=False
-            )
+        max_minutes = 100  # testing
+        lincs = True
+        if lincs:
+            gnn_models = [None, "GCN"]
+            for model in gnn_models:
+                args = {
+                    "dataset_path": "datasets/lincs_smiles.h5ad",  # full path to the anndata dataset
+                    "covariate_keys": [
+                        "cell_id"
+                    ],  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+                    "split_key": "split1",  # necessary field for train, test, ood splits.
+                    "perturbation_key": "pert_id",  # necessary field for perturbations
+                    "dose_key": "pert_dose",  # necessary field for dose. Fill in with dummy variable if dose is the same.
+                    "gnn_model": model,
+                    "smiles_key": "canonical_smiles",
+                    "mol_featurizer": "canonical",
+                    "checkpoint_freq": 15,  # checkoint frequencty to save intermediate results
+                    "hparams": "",  # autoencoder architecture
+                    "max_epochs": 20,  # maximum epochs for training
+                    "max_minutes": max_minutes,  # maximum computation time
+                    "patience": 20,  # patience for early stopping
+                    "loss_ae": "gauss",  # loss (currently only gaussian loss is supported)
+                    "doser_type": None,  # non-linearity for doser function
+                    "save_dir": "sweeps/checkpoints",  # directory to save the model
+                    "decoder_activation": "linear",  # last layer of the decoder
+                    "seed": 0,  # random seed
+                    "sweep_seeds": 0,
+                }
+                autoencoder, datasets = train_compert(
+                    args, return_model=True, ignore_evaluation=False
+                )
+        else:
+            gnn_models = [None, "AttentiveFP", "GAT", "GCN", "MPNN", "weave"]
+            for model in gnn_models:
+                args = {
+                    "dataset_path": "datasets/trapnell_cpa_subset.h5ad",  # full path to the anndata dataset
+                    "covariate_keys": [
+                        "cell_type"
+                    ],  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+                    "split_key": "split1",  # necessary field for train, test, ood splits.
+                    "perturbation_key": "condition",  # necessary field for perturbations
+                    "dose_key": "dose",  # necessary field for dose. Fill in with dummy variable if dose is the same.
+                    "gnn_model": model,
+                    "smiles_key": "SMILES",
+                    "mol_featurizer": "AttentiveFP",
+                    "checkpoint_freq": 15,  # checkoint frequencty to save intermediate results
+                    "hparams": "",  # autoencoder architecture
+                    "max_epochs": 20,  # maximum epochs for training
+                    "max_minutes": max_minutes,  # maximum computation time
+                    "patience": 20,  # patience for early stopping
+                    "loss_ae": "gauss",  # loss (currently only gaussian loss is supported)
+                    "doser_type": None,  # non-linearity for doser function
+                    "save_dir": "sweeps/checkpoints",  # directory to save the model
+                    "decoder_activation": "linear",  # last layer of the decoder
+                    "seed": 0,  # random seed
+                    "sweep_seeds": 0,
+                }
+                autoencoder, datasets = train_compert(
+                    args, return_model=True, ignore_evaluation=False
+                )
