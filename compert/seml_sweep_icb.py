@@ -6,14 +6,10 @@ from collections import defaultdict
 import os
 import json
 import time
-import torch
 import seml
 import numpy as np
 import pandas as pd
-from compert.train import custom_collate, evaluate
-from compert.data import load_dataset_splits
-from compert.model import ComPert
-from compert.graph_model.graph_model import Drugemb
+import torch
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -60,6 +56,8 @@ class ExperimentWrapper:
         Since we set prefix="dataset ", this method only gets passed the respective sub-dictionary, enabling a modular
         experiment design.
         """
+        from compert.data import load_dataset_splits
+
         if dataset_type == "kang":
             self.datasets, self.dataset = load_dataset_splits(
                 **data_params, return_dataset=True
@@ -75,6 +73,8 @@ class ExperimentWrapper:
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, gnn_model: dict, hparams: dict):
+        from compert.graph_model.graph_model import Drugemb
+
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model_type = gnn_model["model_type"]
         dim = hparams["dim"]
@@ -100,6 +100,8 @@ class ExperimentWrapper:
 
     @ex.capture(prefix="model")
     def init_model(self, hparams: dict, additional_params: dict):
+        from compert.model import ComPert
+
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.autoencoder = ComPert(
@@ -113,6 +115,8 @@ class ExperimentWrapper:
         )
 
     def update_datasets(self):
+        from compert.train import custom_collate
+
         self.datasets.update(
             {
                 "loader_tr": torch.utils.data.DataLoader(
@@ -131,6 +135,7 @@ class ExperimentWrapper:
         """
         Sequentially run the sub-initializers of the experiment.
         """
+
         self.seed = seed
         self.init_dataset()
         self.init_drug_embedding()
@@ -147,6 +152,8 @@ class ExperimentWrapper:
         save_checkpoints: bool,
         save_dir: str,
     ):
+        from compert.train import evaluate
+
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")
         print(f"Is path?: {os.path.exists(save_dir)}")
