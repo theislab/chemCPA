@@ -463,6 +463,12 @@ class ComPert(torch.nn.Module):
         if self.num_drugs > 0:
             self.scheduler_dosers.step()
 
+        if score > self.best_score: 
+            self.best_score = score
+            self.patience_trials = 0
+        else: 
+            self.patience_trials +=1 
+
         return self.patience_trials > self.patience
 
     def update(self, genes, drugs, covariates):

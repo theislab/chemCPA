@@ -9,6 +9,7 @@ import time
 import torch
 import seml
 import numpy as np
+import pandas as pd
 from compert.train import custom_collate, evaluate
 from compert.data import load_dataset_splits
 from compert.model import ComPert
@@ -178,16 +179,21 @@ class ExperimentWrapper:
             stop = ellapsed_minutes > max_minutes or (epoch == num_epochs - 1)
 
             if (epoch % checkpoint_freq) == 0 or stop:
+                evaluation_stats = {}
                 if not ignore_evaluation:
                     evaluation_stats = evaluate(self.autoencoder, self.datasets)
+                    score = np.mean(evaluation_stats["test"])
+                    stop = stop or self.autoencoder.early_stopping(score)
+
+                    if stop:
+                        evaluation_stats = evaluate(
+                            self.autoencoder, self.datasets, disentangle=True
+                        )
                     for key, val in evaluation_stats.items():
                         if not (key in self.autoencoder.history.keys()):
                             self.autoencoder.history[key] = []
                         self.autoencoder.history[key].append(val)
                     self.autoencoder.history["stats_epoch"].append(epoch)
-                else:
-                    evaluation_stats = {}
-
                 pjson(
                     {
                         "epoch": epoch,
@@ -196,6 +202,7 @@ class ExperimentWrapper:
                         "ellapsed_minutes": ellapsed_minutes,
                     }
                 )
+
                 if save_checkpoints:
                     if save_dir is None or not os.path.exists(save_dir):
                         print(os.path.exists(save_dir))
@@ -203,34 +210,24 @@ class ExperimentWrapper:
                         raise ValueError(
                             "Please provide a valid directory path in the 'save_dir' argument."
                         )
+                    file_name = "model_seed={}_epoch={}.pt".format(self.seed, epoch)
                     torch.save(
                         (
                             self.autoencoder.state_dict(),
                             self.autoencoder.hparams,
                             self.autoencoder.history,
                         ),
-                        os.path.join(
-                            save_dir,
-                            "model_seed={}_epoch={}.pt".format(self.seed, epoch),
-                        ),
+                        os.path.join(save_dir, file_name),
                     )
 
-                    pjson(
-                        {
-                            "model_saved": "model_seed={}_epoch={}.pt\n".format(
-                                self.seed, epoch
-                            )
-                        }
-                    )
-                if not ignore_evaluation:
-                    stop = stop or self.autoencoder.early_stopping(
-                        np.mean(evaluation_stats["test"])
-                    )
+                    pjson({"model_saved": file_name})
+
                 if stop:
                     pjson({"early_stop": epoch})
                     break
 
         results = self.autoencoder.history
+        # results = pd.DataFrame.from_dict(results) # not same length!
         results["total_epochs"] = epoch
         return results
 

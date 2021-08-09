@@ -49,7 +49,14 @@ def evaluate_disentanglement(autoencoder, dataset, nonlinear=False):
     if nonlinear:
         clf = KNeighborsClassifier(n_neighbors=int(np.sqrt(len(latent_basal))))
     else:
-        clf = LogisticRegression(solver="liblinear", multi_class="auto", max_iter=10000)
+        clf = LogisticRegression(
+            solver="saga",
+            multi_class="multinomial",
+            max_iter=3000,
+            # n_jobs=-1,
+            # verbose=2,
+            tol=1e-2,
+        )
 
     pert_scores, cov_scores = 0, []
 
@@ -120,11 +127,22 @@ def evaluate_r2(autoencoder, dataset, genes_control):
             yp_m = mean_predict.mean(0)
             yp_v = var_predict.mean(0)
 
-            mean_score.append(r2_score(yt_m, yp_m))
-            var_score.append(r2_score(yt_v, yp_v))
+            yp_m = torch.clamp(yp_m, -3e12, 3e12)
+            yp_v = torch.clamp(yp_v, -3e12, 3e12)
 
-            mean_score_de.append(r2_score(yt_m[de_idx], yp_m[de_idx]))
-            var_score_de.append(r2_score(yt_v[de_idx], yp_v[de_idx]))
+            r2_m = -1 if torch.isnan(yp_m).any() else r2_score(yt_m, yp_m)
+            r2_v = -1 if torch.isnan(yp_v).any() else r2_score(yt_v, yp_v)
+            r2_m_de = (
+                -1 if torch.isnan(yp_m).any() else r2_score(yt_m[de_idx], yp_m[de_idx])
+            )
+            r2_v_de = (
+                -1 if torch.isnan(yp_v).any() else r2_score(yt_v[de_idx], yp_v[de_idx])
+            )
+
+            mean_score.append(r2_m)
+            var_score.append(r2_v)
+            mean_score_de.append(r2_m_de)
+            var_score_de.append(r2_v_de)
     return [
         np.mean(s) if len(s) else -1
         for s in [mean_score, mean_score_de, var_score, var_score_de]
@@ -173,7 +191,7 @@ def evaluate(autoencoder, datasets, disentangle=False):
         }
     autoencoder.train()
     ellapsed_minutes = (time.time() - start_time) / 60
-    print(f"Took {ellapsed_minutes:.1f} min for evaluation.")
+    print(f"\nTook {ellapsed_minutes:.1f} min for evaluation.\n")
     return evaluation_stats
 
 
@@ -263,7 +281,7 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
 
     print(f"\nCWD: {os.getcwd()}")
     print(f"Save dir: {args['save_dir']}")
-    print(f"Got valid path for 'save_dir'?: {os.path.exists(args['save_dir'])}\n")
+    print(f"Got valid path for 'save_dir': {os.path.exists(args['save_dir'])}\n")
     start_time = time.time()
     for epoch in tqdm(range(args["max_epochs"])):
         epoch_training_stats = defaultdict(float)
@@ -294,7 +312,9 @@ def train_compert(args, return_model=False, ignore_evaluation=True):
 
         if (epoch % args["checkpoint_freq"]) == 0 or stop:
             if not ignore_evaluation:
-                evaluation_stats = evaluate(autoencoder, datasets)
+                evaluation_stats = evaluate(
+                    autoencoder, datasets, disentangle=True if stop else False
+                )
                 for key, val in evaluation_stats.items():
                     if not (key in autoencoder.history.keys()):
                         autoencoder.history[key] = []
@@ -395,7 +415,7 @@ if __name__ == "__main__":
                     "mol_featurizer": "canonical",
                     "checkpoint_freq": 15,  # checkoint frequencty to save intermediate results
                     "hparams": "",  # autoencoder architecture
-                    "max_epochs": 20,  # maximum epochs for training
+                    "max_epochs": 5,  # maximum epochs for training
                     "max_minutes": max_minutes,  # maximum computation time
                     "patience": 20,  # patience for early stopping
                     "loss_ae": "gauss",  # loss (currently only gaussian loss is supported)
