@@ -428,11 +428,10 @@ class ComPert(torch.nn.Module):
         if self.num_drugs > 0:
             latent_treated = latent_treated + self.compute_drug_embeddings_(drugs)
         if self.num_covariates[0] > 0:
-            for i, emb in enumerate(self.covariates_embeddings):
-                emb = emb.to(self.device)
-                latent_treated = latent_treated + emb(
-                    covariates[i].argmax(1)
-                )  # TODO: Why argmax here?
+            for cov_type, emb_cov in enumerate(self.covariates_embeddings):
+                emb_cov = emb_cov.to(self.device)
+                cov_idx = covariates[cov_type].argmax(1)
+                latent_treated = latent_treated + emb_cov(cov_idx)
 
         gene_reconstructions = self.decoder(latent_treated)
 
@@ -463,11 +462,11 @@ class ComPert(torch.nn.Module):
         if self.num_drugs > 0:
             self.scheduler_dosers.step()
 
-        if score > self.best_score: 
+        if score > self.best_score:
             self.best_score = score
             self.patience_trials = 0
-        else: 
-            self.patience_trials +=1 
+        else:
+            self.patience_trials += 1
 
         return self.patience_trials > self.patience
 
