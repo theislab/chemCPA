@@ -144,4 +144,4 @@ dmypy.json
 # VSCode 
 settings.json
 
-scripts/config_full_lincs.yaml
+scripts/*.yaml  
