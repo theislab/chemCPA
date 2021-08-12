@@ -52,8 +52,9 @@ class Dataset:
         split_key="split",
         mol_featurizer="canonical",
     ):
-
+        print(f"Starting to read in data: {fname}\n...")
         data = sc.read(fname)
+        print(f"Finished data loading.")
         self.genes = torch.Tensor(data.X.A)
         self.var_names = data.var_names
 
