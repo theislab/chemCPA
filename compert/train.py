@@ -30,6 +30,94 @@ def pjson(s):
     print(json.dumps(s), flush=True)
 
 
+def bool2idx(x):
+    """
+    Returns the indices of the True-valued entries in a boolean array `x`
+    """
+    return np.where(x)[0]
+
+
+def repeat_n(x, n):
+    """
+    Reuturns an n-times repeated version of the Tensor x,
+    repitition dimension is axis 0
+    """
+    return x.view(1, -1).repeat(n, 1).clone()
+
+
+def mean(x: list):
+    """
+    Returns mean of list `x`
+    """
+    return np.mean(x) if len(x) else -1
+
+
+def compute_prediction(autoencoder, genes, emb_drugs, emb_covs):
+    """
+    Computes the prediction of a ComPert `autoencoder` and
+    directly splits into `mean` and `variance` predicitons
+    """
+    genes_pred = autoencoder.predict(genes, emb_drugs, emb_covs)
+    genes_pred = genes_pred.detach().cpu()
+    dim = genes.size(1)
+    mean = genes_pred[:, :dim]
+    var = genes_pred[:, dim:]
+    return mean, var
+
+
+def compute_r2(y_true, y_pred):
+    """
+    Computes the r2 score for `y_true` and `y_pred`,
+    returns `-1` when `y_pred` contains nan values
+    """
+    y_pred = torch.clamp(y_pred, -3e12, 3e12)
+    r2 = 0 if torch.isnan(y_pred).any() else max(r2_score(y_true, y_pred), 0)
+    return r2
+
+
+def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
+    logfold_score = []
+    # assumes that `pert_categories` where constructed with first covariate type
+    cov_type = ds_treated.covariate_keys[0]
+    for pert_category in np.unique(ds_treated.pert_categories):
+        covariate = pert_category.split("_")[0]
+        idx_treated_all = bool2idx(ds_treated.pert_categories == pert_category)
+        idx_treated, n_idx_treated = idx_treated_all[0], len(idx_treated_all)
+
+        bool_ctrl_all = ds_ctrl.covariate_names[cov_type] == covariate
+        idx_ctrl_all = bool2idx(bool_ctrl_all)
+        n_idx_ctrl = len(idx_ctrl_all)
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if n_idx_treated <= 30:
+            continue
+
+        emb_drugs = repeat_n(ds_treated.drugs[idx_treated], n_idx_ctrl)
+        emb_covs = [
+            repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
+        ]
+
+        genes_ctrl = ds_ctrl.genes[idx_ctrl_all]
+
+        genes_pred, _ = compute_prediction(
+            autoencoder,
+            genes_ctrl,
+            emb_drugs,
+            emb_covs,
+        )
+        genes_true = ds_treated.genes[idx_treated_all, :]
+
+        y_ctrl = genes_ctrl.mean(0)
+        y_pred = genes_pred.mean(0)
+        y_true = genes_true.mean(0)
+
+        pred = y_pred - y_ctrl
+        true = y_true - y_ctrl
+        r2 = compute_r2(true, pred)
+
+        logfold_score.append(r2)
+    return mean(logfold_score)
+
+
 def evaluate_disentanglement(autoencoder, dataset, nonlinear=False):
     """
     Given a ComPert model, this function measures the correlation between
@@ -90,63 +178,50 @@ def evaluate_r2(autoencoder, dataset, genes_control):
     mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
     num, dim = genes_control.size(0), genes_control.size(1)
 
-    total_cells = len(dataset)
-
     for pert_category in np.unique(dataset.pert_categories):
         if dataset.perturbation_key is None:
             break
         # pert_category category contains: 'celltype_perturbation_dose' info
-        de_idx = np.where(
-            dataset.var_names.isin(np.array(dataset.de_genes[pert_category]))
-        )[0]
+        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[pert_category]))
+        idx_de = bool2idx(bool_de)
 
-        idx = np.where(dataset.pert_categories == pert_category)[0]
+        idx_all = bool2idx(dataset.pert_categories == pert_category)
+        idx, n_idx = idx_all[0], len(idx_all)
 
-        if len(idx) > 30:
-            emb_drugs = dataset.drugs[idx][0].view(1, -1).repeat(num, 1).clone()
-            emb_covars = [
-                covar[idx][0].view(1, -1).repeat(num, 1).clone()
-                for covar in dataset.covariates
-            ]
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if n_idx <= 30:
+            continue
 
-            genes_predict = (
-                autoencoder.predict(genes_control, emb_drugs, emb_covars).detach().cpu()
-            )
+        emb_drugs = repeat_n(dataset.drugs[idx], num)
+        emb_covs = [repeat_n(cov[idx], num) for cov in dataset.covariates]
 
-            mean_predict = genes_predict[:, :dim]
-            var_predict = genes_predict[:, dim:]
+        mean_pred, var_pred = compute_prediction(
+            autoencoder,
+            genes_control,
+            emb_drugs,
+            emb_covs,
+        )
 
-            # estimate metrics only for reasonably-sized drug/cell-type combos
+        y_true = dataset.genes[idx_all, :].numpy()
 
-            y_true = dataset.genes[idx, :].numpy()
+        # true means and variances
+        yt_m = y_true.mean(axis=0)
+        yt_v = y_true.var(axis=0)
+        # predicted means and variances
+        yp_m = mean_pred.mean(0)
+        yp_v = var_pred.mean(0)
 
-            # true means and variances
-            yt_m = y_true.mean(axis=0)
-            yt_v = y_true.var(axis=0)
-            # predicted means and variances
-            yp_m = mean_predict.mean(0)
-            yp_v = var_predict.mean(0)
+        r2_m = compute_r2(yt_m, yp_m)
+        r2_v = compute_r2(yt_v, yp_v)
+        r2_m_de = compute_r2(yt_m[idx_de], yp_m[idx_de])
+        r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
 
-            yp_m = torch.clamp(yp_m, -3e12, 3e12)
-            yp_v = torch.clamp(yp_v, -3e12, 3e12)
-
-            r2_m = -1 if torch.isnan(yp_m).any() else r2_score(yt_m, yp_m)
-            r2_v = -1 if torch.isnan(yp_v).any() else r2_score(yt_v, yp_v)
-            r2_m_de = (
-                -1 if torch.isnan(yp_m).any() else r2_score(yt_m[de_idx], yp_m[de_idx])
-            )
-            r2_v_de = (
-                -1 if torch.isnan(yp_v).any() else r2_score(yt_v[de_idx], yp_v[de_idx])
-            )
-
-            mean_score.append(r2_m)
-            var_score.append(r2_v)
-            mean_score_de.append(r2_m_de)
-            var_score_de.append(r2_v_de)
-    return [
-        np.mean(s) if len(s) else -1
-        for s in [mean_score, mean_score_de, var_score, var_score_de]
-    ]
+        mean_score.append(r2_m)
+        var_score.append(r2_v)
+        mean_score_de.append(r2_m_de)
+        var_score_de.append(r2_v_de)
+    print(f"Number of different r2 computations: {len(mean_score)}")
+    return [mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]]
 
 
 def evaluate(autoencoder, datasets, disentangle=False):
@@ -177,6 +252,15 @@ def evaluate(autoencoder, datasets, disentangle=False):
             "test": stats_test,
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
+            ),
+            "training_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["training_treated"], datasets["training_control"]
+            ),
+            "test_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["test_treated"], datasets["test_control"]
+            ),
+            "ood_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["ood"], datasets["test_control"]
             ),
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": 1 / datasets["test"].num_drugs
