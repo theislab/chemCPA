@@ -122,7 +122,7 @@ class GeneralizedSigmoid(torch.nn.Module):
     drug perurbations.
     """
 
-    def __init__(self, dim, device, nonlin="sigmoid"):
+    def __init__(self, dim, device, nonlin="sigm"):
         """Sigmoid modeling of continuous variable.
         Params
         ------
