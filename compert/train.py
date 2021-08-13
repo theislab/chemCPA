@@ -110,8 +110,9 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
         y_pred = genes_pred.mean(0)
         y_true = genes_true.mean(0)
 
-        pred = y_pred - y_ctrl
-        true = y_true - y_ctrl
+        eps = 1e-5
+        pred = torch.log2(y_pred + eps) - torch.log2(y_ctrl + eps)
+        true = torch.log2(y_true + eps) - torch.log2(y_ctrl + eps)
         r2 = compute_r2(true, pred)
 
         logfold_score.append(r2)
