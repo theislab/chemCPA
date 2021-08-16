@@ -1,16 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
 import warnings
+import numpy as np
 import torch
 
-import numpy as np
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 import scanpy as sc
 import pandas as pd
 
 from sklearn.preprocessing import OneHotEncoder
-from .helper import graph_from_smiles
+from compert.helper import graph_from_smiles
 from typing import Union
 
 
@@ -130,9 +130,7 @@ class Dataset:
             self.drug_dict = None
             self.drugs = None
 
-        if (
-            smiles_key is not None
-        ):  # TODO: Generalise to more than just SMILES, mol_rep_key
+        if smiles_key is not None:
             if mol_featurizer not in mol_featurizers:
                 raise ValueError(f"mol_featurizer must be one of {mol_featurizers}")
             graph_tuple = graph_from_smiles(
@@ -303,3 +301,21 @@ def load_dataset_splits(
         return splits, dataset
     else:
         return splits
+
+
+if __name__ == "__main__":
+    print("Strating\n...")
+    config = {
+        "dataset_path": "datasets/trapnell_cpa_subset.h5ad",  # full path to the anndata dataset
+        "perturbation_key": "condition",
+        "covariate_keys": "cell_type",  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+        "dose_key": "dose",
+        "split_key": "split1",  # necessary field for train, test, ood splits.
+        "smiles_key": "SMILES",
+        "split_key": "split1",
+        "mol_featurizer": "canonical",
+    }
+    for featurizer in ["canonical", "AttentiveFP", "Pretrain"]:
+        config["mol_featurizer"] = featurizer
+        load_dataset_splits(**config)
+        print(f'Finished for {config["mol_featurizer"]}.\n\n\n')
