@@ -88,7 +88,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
         idx_ctrl_all = bool2idx(bool_ctrl_all)
         n_idx_ctrl = len(idx_ctrl_all)
         # estimate metrics only for reasonably-sized drug/cell-type combos
-        if n_idx_treated <= 30:
+        if n_idx_treated <= 5:
             continue
 
         emb_drugs = repeat_n(ds_treated.drugs[idx_treated], n_idx_ctrl)
@@ -190,7 +190,7 @@ def evaluate_r2(autoencoder, dataset, genes_control):
         idx, n_idx = idx_all[0], len(idx_all)
 
         # estimate metrics only for reasonably-sized drug/cell-type combos
-        if n_idx <= 30:
+        if n_idx <= 5:
             continue
 
         emb_drugs = repeat_n(dataset.drugs[idx], num)
