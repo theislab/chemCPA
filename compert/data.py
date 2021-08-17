@@ -49,6 +49,7 @@ class Dataset:
         dose_key=None,
         covariate_keys=None,
         smiles_key=None,
+        pert_category="cov_drug_dose_name",
         split_key="split",
         mol_featurizer="canonical",
     ):
@@ -72,7 +73,7 @@ class Dataset:
                 raise ValueError(
                     f"A 'dose_key' is required when provided a 'perturbation_key'({perturbation_key})."
                 )
-            self.pert_categories = np.array(data.obs["cov_drug_dose_name"].values)
+            self.pert_categories = np.array(data.obs[pert_category].values)
             self.de_genes = data.uns["rank_genes_groups_cov"]
 
             self.drugs_names = np.array(data.obs[perturbation_key].values)
