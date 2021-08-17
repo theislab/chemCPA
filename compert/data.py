@@ -273,7 +273,8 @@ def load_dataset_splits(
     dose_key: Union[str, None],
     covariate_keys: Union[list, str, None],
     smiles_key: Union[str, None],
-    split_key: str,
+    pert_category: str = "cov_drug_dose_name",
+    split_key: str = "split",
     mol_featurizer: str = "canonical",
     return_dataset: bool = False,
 ):
@@ -284,6 +285,7 @@ def load_dataset_splits(
         dose_key,
         covariate_keys,
         smiles_key,
+        pert_category,
         split_key,
         mol_featurizer,
     )
@@ -315,6 +317,7 @@ if __name__ == "__main__":
         "smiles_key": "SMILES",
         "split_key": "split1",
         "mol_featurizer": "canonical",
+        "pert_category": "cov_drug_dose_name",
     }
     for featurizer in ["canonical", "AttentiveFP", "Pretrain"]:
         config["mol_featurizer"] = featurizer
