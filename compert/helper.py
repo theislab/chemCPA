@@ -146,7 +146,7 @@ def graph_from_smiles(
     node_feats, edge_feats = featurisers
 
     # List of valid graphs from SMILES
-    smiles2graph = lambda smiles: smiles_to_bigraph(
+    smiles2bidirected_graph = lambda smiles: smiles_to_bigraph(
         smiles=smiles,
         add_self_loop=True,
         node_featurizer=node_feats,
@@ -172,7 +172,7 @@ def graph_from_smiles(
         if smiles == "":
             idx_wo_smiles.append(i)
             continue
-        graph = smiles2graph(smiles)
+        graph = smiles2bidirected_graph(smiles)
         valid_graphs.append(graph) if graph is not None else idx_bad_smiles.append(i)
 
     def send_warning(idx, signal):
