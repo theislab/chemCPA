@@ -10,6 +10,7 @@ from dgllife.utils import (
     PretrainAtomFeaturizer,
     PretrainBondFeaturizer,
 )
+from rdkit import Chem
 import warnings
 
 
@@ -145,21 +146,33 @@ def graph_from_smiles(
     node_feats, edge_feats = featurisers
 
     # List of valid graphs from SMILES
-    smiles2graph = lambda smiles: smiles_to_bigraph(
+    smiles2bidirected_graph = lambda smiles: smiles_to_bigraph(
         smiles=smiles,
         add_self_loop=True,
         node_featurizer=node_feats,
         edge_featurizer=edge_feats,
     )
 
+    def check_smiles(smiles, mol_featuriser, verbose=False):
+        smiles_canonical = Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
+        if smiles != smiles_canonical:
+            print(f"{smiles} -> {smiles_canonical}") if verbose else None
+        if mol_featuriser == "Pretrain":
+            if "*." in smiles_canonical:
+                new_smiles = smiles_canonical.replace("*.", "")
+                print(f"Ignore unknown atom for smiles: {smiles} -> {new_smiles}.")
+                smiles = new_smiles
+        return smiles
+
     idx_wo_smiles = []
     idx_bad_smiles = []
     valid_graphs = []
     for i, smiles in enumerate(df[smiles_key]):
+        smiles = check_smiles(smiles, mol_featuriser)
         if smiles == "":
             idx_wo_smiles.append(i)
             continue
-        graph = smiles2graph(smiles)
+        graph = smiles2bidirected_graph(smiles)
         valid_graphs.append(graph) if graph is not None else idx_bad_smiles.append(i)
 
     def send_warning(idx, signal):
