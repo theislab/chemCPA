@@ -177,8 +177,8 @@ def graph_from_smiles(
 
 def get_featurisers(mol_featurizer: str = "canonical", return_shape: bool = True):
     """
-    Returns the tuple (node_feats, edge_feats) for the specified molecule featurizer a
-    nd optionally their shape
+    Returns the tuple (node_feats, edge_feats) for the specified molecule featurizer
+    and optionally their shape
     """
     featurizers = ["canonical", "AttentiveFP", "Pretrain"]
     if mol_featurizer == "canonical":
