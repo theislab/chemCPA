@@ -1,0 +1,25 @@
+name: chemical_CPA
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - adjusttext
+  - matplotlib
+  - numpy
+  - pandas
+  - scanpy
+  - scipy
+  - seaborn
+  - scikit-learn
+  - submitit
+  - jupyter
+  - jupytext
+  - pytorch::pytorch
+  - cudatoolkit=10.2
+  - dglteam::dgl
+  - dglteam::dgllife
+  - rdkit
+  - pip
+  - pip:
+    - seml
