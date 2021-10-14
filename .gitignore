@@ -1,5 +1,6 @@
 #Individual
 notebooks/trapnell_2.ipynb
+.idea/
 kang_preprocessed*
 model_seed*
 sweeps/logs/*

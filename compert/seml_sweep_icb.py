@@ -156,7 +156,7 @@ class ExperimentWrapper:
 
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")
-        print(f"Is path?: {os.path.exists(save_dir)}")
+        print(f"Is path?: {os.path.exists(save_dir) if save_dir else None}")
         start_time = time.time()
         for epoch in range(num_epochs):
             epoch_training_stats = defaultdict(float)
