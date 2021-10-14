@@ -1,6 +1,7 @@
 #Individual
 notebooks/trapnell_2.ipynb
 .idea/
+.vscode/
 kang_preprocessed*
 model_seed*
 sweeps/logs/*

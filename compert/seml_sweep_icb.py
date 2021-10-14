@@ -1,15 +1,12 @@
-import logging
-from random import seed
-from typing import OrderedDict
-from sacred import Experiment
-from collections import defaultdict
-import os
 import json
+import os
 import time
-import seml
+from collections import defaultdict
+
 import numpy as np
-import pandas as pd
+import seml
 import torch
+from sacred import Experiment
 
 ex = Experiment()
 seml.setup_logger(ex)
