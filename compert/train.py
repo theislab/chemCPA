@@ -40,7 +40,7 @@ def repeat_n(x, n):
     Returns an n-times repeated version of the Tensor x,
     repetition dimension is axis 0
     """
-    # copy tensor to device BEFORE replicating it n time
+    # copy tensor to device BEFORE replicating it n times
     device = "cuda" if torch.cuda.is_available() else "cpu"
     return x.to(device).view(1, -1).repeat(n, 1)
 
