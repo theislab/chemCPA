@@ -112,6 +112,9 @@ class ExperimentWrapper:
         )
 
     def update_datasets(self):
+        """
+        Instantiates a torch DataLoader for the given batchsize
+        """
         from compert.train import custom_collate
 
         self.datasets.update(
@@ -161,6 +164,7 @@ class ExperimentWrapper:
 
             for data in self.datasets["loader_tr"]:
                 genes, drugs, covariates = data[0], data[1], data[2:]
+                # data is moved to GPU in the update function
                 minibatch_training_stats = self.autoencoder.update(
                     genes, drugs, covariates
                 )
@@ -183,6 +187,7 @@ class ExperimentWrapper:
             # time ran out OR max epochs achieved
             stop = ellapsed_minutes > max_minutes or (epoch == num_epochs - 1)
 
+            # TODO doesn't really make sense to evaluate at 0, right?
             if (epoch % checkpoint_freq) == 0 or stop:
                 evaluation_stats = {}
                 if not ignore_evaluation:

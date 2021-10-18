@@ -16,6 +16,7 @@ dependencies:
   - jupyter
   - jupytext
   - pytorch::pytorch
+  - torchmetrics
   - cudatoolkit=10.2
   - dglteam::dgl
   - dglteam::dgllife
