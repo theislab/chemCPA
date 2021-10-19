@@ -340,7 +340,9 @@ def custom_collate(batch):
         if samples[0] is None:
             concat_batch.append(None)
         else:
-            concat_batch.append(torch.stack(samples, 0))
+            # we move to CUDA here so that prefetching in the DataLoader already yields
+            # ready-to-process CUDA tensors
+            concat_batch.append(torch.stack(samples, 0).to("cuda"))
     return concat_batch
 
 

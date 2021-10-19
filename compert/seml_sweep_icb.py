@@ -124,7 +124,6 @@ class ExperimentWrapper:
                     batch_size=self.autoencoder.hparams["batch_size"],
                     collate_fn=custom_collate,
                     shuffle=True,
-                    num_workers=4,
                 )
             }
         )
