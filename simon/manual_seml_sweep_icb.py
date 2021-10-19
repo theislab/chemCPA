@@ -3,26 +3,28 @@ from pprint import pprint
 
 from compert.seml_sweep_icb import ExperimentWrapper
 
-exp = ExperimentWrapper(init_all=False)
+if __name__ == '__main__':
+    exp = ExperimentWrapper(init_all=False)
 
-# this is how seml loads the config file internally
-seml_config, slurm_config, experiment_config = read_config(
-    "simon/config_sciplex3_interactive.yaml"
-)
-# we take the first config generated
-args = generate_configs(experiment_config)[0]
-pprint(args)
+    # this is how seml loads the config file internally
+    seml_config, slurm_config, experiment_config = read_config(
+        "simon/config_sciplex3_interactive.yaml"
+    )
+    # we take the first config generated
+    args = generate_configs(experiment_config)[0]
+    pprint(args)
 
-exp.seed = 1337
-# loads the dataset splits
-exp.init_dataset(**args["dataset"])
-exp.init_drug_embedding(
-    gnn_model=args["model"]["gnn_model"], hparams=args["model"]["hparams"]
-)
-exp.init_model(
-    hparams=args["model"]["hparams"],
-    additional_params=args["model"]["additional_params"],
-)
-exp.update_datasets()
+    exp.seed = 1337
+    # loads the dataset splits
+    exp.init_dataset(**args["dataset"])
 
-exp.train(**args["training"])
+    exp.init_drug_embedding(
+        gnn_model=args["model"]["gnn_model"], hparams=args["model"]["hparams"]
+    )
+    exp.init_model(
+        hparams=args["model"]["hparams"],
+        additional_params=args["model"]["additional_params"],
+    )
+    exp.update_datasets()
+
+    exp.train(**args["training"])

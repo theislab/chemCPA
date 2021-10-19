@@ -121,11 +121,12 @@ class ExperimentWrapper:
                     batch_size=self.autoencoder.hparams["batch_size"],
                     collate_fn=custom_collate,
                     shuffle=True,
+                    num_workers=4,
                 )
             }
         )
         # pjson({"training_args": args})
-        pjson({"autoencoder_params": self.autoencoder.hparams})
+        # pjson({"autoencoder_params": self.autoencoder.hparams})
 
     @ex.capture
     def init_all(self, seed):
