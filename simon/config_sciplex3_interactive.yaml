@@ -1,0 +1,68 @@
+# Config for hyperparameter-tuning CPA on SciPlex 3 with pretrained (and frozen) HierVAE drug embeddings.
+seml:
+  executable: compert/seml_sweep_icb.py
+  name: cpa_graphs_sciplex3
+  output_dir: sweeps/logs
+  conda_environment: chemical_CPA
+  project_root_dir: ..
+
+slurm:
+  experiments_per_job: 1
+  max_jobs_per_batch: 4
+  sbatch_options_template: GPU
+  sbatch_options:
+    gres: gpu:1       # num GPUs
+    mem: 32G          # memory
+    cpus-per-task: 6  # num cores
+    time: 0-01:01     # max time, D-HH:MM
+###### BEGIN PARAMETER CONFIGURATION ######
+
+fixed:
+  training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
+  training.num_epochs: 10 # maximum epochs for training
+  training.max_minutes: 300 # maximum computation time
+  training.ignore_evaluation: False
+  training.save_checkpoints: False
+  training.save_dir: sweeps/checkpoints
+  
+  model.additional_params.seed: 0 # random seed
+  model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
+  model.additional_params.patience: 20 # patience for early stopping
+  model.additional_params.decoder_activation: linear # last layer of the decoder
+  model.additional_params.doser_type: sigm # non-linearity for doser function
+ 
+  dataset.dataset_type: trapnell
+  dataset.data_params.dataset_path: datasets/trapnell_cpa_subset.h5ad # full path to the anndata dataset
+  dataset.data_params.perturbation_key: condition
+  dataset.data_params.dose_key: dose
+  dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+  dataset.data_params.smiles_key: SMILES
+  dataset.data_params.split_key: split # necessary field for train, test, ood splits.
+  dataset.data_params.mol_featurizer: canonical
+
+  model.hparams.dropout: 0.1
+  model.hparams.dim: 128
+  model.hparams.dosers_width: 32
+  model.hparams.dosers_depth: 1
+  model.hparams.dosers_lr: 1e-2
+  model.hparams.dosers_wd: 1e-8
+  model.hparams.autoencoder_width: 256
+  model.hparams.autoencoder_depth: 3
+  model.hparams.autoencoder_lr: 1e-2
+  model.hparams.autoencoder_wd: 1e-8
+  model.hparams.adversary_width: 64
+  model.hparams.adversary_depth: 2
+  model.hparams.adversary_lr: 1e-3
+  model.hparams.adversary_wd: 1e-6
+  model.hparams.adversary_steps: 1
+  model.hparams.reg_adversary: 1e-2
+  model.hparams.penalty_adversary: 1e-2
+  model.hparams.batch_size: 128
+  model.hparams.step_size_lr: 15
+
+
+gnn_model: # configures the GNN used in end-to-end training of the embedding (not used anymore)
+  fixed:
+    model.gnn_model.hparams.n_layers: 2
+    model.gnn_model.GCN.hparams.n_layers: 3
+    model.gnn_model.model_type: null

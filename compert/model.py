@@ -384,12 +384,11 @@ class ComPert(torch.nn.Module):
         """
         Move minibatch tensors to CPU/GPU.
         """
-        if genes.device.type != self.device:
-            genes = genes.to(self.device)
-            if drugs is not None:
-                drugs = drugs.to(self.device)
-            if covariates is not None:
-                covariates = [cov.to(self.device) for cov in covariates]
+        genes = genes.to(self.device)
+        if drugs is not None:
+            drugs = drugs.to(self.device)
+        if covariates is not None:
+            covariates = [cov.to(self.device) for cov in covariates]
         return (genes, drugs, covariates)
 
     def compute_drug_embeddings_(self, drugs):

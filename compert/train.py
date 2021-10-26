@@ -1,26 +1,24 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-import os
-import json
 import argparse
+import json
+import os
 import time
-import scanpy as sc
 from collections import defaultdict
 
 import numpy as np
 import torch
-
-from compert.data import load_dataset_splits
-from compert.model import ComPert
-
-from sklearn.metrics import r2_score, balanced_accuracy_score, make_scorer
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import balanced_accuracy_score, make_scorer
 from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
+from torchmetrics import R2Score
 from tqdm import tqdm
 
+from compert.data import load_dataset_splits
 from compert.graph_model.graph_model import Drugemb
+from compert.model import ComPert
 
 
 def pjson(s):
@@ -39,10 +37,12 @@ def bool2idx(x):
 
 def repeat_n(x, n):
     """
-    Reuturns an n-times repeated version of the Tensor x,
-    repitition dimension is axis 0
+    Returns an n-times repeated version of the Tensor x,
+    repetition dimension is axis 0
     """
-    return x.view(1, -1).repeat(n, 1).clone()
+    # copy tensor to device BEFORE replicating it n times
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    return x.to(device).view(1, -1).repeat(n, 1)
 
 
 def mean(x: list):
@@ -52,13 +52,12 @@ def mean(x: list):
     return np.mean(x) if len(x) else -1
 
 
-def compute_prediction(autoencoder, genes, emb_drugs, emb_covs):
+def compute_prediction(autoencoder: ComPert, genes, emb_drugs, emb_covs):
     """
     Computes the prediction of a ComPert `autoencoder` and
-    directly splits into `mean` and `variance` predicitons
+    directly splits into `mean` and `variance` predictions
     """
-    genes_pred = autoencoder.predict(genes, emb_drugs, emb_covs)
-    genes_pred = genes_pred.detach().cpu()
+    genes_pred = autoencoder.predict(genes, emb_drugs, emb_covs).detach()
     dim = genes.size(1)
     mean = genes_pred[:, :dim]
     var = genes_pred[:, dim:]
@@ -71,7 +70,9 @@ def compute_r2(y_true, y_pred):
     returns `-1` when `y_pred` contains nan values
     """
     y_pred = torch.clamp(y_pred, -3e12, 3e12)
-    r2 = 0 if torch.isnan(y_pred).any() else max(r2_score(y_true, y_pred), 0)
+    metric = R2Score().to(y_true.device)
+    metric.update(y_pred, y_true)  # same as sklearn.r2_score(y_true, y_pred)
+    r2 = 0 if torch.isnan(y_pred).any() else max(metric.compute().item(), 0)
     return r2
 
 
@@ -96,7 +97,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
             repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
         ]
 
-        genes_ctrl = ds_ctrl.genes[idx_ctrl_all]
+        genes_ctrl = ds_ctrl.genes[idx_ctrl_all].to(device="cuda")
 
         genes_pred, _ = compute_prediction(
             autoencoder,
@@ -104,7 +105,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
             emb_drugs,
             emb_covs,
         )
-        genes_true = ds_treated.genes[idx_treated_all, :]
+        genes_true = ds_treated.genes[idx_treated_all, :].to(device="cuda")
 
         y_ctrl = genes_ctrl.mean(0)
         y_pred = genes_pred.mean(0)
@@ -203,14 +204,15 @@ def evaluate_r2(autoencoder, dataset, genes_control):
             emb_covs,
         )
 
-        y_true = dataset.genes[idx_all, :].numpy()
+        # copies just the needed genes to GPU
+        y_true = dataset.genes[idx_all, :].to(device="cuda")
 
         # true means and variances
-        yt_m = y_true.mean(axis=0)
-        yt_v = y_true.var(axis=0)
+        yt_m = y_true.mean(dim=0)
+        yt_v = y_true.var(dim=0)
         # predicted means and variances
-        yp_m = mean_pred.mean(0)
-        yp_v = var_pred.mean(0)
+        yp_m = mean_pred.mean(dim=0)
+        yp_v = var_pred.mean(dim=0)
 
         r2_m = compute_r2(yt_m, yp_m)
         r2_v = compute_r2(yt_v, yp_v)
@@ -233,9 +235,6 @@ def evaluate(autoencoder, datasets, disentangle=False):
     start_time = time.time()
     autoencoder.eval()
     with torch.no_grad():
-        stats_test = evaluate_r2(
-            autoencoder, datasets["test_treated"], datasets["test_control"].genes
-        )
         if disentangle:
             disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
             stats_disent_pert = disent_scores[0]
@@ -250,7 +249,9 @@ def evaluate(autoencoder, datasets, disentangle=False):
                 datasets["training_treated"],
                 datasets["training_control"].genes,
             ),
-            "test": stats_test,
+            "test": evaluate_r2(
+                autoencoder, datasets["test_treated"], datasets["test_control"].genes
+            ),
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
             ),
@@ -339,7 +340,9 @@ def custom_collate(batch):
         if samples[0] is None:
             concat_batch.append(None)
         else:
-            concat_batch.append(torch.stack(samples, 0))
+            # we move to CUDA here so that prefetching in the DataLoader already yields
+            # ready-to-process CUDA tensors
+            concat_batch.append(torch.stack(samples, 0).to("cuda"))
     return concat_batch
 
 
