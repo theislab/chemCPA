@@ -152,7 +152,7 @@ class ExperimentWrapper:
         save_checkpoints: bool,
         save_dir: str,
     ):
-        from compert.train import evaluate
+        from compert.train import evaluate, evaluate_r2
 
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")
@@ -186,15 +186,19 @@ class ExperimentWrapper:
             # time ran out OR max epochs achieved
             stop = ellapsed_minutes > max_minutes or (epoch == num_epochs - 1)
 
-            # TODO doesn't really make sense to evaluate at 0, right?
-            if (epoch % checkpoint_freq) == 0 or stop:
+            if ((epoch % checkpoint_freq) == 0 and epoch > 0) or stop:
                 evaluation_stats = {}
-                if not ignore_evaluation:
-                    evaluation_stats = evaluate(self.autoencoder, self.datasets)
-                    score = np.mean(evaluation_stats["test"])
-                    stop = stop or self.autoencoder.early_stopping(score)
-
-                    if stop:
+                evaluation_stats["test"] = evaluate_r2(
+                    self.autoencoder,
+                    self.datasets["test_treated"],
+                    self.datasets["test_control"].genes,
+                )
+                score = np.mean(evaluation_stats["test"])
+                stop = stop or self.autoencoder.early_stopping(score)
+                if not ignore_evaluation or stop:
+                    if not stop:
+                        evaluation_stats = evaluate(self.autoencoder, self.datasets)
+                    else:
                         evaluation_stats = evaluate(
                             self.autoencoder, self.datasets, disentangle=True
                         )
@@ -203,6 +207,7 @@ class ExperimentWrapper:
                             self.autoencoder.history[key] = []
                         self.autoencoder.history[key].append(val)
                     self.autoencoder.history["stats_epoch"].append(epoch)
+
                 pjson(
                     {
                         "epoch": epoch,
@@ -212,14 +217,15 @@ class ExperimentWrapper:
                     }
                 )
 
-                if save_checkpoints:
+                improved_model = self.autoencoder.best_score == score
+                if save_checkpoints and improved_model:
                     if save_dir is None or not os.path.exists(save_dir):
                         print(os.path.exists(save_dir))
                         print(not os.path.exists(save_dir))
                         raise ValueError(
                             "Please provide a valid directory path in the 'save_dir' argument."
                         )
-                    file_name = "model_seed={}_epoch={}.pt".format(self.seed, epoch)
+                    file_name = "model_seed={}_best_model.pt".format(self.seed, epoch)
                     torch.save(
                         (
                             self.autoencoder.state_dict(),
