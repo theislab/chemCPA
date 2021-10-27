@@ -492,9 +492,7 @@ class ComPert(torch.nn.Module):
                 adversary_drugs_predictions, drugs.gt(0).float()
             )
 
-        adversary_covariates_loss = torch.tensor(
-            [0.0], device=self.device
-        )  # TODO: Is one scalar enough?
+        adversary_covariates_loss = torch.tensor([0.0], device=self.device)
         if self.num_covariates[0] > 0:
             adversary_covariate_predictions = []
             for i, adv in enumerate(self.adversary_covariates):
