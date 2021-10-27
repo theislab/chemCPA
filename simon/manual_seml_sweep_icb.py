@@ -12,7 +12,9 @@ if __name__ == "__main__":
         "simon/config_sciplex3_interactive.yaml"
     )
     # we take the first config generated
-    args = generate_configs(experiment_config)[0]
+    configs = generate_configs(experiment_config)
+    assert len(configs) == 1, "Careful, more than one config generated from the yaml file"
+    args = configs[0]
     pprint(args)
 
     exp.seed = 1337

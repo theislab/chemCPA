@@ -44,6 +44,10 @@ indx = lambda a, i: a[i] if a is not None else None
 class Dataset:
     covariate_keys: Optional[List[str]]
     drugs: torch.Tensor  # stores the (OneHot * dosage) encoding of drugs / combinations of drugs
+    drugs_idx: torch.Tensor  # stores the integer index of the drugs applied to each cell.
+    max_num_perturbations: int  # how many drugs are applied to each cell at the same time?
+    dosages: torch.Tensor  # shape: (dataset_size, max_num_perturbations)
+    drugs_names_unique: np.ndarray
 
     def __init__(
         self,
@@ -55,6 +59,7 @@ class Dataset:
         pert_category="cov_drug_dose_name",
         split_key="split",
         mol_featurizer="canonical",
+        use_drugs_idx=False,
     ):
         """
         :param covariate_keys: Names of obs columns which stores covariate names (eg cell type).
@@ -64,6 +69,7 @@ class Dataset:
             Combinations of perturbations are separated with `+`.
         :param pert_category: Name of obs column with stores covariate + perturbation + dose.
             Example: cell type + drug name + drug dose. This seems unused?
+        :param use_drugs_idx: Whether or not to encode drugs via their index, instead of via a OneHot encoding
         """
         print(f"Starting to read in data: {fname}\n...")
         data = sc.read(fname)
@@ -77,8 +83,8 @@ class Dataset:
             covariate_keys = [covariate_keys]
         self.covariate_keys = covariate_keys
         self.smiles_key = smiles_key
-        mol_featurizers = ["canonical", "AttentiveFP", "Pretrain"]
         self.mol_featurizer = mol_featurizer
+        self.use_drugs_idx = use_drugs_idx
 
         if perturbation_key is not None:
             if dose_key is None:
@@ -94,45 +100,66 @@ class Dataset:
             drugs_names_unique = set()
             for d in self.drugs_names:
                 [drugs_names_unique.add(i) for i in d.split("+")]
-            self.drugs_names_unique = np.array(list(drugs_names_unique))
-
-            # prepare a OneHot encoding for each unique drug in the dataset
-            self.encoder_drug = OneHotEncoder(sparse=False)
-            self.encoder_drug.fit(self.drugs_names_unique.reshape(-1, 1))
-            # stores a drug name -> OHE mapping (np float array)
-            self.atomic_drugs_dict = dict(
-                zip(
-                    self.drugs_names_unique,
-                    self.encoder_drug.transform(self.drugs_names_unique.reshape(-1, 1)),
-                )
+            self.drugs_names_unique = np.array(sorted(list(drugs_names_unique)))
+            self.drugs_names_unique_l = sorted(list(drugs_names_unique))
+            self.max_num_perturbations = max(
+                len(name.split("+")) for name in self.drugs_names
             )
 
-            # get drug combination encoding: for each cell we calculate a single vector as:
-            # combination_encoding = dose1 * OneHot(drug1) + dose2  * OneHot(drug2) + ...
-            drugs = []
-            for i, comb in enumerate(self.drugs_names):
-                # here (in encoder_drug.transform()) is where the init_dataset function spends most of it's time.
-                drugs_combos = self.encoder_drug.transform(
-                    np.array(comb.split("+")).reshape(-1, 1)
+            if not use_drugs_idx:
+                # prepare a OneHot encoding for each unique drug in the dataset
+                self.encoder_drug = OneHotEncoder(sparse=False)
+                self.encoder_drug.fit(self.drugs_names_unique.reshape(-1, 1))
+                # stores a drug name -> OHE mapping (np float array)
+                self.atomic_drugs_dict = dict(
+                    zip(
+                        self.drugs_names_unique,
+                        self.encoder_drug.transform(
+                            self.drugs_names_unique.reshape(-1, 1)
+                        ),
+                    )
                 )
-                dose_combos = str(data.obs[dose_key].values[i]).split("+")
-                for j, d in enumerate(dose_combos):
-                    if j == 0:
-                        drug_ohe = float(d) * drugs_combos[j]
-                    else:
-                        drug_ohe += float(d) * drugs_combos[j]
-                drugs.append(drug_ohe)
-            self.drugs = torch.Tensor(drugs)
+                # get drug combination encoding: for each cell we calculate a single vector as:
+                # combination_encoding = dose1 * OneHot(drug1) + dose2  * OneHot(drug2) + ...
+                drugs = []
+                for i, comb in enumerate(self.drugs_names):
+                    # here (in encoder_drug.transform()) is where the init_dataset function spends most of it's time.
+                    drugs_combos = self.encoder_drug.transform(
+                        np.array(comb.split("+")).reshape(-1, 1)
+                    )
+                    dose_combos = str(data.obs[dose_key].values[i]).split("+")
+                    for j, d in enumerate(dose_combos):
+                        if j == 0:
+                            drug_ohe = float(d) * drugs_combos[j]
+                        else:
+                            drug_ohe += float(d) * drugs_combos[j]
+                    drugs.append(drug_ohe)
+                self.drugs = torch.Tensor(drugs)
 
-            # store a mapping from int -> drug_name, where the integer equals the position
-            # of the drug in the OneHot encoding. Very convoluted, should be refactored.
-            self.drug_dict = {}
-            atomic_ohe = self.encoder_drug.transform(
-                self.drugs_names_unique.reshape(-1, 1)
-            )
-            for idrug, drug in enumerate(self.drugs_names_unique):
-                i = np.where(atomic_ohe[idrug] == 1)[0][0]
-                self.drug_dict[i] = drug
+                # store a mapping from int -> drug_name, where the integer equals the position
+                # of the drug in the OneHot encoding. Very convoluted, should be refactored.
+                self.drug_dict = {}
+                atomic_ohe = self.encoder_drug.transform(
+                    self.drugs_names_unique.reshape(-1, 1)
+                )
+                for idrug, drug in enumerate(self.drugs_names_unique):
+                    i = np.where(atomic_ohe[idrug] == 1)[0][0]
+                    self.drug_dict[i] = drug
+            else:
+                assert (
+                    self.max_num_perturbations == 1
+                ), "idx only implemented for single perturbations"
+                drugs_idx = [self.drug_name_to_idx(drug) for drug in self.drugs_names]
+                self.drugs_idx = torch.tensor(
+                    drugs_idx,
+                    dtype=torch.long,
+                )
+                dosages = [float(dosage) for dosage in self.dose_names]
+                self.dosages = torch.tensor(
+                    dosages,
+                    dtype=torch.float32,
+                )
+
         else:
             self.pert_categories = None
             self.de_genes = None
@@ -144,13 +171,14 @@ class Dataset:
             self.drugs = None
 
         if smiles_key is not None:
+            mol_featurizers = ["canonical", "AttentiveFP", "Pretrain"]
             if mol_featurizer not in mol_featurizers:
                 raise ValueError(f"mol_featurizer must be one of {mol_featurizers}")
             graph_tuple = graph_from_smiles(
                 data.obs[[self.perturbation_key, self.smiles_key]],
                 self.perturbation_key,
                 self.smiles_key,
-                self.encoder_drug,
+                self.drugs_names_unique,
                 mol_featuriser=self.mol_featurizer,
             )
             self.batched_graph_collection = graph_tuple[0]
@@ -206,7 +234,9 @@ class Dataset:
         else:
             self.num_covariates = [0]
         self.num_genes = self.genes.shape[1]
-        self.num_drugs = len(self.drugs_names_unique) if self.drugs is not None else 0
+        self.num_drugs = (
+            len(self.drugs_names_unique) if self.drugs_names_unique is not None else 0
+        )
 
         self.indices = {
             "all": list(range(len(self.genes))),
@@ -220,6 +250,14 @@ class Dataset:
     def subset(self, split, condition="all"):
         idx = list(set(self.indices[split]) & set(self.indices[condition]))
         return SubDataset(self, idx)
+
+    def drug_name_to_idx(self, drug_name: str):
+        """
+        For the given drug, return it's index. The index will be persistent for each dataset (since the list is sorted).
+        Raises ValueError if the drug doesn't exist in the dataset.
+        """
+        assert self.use_drugs_idx
+        return self.drugs_names_unique_l.index(drug_name)
 
     def __getitem__(self, i):
         return (
@@ -247,11 +285,16 @@ class SubDataset:
         self.idx_wo_smiles = dataset.idx_wo_smiles
         self.graph_feats_shape = dataset.graph_feats_shape
 
-        self.perts_dict = dataset.atomic_drugs_dict
         self.covars_dict = dataset.atomic_сovars_dict
 
         self.genes = dataset.genes[indices]
-        self.drugs = indx(dataset.drugs, indices)
+        self.use_drugs_idx = dataset.use_drugs_idx
+        if self.use_drugs_idx:
+            self.drugs_idx = indx(dataset.drugs_idx, indices)
+            self.dosages = indx(dataset.dosages, indices)
+        else:
+            self.perts_dict = dataset.atomic_drugs_dict
+            self.drugs = indx(dataset.drugs, indices)
         self.covariates = [indx(cov, indices) for cov in dataset.covariates]
 
         self.drugs_names = indx(dataset.drugs_names, indices)
@@ -269,11 +312,19 @@ class SubDataset:
         self.num_drugs = dataset.num_drugs
 
     def __getitem__(self, i):
-        return (
-            self.genes[i],
-            indx(self.drugs, i),
-            *[indx(cov, i) for cov in self.covariates],
-        )
+        if self.use_drugs_idx:
+            return (
+                self.genes[i],
+                indx(self.drugs_idx, i),
+                indx(self.dosages, i),
+                *[indx(cov, i) for cov in self.covariates],
+            )
+        else:
+            return (
+                self.genes[i],
+                indx(self.drugs, i),
+                *[indx(cov, i) for cov in self.covariates],
+            )
 
     def __len__(self):
         return len(self.genes)
@@ -289,6 +340,7 @@ def load_dataset_splits(
     split_key: str = "split",
     mol_featurizer: str = "canonical",
     return_dataset: bool = False,
+    use_drugs_idx=False,
 ):
 
     dataset = Dataset(
@@ -300,6 +352,7 @@ def load_dataset_splits(
         pert_category,
         split_key,
         mol_featurizer,
+        use_drugs_idx,
     )
 
     splits = {
