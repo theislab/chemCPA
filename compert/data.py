@@ -1,9 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
 import warnings
+
 import numpy as np
 import torch
-
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 import scanpy as sc
@@ -11,7 +11,7 @@ import pandas as pd
 
 from sklearn.preprocessing import OneHotEncoder
 from compert.helper import graph_from_smiles
-from typing import Union
+from typing import Union, Optional, List
 
 
 def ranks_to_df(data, key="rank_genes_groups"):
@@ -42,9 +42,12 @@ indx = lambda a, i: a[i] if a is not None else None
 
 
 class Dataset:
+    covariate_keys: Optional[List[str]]
+    drugs: torch.Tensor  # stores the (OneHot * dosage) encoding of drugs / combinations of drugs
+
     def __init__(
         self,
-        fname,
+        fname: str,
         perturbation_key=None,
         dose_key=None,
         covariate_keys=None,
@@ -53,6 +56,15 @@ class Dataset:
         split_key="split",
         mol_featurizer="canonical",
     ):
+        """
+        :param covariate_keys: Names of obs columns which stores covariate names (eg cell type).
+        :param perturbation_key: Name of obs column which stores perturbation name (eg drug name).
+            Combinations of perturbations are separated with `+`.
+        :param dose_key: Name of obs column which stores perturbation dose.
+            Combinations of perturbations are separated with `+`.
+        :param pert_category: Name of obs column with stores covariate + perturbation + dose.
+            Example: cell type + drug name + drug dose. This seems unused?
+        """
         print(f"Starting to read in data: {fname}\n...")
         data = sc.read(fname)
         print(f"Finished data loading.")
@@ -75,7 +87,6 @@ class Dataset:
                 )
             self.pert_categories = np.array(data.obs[pert_category].values)
             self.de_genes = data.uns["rank_genes_groups_cov"]
-
             self.drugs_names = np.array(data.obs[perturbation_key].values)
             self.dose_names = np.array(data.obs[dose_key].values)
 
@@ -85,25 +96,23 @@ class Dataset:
                 [drugs_names_unique.add(i) for i in d.split("+")]
             self.drugs_names_unique = np.array(list(drugs_names_unique))
 
-            # save encoder for a comparison with Mo's model
-            # later we need to remove this part
-            encoder_drug = OneHotEncoder(sparse=False)
-            encoder_drug.fit(self.drugs_names_unique.reshape(-1, 1))
-
-            # Store as attribute for molecular featurisation
-            self.encoder_drug = encoder_drug
-
+            # prepare a OneHot encoding for each unique drug in the dataset
+            self.encoder_drug = OneHotEncoder(sparse=False)
+            self.encoder_drug.fit(self.drugs_names_unique.reshape(-1, 1))
+            # stores a drug name -> OHE mapping (np float array)
             self.atomic_drugs_dict = dict(
                 zip(
                     self.drugs_names_unique,
-                    encoder_drug.transform(self.drugs_names_unique.reshape(-1, 1)),
+                    self.encoder_drug.transform(self.drugs_names_unique.reshape(-1, 1)),
                 )
             )
 
-            # get drug combinations
+            # get drug combination encoding: for each cell we calculate a single vector as:
+            # combination_encoding = dose1 * OneHot(drug1) + dose2  * OneHot(drug2) + ...
             drugs = []
             for i, comb in enumerate(self.drugs_names):
-                drugs_combos = encoder_drug.transform(
+                # here (in encoder_drug.transform()) is where the init_dataset function spends most of it's time.
+                drugs_combos = self.encoder_drug.transform(
                     np.array(comb.split("+")).reshape(-1, 1)
                 )
                 dose_combos = str(data.obs[dose_key].values[i]).split("+")
@@ -115,9 +124,12 @@ class Dataset:
                 drugs.append(drug_ohe)
             self.drugs = torch.Tensor(drugs)
 
-            atomic_ohe = encoder_drug.transform(self.drugs_names_unique.reshape(-1, 1))
-
+            # store a mapping from int -> drug_name, where the integer equals the position
+            # of the drug in the OneHot encoding. Very convoluted, should be refactored.
             self.drug_dict = {}
+            atomic_ohe = self.encoder_drug.transform(
+                self.drugs_names_unique.reshape(-1, 1)
+            )
             for idrug, drug in enumerate(self.drugs_names_unique):
                 i = np.where(atomic_ohe[idrug] == 1)[0][0]
                 self.drug_dict[i] = drug
@@ -225,7 +237,7 @@ class SubDataset:
     Subsets a `Dataset` by selecting the examples given by `indices`.
     """
 
-    def __init__(self, dataset, indices):
+    def __init__(self, dataset: Dataset, indices):
         self.perturbation_key = dataset.perturbation_key
         self.dose_key = dataset.dose_key
         self.covariate_keys = dataset.covariate_keys

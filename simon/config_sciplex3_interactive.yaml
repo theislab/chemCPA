@@ -33,8 +33,9 @@ fixed:
  
   dataset.dataset_type: trapnell
   dataset.data_params.dataset_path: datasets/trapnell_cpa_subset.h5ad # full path to the anndata dataset
-  dataset.data_params.perturbation_key: condition
-  dataset.data_params.dose_key: dose
+  dataset.data_params.perturbation_key: condition # stores name of the drug
+  dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
+  dataset.data_params.dose_key: dose # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: SMILES
   dataset.data_params.split_key: split # necessary field for train, test, ood splits.

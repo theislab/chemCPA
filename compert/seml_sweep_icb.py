@@ -55,18 +55,10 @@ class ExperimentWrapper:
         """
         from compert.data import load_dataset_splits
 
-        if dataset_type == "kang":
-            self.datasets, self.dataset = load_dataset_splits(
-                **data_params, return_dataset=True
-            )
-        elif dataset_type == "trapnell":
-            self.datasets, self.dataset = load_dataset_splits(
-                **data_params, return_dataset=True
-            )
-        elif dataset_type == "lincs":
-            self.datasets, self.dataset = load_dataset_splits(
-                **data_params, return_dataset=True
-            )
+        assert dataset_type in ("kang", "trapnell", "lincs")
+        self.datasets, self.dataset = load_dataset_splits(
+            **data_params, return_dataset=True
+        )
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, gnn_model: dict, hparams: dict):
@@ -131,7 +123,7 @@ class ExperimentWrapper:
         # pjson({"autoencoder_params": self.autoencoder.hparams})
 
     @ex.capture
-    def init_all(self, seed):
+    def init_all(self, seed: int):
         """
         Sequentially run the sub-initializers of the experiment.
         """
@@ -156,7 +148,10 @@ class ExperimentWrapper:
 
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")
-        print(f"Is path?: {os.path.exists(save_dir) if save_dir else None}")
+        assert not save_checkpoints or (
+            save_dir is not None and os.path.exists(save_dir)
+        ), f"save_dir ({save_dir}) doesn't exist, create it first."
+
         start_time = time.time()
         for epoch in range(num_epochs):
             epoch_training_stats = defaultdict(float)
@@ -234,7 +229,6 @@ class ExperimentWrapper:
                         ),
                         os.path.join(save_dir, file_name),
                     )
-
                     pjson({"model_saved": file_name})
 
                 if stop:

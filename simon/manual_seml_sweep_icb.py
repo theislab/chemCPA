@@ -1,9 +1,10 @@
-from seml.config import read_config, generate_configs
 from pprint import pprint
+
+from seml.config import read_config, generate_configs
 
 from compert.seml_sweep_icb import ExperimentWrapper
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exp = ExperimentWrapper(init_all=False)
 
     # this is how seml loads the config file internally
@@ -25,6 +26,7 @@ if __name__ == '__main__':
         hparams=args["model"]["hparams"],
         additional_params=args["model"]["additional_params"],
     )
+    # setup the torch DataLoader
     exp.update_datasets()
 
     exp.train(**args["training"])

@@ -143,7 +143,9 @@ class GeneralizedSigmoid(torch.nn.Module):
             c0 = self.bias.sigmoid()
             return (torch.log1p(x) * self.beta + self.bias).sigmoid() - c0
         elif self.nonlin == "sigm":
-            c0 = self.bias.sigmoid()
+            c0 = (
+                self.bias.sigmoid()
+            )  # by subtracting the bias we always have forward(0) = 0
             return (x * self.beta + self.bias).sigmoid() - c0
         else:
             return x
@@ -164,11 +166,13 @@ class ComPert(torch.nn.Module):
     Our main module, the ComPert autoencoder
     """
 
+    num_drugs: int  # number of unique drugs in the dataset, including control
+
     def __init__(
         self,
-        num_genes,
-        num_drugs,
-        num_covariates,
+        num_genes: int,
+        num_drugs: int,
+        num_covariates: int,
         device="cpu",
         seed=0,
         patience=5,
@@ -395,6 +399,8 @@ class ComPert(torch.nn.Module):
         """
         Compute sum of drug embeddings, each of them multiplied by its
         dose-response curve.
+
+        Returns a tensor of shape [batch_size, drug_embedding_dimension]
         """
         if isinstance(self.drug_embeddings, Drugemb):
             # drug embedding matrix
