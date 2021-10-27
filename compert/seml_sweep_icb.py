@@ -157,13 +157,23 @@ class ExperimentWrapper:
             epoch_training_stats = defaultdict(float)
 
             for data in self.datasets["loader_tr"]:
-                genes, drugs, covariates = data[0], data[1], data[2:]
-                # data is moved to GPU in the update function
-                minibatch_training_stats = self.autoencoder.update(
-                    genes, drugs, covariates
-                )
+                if self.dataset.use_drugs_idx:
+                    genes, drugs_idx, dosages, *covariates = data
+                    training_stats = self.autoencoder.update(
+                        genes=genes,
+                        drugs_idx=drugs_idx,
+                        dosages=dosages,
+                        covariates=covariates,
+                    )
+                else:
+                    genes, drugs, *covariates = data[0], data[1], data[2:]
+                    training_stats = self.autoencoder.update(
+                        genes=genes,
+                        drugs=drugs,
+                        covariates=covariates,
+                    )
 
-                for key, val in minibatch_training_stats.items():
+                for key, val in training_stats.items():
                     epoch_training_stats[key] += val
 
             for key, val in epoch_training_stats.items():

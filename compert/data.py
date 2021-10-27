@@ -260,11 +260,19 @@ class Dataset:
         return self.drugs_names_unique_l.index(drug_name)
 
     def __getitem__(self, i):
-        return (
-            self.genes[i],
-            indx(self.drugs, i),
-            *[indx(cov, i) for cov in self.covariates],
-        )
+        if self.use_drugs_idx:
+            return (
+                self.genes[i],
+                indx(self.drugs_idx, i),
+                indx(self.dosages, i),
+                *[indx(cov, i) for cov in self.covariates],
+            )
+        else:
+            return (
+                self.genes[i],
+                indx(self.drugs, i),
+                *[indx(cov, i) for cov in self.covariates],
+            )
 
     def __len__(self):
         return len(self.genes)
