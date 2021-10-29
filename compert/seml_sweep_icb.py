@@ -55,10 +55,10 @@ class ExperimentWrapper:
         """
         from compert.data import load_dataset_splits
 
-        assert dataset_type in ("kang", "trapnell", "lincs")
-        self.datasets, self.dataset = load_dataset_splits(
-            **data_params, return_dataset=True
-        )
+        if dataset_type in ("kang", "trapnell", "lincs"):
+            self.datasets, self.dataset = load_dataset_splits(
+                **data_params, return_dataset=True
+            )
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, gnn_model: dict, hparams: dict):

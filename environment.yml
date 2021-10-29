@@ -21,6 +21,7 @@ dependencies:
   - dglteam::dgl
   - dglteam::dgllife
   - rdkit
+  - pytest
   - pip
   - pip:
     - seml
