@@ -516,6 +516,7 @@ class ComPert(torch.nn.Module):
 
         gene_reconstructions, latent_basal = self.predict(
             genes=genes,
+            drugs=drugs,
             drugs_idx=drugs_idx,
             dosages=dosages,
             covariates=covariates,
