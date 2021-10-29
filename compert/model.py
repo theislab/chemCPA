@@ -436,6 +436,7 @@ class ComPert(torch.nn.Module):
             latent_drugs = self.drug_embeddings.weight
 
         if drugs_idx is not None:
+            assert drugs_idx.shape == dosages.shape and len(drugs_idx.shape) == 1
             # results in a tensor of shape [batchsize, drug_embedding_dimension]
             latent_drugs = latent_drugs[drugs_idx]
 
