@@ -5,9 +5,18 @@ from typing import Union
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from compert.graph_model.graph_model import Drugemb
+
+
+def _move_inputs(*inputs, device="cuda"):
+    def mv_input(x):
+        if type(x) == list:
+            return [mv_input(y) for y in x]
+        else:
+            return x.to(device) if x is not None else None
+
+    return [mv_input(x) for x in inputs]
 
 
 class NBLoss(torch.nn.Module):
@@ -182,6 +191,7 @@ class ComPert(torch.nn.Module):
     """
 
     num_drugs: int  # number of unique drugs in the dataset, including control
+    use_drugs_idx: bool  # whether to except drugs coded by index or by OneHotEncoding
 
     def __init__(
         self,
@@ -196,6 +206,7 @@ class ComPert(torch.nn.Module):
         decoder_activation="linear",
         hparams="",
         drug_embeddings: Union[None, Drugemb] = None,
+        use_drugs_idx=False,
     ):
         super(ComPert, self).__init__()
         # set generic attributes
@@ -209,6 +220,7 @@ class ComPert(torch.nn.Module):
         self.patience = patience
         self.best_score = -1e3
         self.patience_trials = 0
+        self.use_drugs_idx = use_drugs_idx
 
         # set hyperparameters
         if isinstance(hparams, dict):
@@ -243,7 +255,14 @@ class ComPert(torch.nn.Module):
                 )
             else:
                 self.drug_embeddings = drug_embeddings
-            self.loss_adversary_drugs = torch.nn.BCEWithLogitsLoss()
+
+            if use_drugs_idx:
+                # there will only ever be a single drug, so no binary cross entropy needed
+                # careful: when the model is finetuned later with One-hot encodings, we'll have to
+                # retrained the adversary classifiers.
+                self.loss_adversary_drugs = torch.nn.CrossEntropyLoss()
+            else:
+                self.loss_adversary_drugs = torch.nn.BCEWithLogitsLoss()
             # set dosers
             if doser_type == "mlp":
                 self.dosers = torch.nn.ModuleList()
@@ -408,6 +427,8 @@ class ComPert(torch.nn.Module):
         """
         assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
 
+        drugs, drugs_idx, dosages = _move_inputs(drugs, drugs_idx, dosages)
+
         if isinstance(self.drug_embeddings, Drugemb):
             # drug embedding matrix
             latent_drugs = self.drug_embeddings()
@@ -458,6 +479,9 @@ class ComPert(torch.nn.Module):
         combination of drugs `drugs`.
         """
         assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
+        genes, drugs, drugs_idx, dosages, covariates = _move_inputs(
+            genes, drugs, drugs_idx, dosages, covariates
+        )
 
         latent_basal = self.encoder(genes)
 
@@ -525,18 +549,19 @@ class ComPert(torch.nn.Module):
             covariates=covariates,
             return_latent_basal=True,
         )
-
         reconstruction_loss = self.loss_autoencoder(gene_reconstructions, genes)
 
         adversary_drugs_loss = torch.tensor([0.0], device=self.device)
         if self.num_drugs > 0:
             adversary_drugs_predictions = self.adversary_drugs(latent_basal)
-            if self.num_drugs > 1:
-                ohe = F.one_hot(drugs_idx)
-            one_hot = torch.zeros_like(adversary_drugs_predictions)
-            adversary_drugs_loss = self.loss_adversary_drugs(
-                adversary_drugs_predictions, drugs.gt(0).float()
-            )
+            if self.use_drugs_idx:
+                adversary_drugs_loss = self.loss_adversary_drugs(
+                    adversary_drugs_predictions, drugs_idx
+                )
+            else:
+                adversary_drugs_loss = self.loss_adversary_drugs(
+                    adversary_drugs_predictions, drugs.gt(0).float()
+                )
 
         adversary_covariates_loss = torch.tensor([0.0], device=self.device)
         if self.num_covariates[0] > 0:

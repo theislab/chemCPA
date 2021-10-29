@@ -148,7 +148,7 @@ class Dataset:
             else:
                 assert (
                     self.max_num_perturbations == 1
-                ), "idx only implemented for single perturbations"
+                ), "Index-based drug encoding only works with single perturbations"
                 drugs_idx = [self.drug_name_to_idx(drug) for drug in self.drugs_names]
                 self.drugs_idx = torch.tensor(
                     drugs_idx,

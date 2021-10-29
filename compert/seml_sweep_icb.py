@@ -101,6 +101,7 @@ class ExperimentWrapper:
             **additional_params,
             hparams=hparams,
             drug_embeddings=self.drug_embeddings,
+            use_drugs_idx=self.dataset.use_drugs_idx,
         )
 
     def update_datasets(self):
