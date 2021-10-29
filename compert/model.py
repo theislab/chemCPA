@@ -419,26 +419,29 @@ class ComPert(torch.nn.Module):
             latent_drugs = latent_drugs[drugs_idx]
 
         if self.doser_type == "mlp":
-            if drugs_idx is not None:
-                raise NotImplementedError("MLP doesn't yet work with indices")
-            doses = []
-            for d in range(drugs.size(1)):
-                this_drug = drugs[:, d].view(-1, 1)
-                doses.append(self.dosers[d](this_drug).sigmoid() * this_drug.gt(0))
-            return torch.cat(doses, 1) @ latent_drugs
+            if drugs_idx is None:
+                doses = []
+                for d in range(drugs.size(1)):
+                    this_drug = drugs[:, d].view(-1, 1)
+                    doses.append(self.dosers[d](this_drug).sigmoid() * this_drug.gt(0))
+                scaled_dosages = torch.cat(doses, 1)
+            else:
+                scaled_dosages = []
+                for idx, dosage in zip(drugs_idx, dosages):
+                    scaled_dosages.append(
+                        self.dosers[idx](dosage.unsqueeze(0)).sigmoid()
+                    )
+                scaled_dosages = torch.cat(scaled_dosages, 0)
         else:
             if drugs_idx is None:
-                return self.dosers(drugs) @ latent_drugs
+                scaled_dosages = self.dosers(drugs)
             else:
-                # [batchsize, max_num_perturbations]
                 scaled_dosages = self.dosers(dosages, drugs_idx)
-                assert scaled_dosages.shape == drugs_idx.shape
-                result = torch.einsum("b,be->be", [scaled_dosages, latent_drugs])
-                assert result.shape == (
-                    drugs_idx.shape[0],
-                    latent_drugs.shape[1],
-                ), result.shape
-                return result
+
+        if drugs_idx is None:
+            return scaled_dosages @ latent_drugs
+        else:
+            return torch.einsum("b,be->be", [scaled_dosages, latent_drugs])
 
     def predict(
         self,

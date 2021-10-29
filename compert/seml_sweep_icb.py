@@ -158,7 +158,12 @@ class ExperimentWrapper:
 
             for data in self.datasets["loader_tr"]:
                 if self.dataset.use_drugs_idx:
-                    genes, drugs_idx, dosages, *covariates = data
+                    genes, drugs_idx, dosages, covariates = (
+                        data[0],
+                        data[1],
+                        data[2],
+                        data[3:],
+                    )
                     training_stats = self.autoencoder.update(
                         genes=genes,
                         drugs_idx=drugs_idx,
@@ -166,7 +171,7 @@ class ExperimentWrapper:
                         covariates=covariates,
                     )
                 else:
-                    genes, drugs, *covariates = data[0], data[1], data[2:]
+                    genes, drugs, covariates = data[0], data[1], data[2:]
                     training_stats = self.autoencoder.update(
                         genes=genes,
                         drugs=drugs,
