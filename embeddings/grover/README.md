@@ -11,3 +11,7 @@ Download the pretrained models from Tencent and put them into the `data/model` d
    - [GROVER<sub>base</sub>](https://ai.tencent.com/ailab/ml/ml-data/grover-models/pretrain/grover_base.tar.gz)
    - [GROVER<sub>large</sub>](https://ai.tencent.com/ailab/ml/ml-data/grover-models/pretrain/grover_large.tar.gz) 
 
+## Generating the embeddings
+In `generate_embeddings.ipynb` there is code that extracts all SMILES from LINCs & trapnell, generates the 
+grover embeddings from them and saves them to a DataFrame.
+
