@@ -13,7 +13,9 @@ if __name__ == "__main__":
     )
     # we take the first config generated
     configs = generate_configs(experiment_config)
-    assert len(configs) == 1, "Careful, more than one config generated from the yaml file"
+    assert (
+        len(configs) == 1
+    ), "Careful, more than one config generated from the yaml file"
     args = configs[0]
     pprint(args)
 

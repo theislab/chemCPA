@@ -30,7 +30,7 @@ fixed:
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: sigm # non-linearity for doser function
- 
+
   dataset.dataset_type: trapnell
   dataset.data_params.dataset_path: datasets/trapnell_cpa_subset.h5ad # full path to the anndata dataset
   dataset.data_params.perturbation_key: condition # stores name of the drug
@@ -40,6 +40,7 @@ fixed:
   dataset.data_params.smiles_key: SMILES
   dataset.data_params.split_key: split # necessary field for train, test, ood splits.
   dataset.data_params.mol_featurizer: canonical
+  dataset.data_params.use_drugs_idx: True
 
   model.hparams.dropout: 0.1
   model.hparams.dim: 128

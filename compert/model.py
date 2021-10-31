@@ -129,9 +129,6 @@ class MLP(torch.nn.Module):
 
 class GeneralizedSigmoid(torch.nn.Module):
     """
-    TODO this class needs one test to make sure the IDX etc works.
-    Test should make sure that the one hot result is equal to the IDX result.
-
     Sigmoid, log-sigmoid or linear functions for encoding dose-response for
     drug perurbations.
     """
@@ -144,6 +141,7 @@ class GeneralizedSigmoid(torch.nn.Module):
             One of logsigm, sigm.
         """
         super(GeneralizedSigmoid, self).__init__()
+        assert nonlin in ("sigm", "logsigm", None)
         self.nonlin = nonlin
         self.beta = torch.nn.Parameter(
             torch.ones(1, dim, device=device), requires_grad=True
@@ -427,7 +425,9 @@ class ComPert(torch.nn.Module):
         """
         assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
 
-        drugs, drugs_idx, dosages = _move_inputs(drugs, drugs_idx, dosages)
+        drugs, drugs_idx, dosages = _move_inputs(
+            drugs, drugs_idx, dosages, device=self.device
+        )
 
         if isinstance(self.drug_embeddings, Drugemb):
             # drug embedding matrix
@@ -481,7 +481,7 @@ class ComPert(torch.nn.Module):
         """
         assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
         genes, drugs, drugs_idx, dosages, covariates = _move_inputs(
-            genes, drugs, drugs_idx, dosages, covariates
+            genes, drugs, drugs_idx, dosages, covariates, device=self.device
         )
 
         latent_basal = self.encoder(genes)
