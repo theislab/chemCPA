@@ -61,30 +61,20 @@ class ExperimentWrapper:
             )
 
     @ex.capture(prefix="model")
-    def init_drug_embedding(self, gnn_model: dict, hparams: dict):
-        from compert.graph_model.graph_model import Drugemb
+    def init_drug_embedding(self, embedding: dict):
+        from compert.embedding import get_chemical_representation
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        model_type = gnn_model["model_type"]
-        dim = hparams["dim"]
-        params = gnn_model["hparams"].copy()
-        if model_type in list(gnn_model):
-            for key, value in gnn_model[model_type]["hparams"].items():
-                params[key] = value
-        print(f"\nGNN params: {params}\n")
-        if model_type is not None:
-            self.drug_embeddings = Drugemb(
-                dim=dim,  # TODO: This is set only in Compert model
-                gnn_model=model_type,
-                graph_feats_shape=self.datasets["training"].graph_feats_shape,
-                idx_wo_smiles=self.datasets["training"].idx_wo_smiles,
-                batched_graph_collection=self.datasets[
-                    "training"
-                ].batched_graph_collection,
-                hparams=params,
+        if embedding["model"] is not None:
+            # ComPert will use the provided embedding, which is frozen during training
+            self.drug_embeddings = get_chemical_representation(
+                smiles=self.dataset.smiles_unique_ordered,
+                embedding_model=embedding["model"],
+                data_dir=embedding["directory"],
                 device=device,
             )
         else:
+            # ComPert will initialize a new embedding, which is updated during training
             self.drug_embeddings = None
 
     @ex.capture(prefix="model")
@@ -188,6 +178,17 @@ class ExperimentWrapper:
                     self.autoencoder.history[key] = []
                 self.autoencoder.history[key].append(val)
             self.autoencoder.history["epoch"].append(epoch)
+
+            # print some stats for each epoch
+            print(
+                f"{epoch:4}",
+                ", ".join(
+                    [
+                        f"{key}: {value:7.5f}"
+                        for key, value in epoch_training_stats.items()
+                    ]
+                ),
+            )
 
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes

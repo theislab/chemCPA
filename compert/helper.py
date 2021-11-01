@@ -1,3 +1,5 @@
+from typing import Optional
+
 import scanpy as sc
 import pandas as pd
 import dgl
@@ -213,3 +215,10 @@ def get_featurisers(mol_featurizer: str = "canonical", return_shape: bool = True
     if return_shape:
         return (node_feats, edge_feats), graph_feats_shape
     return node_feats, edge_feats
+
+
+def canonicalize_smiles(smiles: Optional[str]):
+    if smiles:
+        return Chem.MolToSmiles(Chem.MolFromSmiles(smiles), canonical=True)
+    else:
+        return None

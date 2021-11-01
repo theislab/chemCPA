@@ -23,9 +23,7 @@ if __name__ == "__main__":
     # loads the dataset splits
     exp.init_dataset(**args["dataset"])
 
-    exp.init_drug_embedding(
-        gnn_model=args["model"]["gnn_model"], hparams=args["model"]["hparams"]
-    )
+    exp.init_drug_embedding(embedding=args["model"]["embedding"])
     exp.init_model(
         hparams=args["model"]["hparams"],
         additional_params=args["model"]["additional_params"],
