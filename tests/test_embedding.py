@@ -1,4 +1,5 @@
 import numpy
+import pandas as pd
 import torch.testing
 
 from compert.data import Dataset
@@ -19,6 +20,13 @@ def test_embedding_idx_roundtrip():
         "split_key": "split",
     }
 
+    # load the embedding of DSMO
+    control_emb = torch.tensor(
+        pd.read_parquet("embeddings/grover/data/embeddings/grover_base.parquet")
+        .loc["CS(C)=O"]
+        .values
+    )
+
     for use_drugs_idx in [True, False]:
         dataset = Dataset(
             fname="datasets/trapnell_cpa_subset.h5ad",
@@ -36,10 +44,7 @@ def test_embedding_idx_roundtrip():
             list(dataset.drugs_names_unique_sorted).index("control"),
             device=device,
         )
-        torch.testing.assert_equal(
-            embedding(control),
-            torch.zeros(embedding.weight.shape[1], device=device),
-        )
+        torch.testing.assert_equal(embedding(control), control_emb.to(device))
 
         model = ComPert(
             dataset.num_genes,
