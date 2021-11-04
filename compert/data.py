@@ -47,7 +47,7 @@ class Dataset:
     drugs_idx: torch.Tensor  # stores the integer index of the drugs applied to each cell.
     max_num_perturbations: int  # how many drugs are applied to each cell at the same time?
     dosages: torch.Tensor  # shape: (dataset_size, max_num_perturbations)
-    drugs_names_unique: np.ndarray
+    drugs_names_unique_sorted: np.ndarray  # sorted list of all drug names in the dataset
 
     def __init__(
         self,
@@ -100,22 +100,24 @@ class Dataset:
             drugs_names_unique = set()
             for d in self.drugs_names:
                 [drugs_names_unique.add(i) for i in d.split("+")]
-            self.drugs_names_unique = np.array(sorted(list(drugs_names_unique)))
-            self.drugs_names_unique_l = sorted(list(drugs_names_unique))
+            self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
             self.max_num_perturbations = max(
                 len(name.split("+")) for name in self.drugs_names
             )
 
             if not use_drugs_idx:
                 # prepare a OneHot encoding for each unique drug in the dataset
-                self.encoder_drug = OneHotEncoder(sparse=False)
-                self.encoder_drug.fit(self.drugs_names_unique.reshape(-1, 1))
+                # use the same sorted ordering of drugs as for indexing
+                self.encoder_drug = OneHotEncoder(
+                    sparse=False, categories=[list(self.drugs_names_unique_sorted)]
+                )
+                self.encoder_drug.fit(self.drugs_names_unique_sorted.reshape(-1, 1))
                 # stores a drug name -> OHE mapping (np float array)
                 self.atomic_drugs_dict = dict(
                     zip(
-                        self.drugs_names_unique,
+                        self.drugs_names_unique_sorted,
                         self.encoder_drug.transform(
-                            self.drugs_names_unique.reshape(-1, 1)
+                            self.drugs_names_unique_sorted.reshape(-1, 1)
                         ),
                     )
                 )
@@ -140,9 +142,9 @@ class Dataset:
                 # of the drug in the OneHot encoding. Very convoluted, should be refactored.
                 self.drug_dict = {}
                 atomic_ohe = self.encoder_drug.transform(
-                    self.drugs_names_unique.reshape(-1, 1)
+                    self.drugs_names_unique_sorted.reshape(-1, 1)
                 )
-                for idrug, drug in enumerate(self.drugs_names_unique):
+                for idrug, drug in enumerate(self.drugs_names_unique_sorted):
                     i = np.where(atomic_ohe[idrug] == 1)[0][0]
                     self.drug_dict[i] = drug
             else:
@@ -165,7 +167,7 @@ class Dataset:
             self.de_genes = None
             self.drugs_names = None
             self.dose_names = None
-            self.drugs_names_unique = None
+            self.drugs_names_unique_sorted = None
             self.atomic_drugs_dict = None
             self.drug_dict = None
             self.drugs = None
@@ -178,7 +180,7 @@ class Dataset:
                 data.obs[[self.perturbation_key, self.smiles_key]],
                 self.perturbation_key,
                 self.smiles_key,
-                self.drugs_names_unique,
+                self.drugs_names_unique_sorted,
                 mol_featuriser=self.mol_featurizer,
             )
             self.batched_graph_collection = graph_tuple[0]
@@ -235,7 +237,9 @@ class Dataset:
             self.num_covariates = [0]
         self.num_genes = self.genes.shape[1]
         self.num_drugs = (
-            len(self.drugs_names_unique) if self.drugs_names_unique is not None else 0
+            len(self.drugs_names_unique_sorted)
+            if self.drugs_names_unique_sorted is not None
+            else 0
         )
 
         self.indices = {
@@ -256,8 +260,7 @@ class Dataset:
         For the given drug, return it's index. The index will be persistent for each dataset (since the list is sorted).
         Raises ValueError if the drug doesn't exist in the dataset.
         """
-        assert self.use_drugs_idx
-        return self.drugs_names_unique_l.index(drug_name)
+        return list(self.drugs_names_unique_sorted).index(drug_name)
 
     def __getitem__(self, i):
         if self.use_drugs_idx:
