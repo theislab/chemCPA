@@ -109,7 +109,7 @@ def graph_from_smiles(
     drug_smiles_df,
     perturbation_key,
     smiles_key,
-    pert_ohe,
+    drugs_ordering,
     mol_featuriser="canonical",
 ):
     """Translates molecular graph information from the drug SMILES and outputs the graph tuple.
@@ -122,8 +122,8 @@ def graph_from_smiles(
         Column name in `drug_smiles_df` with compound names
     smiles_key : str
         Column name in `drug_smiles_df` with SMILES
-    pert_ohe : sklearn.preprocessing.OneHotEncoder
-        OHE that is used to order perturbations in `drug_smiles_df`
+    drugs_ordering : list of drugnames
+        the ordering of the drugs in the list is used to order perturbations in `drug_smiles_df`
     mol_featuriser : str
         Molecule featurizer. Must be one of `['canonical', 'AttentiveFP', 'Pretrain']`.
 
@@ -137,9 +137,10 @@ def graph_from_smiles(
         The tuple that indicates the shape of the batched graph collection.
     """
 
-    # Order drugs as in pert_ohe
+    # Order drugs as in drugs_ordering
     df = drug_smiles_df.drop_duplicates(subset=[perturbation_key])
-    df = df.set_index(perturbation_key).reindex(pert_ohe.categories_[0]).reset_index()
+    df = df.set_index(perturbation_key).reindex(drugs_ordering).reset_index()
+    assert df[perturbation_key].isna().sum() == 0
 
     # Define featurisers
     featurisers, graph_feats_shape = get_featurisers(mol_featuriser, return_shape=True)

@@ -55,15 +55,7 @@ class ExperimentWrapper:
         """
         from compert.data import load_dataset_splits
 
-        if dataset_type == "kang":
-            self.datasets, self.dataset = load_dataset_splits(
-                **data_params, return_dataset=True
-            )
-        elif dataset_type == "trapnell":
-            self.datasets, self.dataset = load_dataset_splits(
-                **data_params, return_dataset=True
-            )
-        elif dataset_type == "lincs":
+        if dataset_type in ("kang", "trapnell", "lincs"):
             self.datasets, self.dataset = load_dataset_splits(
                 **data_params, return_dataset=True
             )
@@ -109,6 +101,7 @@ class ExperimentWrapper:
             **additional_params,
             hparams=hparams,
             drug_embeddings=self.drug_embeddings,
+            use_drugs_idx=self.dataset.use_drugs_idx,
         )
 
     def update_datasets(self):
@@ -131,7 +124,7 @@ class ExperimentWrapper:
         # pjson({"autoencoder_params": self.autoencoder.hparams})
 
     @ex.capture
-    def init_all(self, seed):
+    def init_all(self, seed: int):
         """
         Sequentially run the sub-initializers of the experiment.
         """
@@ -156,19 +149,37 @@ class ExperimentWrapper:
 
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")
-        print(f"Is path?: {os.path.exists(save_dir) if save_dir else None}")
+        assert not save_checkpoints or (
+            save_dir is not None and os.path.exists(save_dir)
+        ), f"save_dir ({save_dir}) doesn't exist, create it first."
+
         start_time = time.time()
         for epoch in range(num_epochs):
             epoch_training_stats = defaultdict(float)
 
             for data in self.datasets["loader_tr"]:
-                genes, drugs, covariates = data[0], data[1], data[2:]
-                # data is moved to GPU in the update function
-                minibatch_training_stats = self.autoencoder.update(
-                    genes, drugs, covariates
-                )
+                if self.dataset.use_drugs_idx:
+                    genes, drugs_idx, dosages, covariates = (
+                        data[0],
+                        data[1],
+                        data[2],
+                        data[3:],
+                    )
+                    training_stats = self.autoencoder.update(
+                        genes=genes,
+                        drugs_idx=drugs_idx,
+                        dosages=dosages,
+                        covariates=covariates,
+                    )
+                else:
+                    genes, drugs, covariates = data[0], data[1], data[2:]
+                    training_stats = self.autoencoder.update(
+                        genes=genes,
+                        drugs=drugs,
+                        covariates=covariates,
+                    )
 
-                for key, val in minibatch_training_stats.items():
+                for key, val in training_stats.items():
                     epoch_training_stats[key] += val
 
             for key, val in epoch_training_stats.items():
@@ -234,7 +245,6 @@ class ExperimentWrapper:
                         ),
                         os.path.join(save_dir, file_name),
                     )
-
                     pjson({"model_saved": file_name})
 
                 if stop:

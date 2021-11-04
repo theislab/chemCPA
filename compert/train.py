@@ -57,7 +57,18 @@ def compute_prediction(autoencoder: ComPert, genes, emb_drugs, emb_covs):
     Computes the prediction of a ComPert `autoencoder` and
     directly splits into `mean` and `variance` predictions
     """
-    genes_pred = autoencoder.predict(genes, emb_drugs, emb_covs).detach()
+    if autoencoder.use_drugs_idx:
+        assert len(emb_drugs) == 2
+        genes_pred = autoencoder.predict(
+            genes=genes,
+            drugs_idx=emb_drugs[0],
+            dosages=emb_drugs[1],
+            covariates=emb_covs,
+        ).detach()
+    else:
+        genes_pred = autoencoder.predict(
+            genes=genes, drugs=emb_drugs, covariates=emb_covs
+        ).detach()
     dim = genes.size(1)
     mean = genes_pred[:, :dim]
     var = genes_pred[:, dim:]
@@ -92,10 +103,16 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
         if n_idx_treated <= 5:
             continue
 
-        emb_drugs = repeat_n(ds_treated.drugs[idx_treated], n_idx_ctrl)
         emb_covs = [
             repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
         ]
+        if ds_treated.use_drugs_idx:
+            emb_drugs = (
+                repeat_n(ds_treated.drugs_idx[idx_treated], n_idx_ctrl).squeeze(),
+                repeat_n(ds_treated.dosages[idx_treated], n_idx_ctrl).squeeze(),
+            )
+        else:
+            emb_drugs = repeat_n(ds_treated.drugs[idx_treated], n_idx_ctrl)
 
         genes_ctrl = ds_ctrl.genes[idx_ctrl_all].to(device="cuda")
 
@@ -127,12 +144,21 @@ def evaluate_disentanglement(autoencoder, dataset, nonlinear=False):
     vectors.
 
     """
-    _, latent_basal = autoencoder.predict(
-        dataset.genes,
-        dataset.drugs,
-        dataset.covariates,
-        return_latent_basal=True,
-    )
+    if dataset.use_drugs_idx:
+        _, latent_basal = autoencoder.predict(
+            genes=dataset.genes,
+            drugs_idx=dataset.drugs_idx,
+            dosages=dataset.dosages,
+            covariates=dataset.covariates,
+            return_latent_basal=True,
+        )
+    else:
+        _, latent_basal = autoencoder.predict(
+            genes=dataset.genes,
+            drugs=dataset.drugs,
+            covariates=dataset.covariates,
+            return_latent_basal=True,
+        )
 
     latent_basal = latent_basal.detach().cpu().numpy()
 
@@ -194,9 +220,14 @@ def evaluate_r2(autoencoder, dataset, genes_control):
         if n_idx <= 5:
             continue
 
-        emb_drugs = repeat_n(dataset.drugs[idx], num)
         emb_covs = [repeat_n(cov[idx], num) for cov in dataset.covariates]
-
+        if dataset.use_drugs_idx:
+            emb_drugs = (
+                repeat_n(dataset.drugs_idx[idx], num).squeeze(),
+                repeat_n(dataset.dosages[idx], num).squeeze(),
+            )
+        else:
+            emb_drugs = repeat_n(dataset.drugs[idx], num)
         mean_pred, var_pred = compute_prediction(
             autoencoder,
             genes_control,

@@ -1,11 +1,22 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-from compert.graph_model.graph_model import Drugemb
 import json
-import torch
-import numpy as np
-from sklearn.preprocessing import KBinsDiscretizer
 from typing import Union
+
+import numpy as np
+import torch
+
+from compert.graph_model.graph_model import Drugemb
+
+
+def _move_inputs(*inputs, device="cuda"):
+    def mv_input(x):
+        if type(x) == list:
+            return [mv_input(y) for y in x]
+        else:
+            return x.to(device) if x is not None else None
+
+    return [mv_input(x) for x in inputs]
 
 
 class NBLoss(torch.nn.Module):
@@ -130,6 +141,7 @@ class GeneralizedSigmoid(torch.nn.Module):
             One of logsigm, sigm.
         """
         super(GeneralizedSigmoid, self).__init__()
+        assert nonlin in ("sigm", "logsigm", None)
         self.nonlin = nonlin
         self.beta = torch.nn.Parameter(
             torch.ones(1, dim, device=device), requires_grad=True
@@ -138,13 +150,25 @@ class GeneralizedSigmoid(torch.nn.Module):
             torch.zeros(1, dim, device=device), requires_grad=True
         )
 
-    def forward(self, x):
+    def forward(self, x, idx=None):
         if self.nonlin == "logsigm":
-            c0 = self.bias.sigmoid()
-            return (torch.log1p(x) * self.beta + self.bias).sigmoid() - c0
+            if idx is None:
+                c0 = self.bias.sigmoid()
+                return (torch.log1p(x) * self.beta + self.bias).sigmoid() - c0
+            else:
+                bias = self.bias[0][idx]
+                beta = self.beta[0][idx]
+                c0 = bias.sigmoid()
+                return (torch.log1p(x) * beta + bias).sigmoid() - c0
         elif self.nonlin == "sigm":
-            c0 = self.bias.sigmoid()
-            return (x * self.beta + self.bias).sigmoid() - c0
+            if idx is None:
+                c0 = self.bias.sigmoid()
+                return (x * self.beta + self.bias).sigmoid() - c0
+            else:
+                bias = self.bias[0][idx]
+                beta = self.beta[0][idx]
+                c0 = bias.sigmoid()
+                return (x * beta + bias).sigmoid() - c0
         else:
             return x
 
@@ -164,11 +188,14 @@ class ComPert(torch.nn.Module):
     Our main module, the ComPert autoencoder
     """
 
+    num_drugs: int  # number of unique drugs in the dataset, including control
+    use_drugs_idx: bool  # whether to except drugs coded by index or by OneHotEncoding
+
     def __init__(
         self,
-        num_genes,
-        num_drugs,
-        num_covariates,
+        num_genes: int,
+        num_drugs: int,
+        num_covariates: int,
         device="cpu",
         seed=0,
         patience=5,
@@ -177,6 +204,7 @@ class ComPert(torch.nn.Module):
         decoder_activation="linear",
         hparams="",
         drug_embeddings: Union[None, Drugemb] = None,
+        use_drugs_idx=False,
     ):
         super(ComPert, self).__init__()
         # set generic attributes
@@ -190,6 +218,7 @@ class ComPert(torch.nn.Module):
         self.patience = patience
         self.best_score = -1e3
         self.patience_trials = 0
+        self.use_drugs_idx = use_drugs_idx
 
         # set hyperparameters
         if isinstance(hparams, dict):
@@ -224,7 +253,14 @@ class ComPert(torch.nn.Module):
                 )
             else:
                 self.drug_embeddings = drug_embeddings
-            self.loss_adversary_drugs = torch.nn.BCEWithLogitsLoss()
+
+            if use_drugs_idx:
+                # there will only ever be a single drug, so no binary cross entropy needed
+                # careful: when the model is finetuned later with One-hot encodings, we'll have to
+                # retrained the adversary classifiers.
+                self.loss_adversary_drugs = torch.nn.CrossEntropyLoss()
+            else:
+                self.loss_adversary_drugs = torch.nn.BCEWithLogitsLoss()
             # set dosers
             if doser_type == "mlp":
                 self.dosers = torch.nn.ModuleList()
@@ -380,52 +416,82 @@ class ComPert(torch.nn.Module):
 
         return self.hparams
 
-    def move_inputs_(self, genes, drugs, covariates):
-        """
-        Move minibatch tensors to CPU/GPU.
-        """
-        genes = genes.to(self.device)
-        if drugs is not None:
-            drugs = drugs.to(self.device)
-        if covariates is not None:
-            covariates = [cov.to(self.device) for cov in covariates]
-        return (genes, drugs, covariates)
-
-    def compute_drug_embeddings_(self, drugs):
+    def compute_drug_embeddings_(self, drugs=None, drugs_idx=None, dosages=None):
         """
         Compute sum of drug embeddings, each of them multiplied by its
         dose-response curve.
+
+        Returns a tensor of shape [batch_size, drug_embedding_dimension]
         """
+        assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
+
+        drugs, drugs_idx, dosages = _move_inputs(
+            drugs, drugs_idx, dosages, device=self.device
+        )
+
         if isinstance(self.drug_embeddings, Drugemb):
             # drug embedding matrix
             latent_drugs = self.drug_embeddings()
         else:
             latent_drugs = self.drug_embeddings.weight
 
-        if self.doser_type == "mlp":
-            doses = []
-            for d in range(drugs.size(1)):
-                this_drug = drugs[:, d].view(-1, 1)
-                doses.append(self.dosers[d](this_drug).sigmoid() * this_drug.gt(0))
-            return torch.cat(doses, 1) @ latent_drugs
-        else:
-            return self.dosers(drugs) @ latent_drugs
+        if drugs_idx is not None:
+            assert drugs_idx.shape == dosages.shape and len(drugs_idx.shape) == 1
+            # results in a tensor of shape [batchsize, drug_embedding_dimension]
+            latent_drugs = latent_drugs[drugs_idx]
 
-    def predict(self, genes, drugs, covariates, return_latent_basal=False):
+        if self.doser_type == "mlp":
+            if drugs_idx is None:
+                doses = []
+                for d in range(drugs.size(1)):
+                    this_drug = drugs[:, d].view(-1, 1)
+                    doses.append(self.dosers[d](this_drug).sigmoid() * this_drug.gt(0))
+                scaled_dosages = torch.cat(doses, 1)
+            else:
+                scaled_dosages = []
+                for idx, dosage in zip(drugs_idx, dosages):
+                    scaled_dosages.append(
+                        self.dosers[idx](dosage.unsqueeze(0)).sigmoid()
+                    )
+                scaled_dosages = torch.cat(scaled_dosages, 0)
+        else:
+            if drugs_idx is None:
+                scaled_dosages = self.dosers(drugs)
+            else:
+                scaled_dosages = self.dosers(dosages, drugs_idx)
+
+        if drugs_idx is None:
+            return scaled_dosages @ latent_drugs
+        else:
+            return torch.einsum("b,be->be", [scaled_dosages, latent_drugs])
+
+    def predict(
+        self,
+        genes,
+        drugs=None,
+        drugs_idx=None,
+        dosages=None,
+        covariates=None,
+        return_latent_basal=False,
+    ):
         """
         Predict "what would have the gene expression `genes` been, had the
         cells in `genes` with cell types `cell_types` been treated with
         combination of drugs `drugs`.
         """
-
-        genes, drugs, covariates = self.move_inputs_(genes, drugs, covariates)
+        assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
+        genes, drugs, drugs_idx, dosages, covariates = _move_inputs(
+            genes, drugs, drugs_idx, dosages, covariates, device=self.device
+        )
 
         latent_basal = self.encoder(genes)
 
         latent_treated = latent_basal
 
         if self.num_drugs > 0:
-            latent_treated = latent_treated + self.compute_drug_embeddings_(drugs)
+            latent_treated = latent_treated + self.compute_drug_embeddings_(
+                drugs=drugs, drugs_idx=drugs_idx, dosages=dosages
+            )
         if self.num_covariates[0] > 0:
             for cov_type, emb_cov in enumerate(self.covariates_embeddings):
                 emb_cov = emb_cov.to(self.device)
@@ -469,28 +535,34 @@ class ComPert(torch.nn.Module):
 
         return self.patience_trials > self.patience
 
-    def update(self, genes, drugs, covariates):
+    def update(self, genes, drugs=None, drugs_idx=None, dosages=None, covariates=None):
         """
         Update ComPert's parameters given a minibatch of genes, drugs, and
         cell types.
         """
-        genes, drugs, covariates = self.move_inputs_(genes, drugs, covariates)
+        assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
 
         gene_reconstructions, latent_basal = self.predict(
-            genes,
-            drugs,
-            covariates,
+            genes=genes,
+            drugs=drugs,
+            drugs_idx=drugs_idx,
+            dosages=dosages,
+            covariates=covariates,
             return_latent_basal=True,
         )
-
         reconstruction_loss = self.loss_autoencoder(gene_reconstructions, genes)
 
         adversary_drugs_loss = torch.tensor([0.0], device=self.device)
         if self.num_drugs > 0:
             adversary_drugs_predictions = self.adversary_drugs(latent_basal)
-            adversary_drugs_loss = self.loss_adversary_drugs(
-                adversary_drugs_predictions, drugs.gt(0).float()
-            )
+            if self.use_drugs_idx:
+                adversary_drugs_loss = self.loss_adversary_drugs(
+                    adversary_drugs_predictions, drugs_idx
+                )
+            else:
+                adversary_drugs_loss = self.loss_adversary_drugs(
+                    adversary_drugs_predictions, drugs.gt(0).float()
+                )
 
         adversary_covariates_loss = torch.tensor([0.0], device=self.device)
         if self.num_covariates[0] > 0:
