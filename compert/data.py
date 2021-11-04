@@ -120,7 +120,7 @@ class Dataset:
                 [drugs_names_unique.add(i) for i in d.split("+")]
 
             self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
-            self.smiles_unique_ordered = drug_names_to_smiles(
+            self.smiles_unique_sorted = drug_names_to_smiles(
                 list(self.drugs_names_unique_sorted), data, perturbation_key, smiles_key
             )
             self.max_num_perturbations = max(
