@@ -1,0 +1,10 @@
+.idea/
+*.pyc
+*model.iter*
+data/
+*LOG*
+results*
+model.*
+splits/
+*.pkl
+ckpt/

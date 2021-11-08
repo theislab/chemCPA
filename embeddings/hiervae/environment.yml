@@ -1,0 +1,13 @@
+name: hiervae
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - numpy
+  - networkx
+  - rdkit=2019.03.4.0
+  - chemprop
+  - pytorch::pytorch
+  - cudatoolkit=10.2
+  - pyarrow
