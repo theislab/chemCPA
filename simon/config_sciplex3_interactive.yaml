@@ -60,6 +60,8 @@ fixed:
   model.hparams.penalty_adversary: 1e-2
   model.hparams.batch_size: 128
   model.hparams.step_size_lr: 15
+  model.hparams.embedding_encoder_width: 512
+  model.hparams.embedding_encoder_depth: 0  # just a single linear layer for now
 
   model.embedding.model: grover_base
   model.embedding.directory: embeddings

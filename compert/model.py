@@ -255,7 +255,10 @@ class ComPert(torch.nn.Module):
                 embedding_requires_grad = False
 
             self.drug_embedding_encoder = MLP(
-                [self.drug_embeddings.embedding_dim, self.hparams["dim"]],
+                [self.drug_embeddings.embedding_dim]
+                + [self.hparams["embedding_encoder_width"]]
+                * self.hparams["embedding_encoder_depth"]
+                + [self.hparams["dim"]],
                 last_layer_act="linear",
             )
 
@@ -411,6 +414,8 @@ class ComPert(torch.nn.Module):
             if default
             else int(np.random.choice([64, 128, 256, 512])),
             "step_size_lr": 45 if default else int(np.random.choice([15, 25, 45])),
+            "embedding_encoder_width": 512,
+            "embedding_encoder_depth": 0,
         }
 
         # the user may fix some hparams
