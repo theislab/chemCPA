@@ -1,7 +1,6 @@
 name: chemical_CPA
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - python
   - adjusttext
