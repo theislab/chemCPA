@@ -10,7 +10,7 @@ import scanpy as sc
 import pandas as pd
 
 from sklearn.preprocessing import OneHotEncoder
-from compert.helper import graph_from_smiles
+from compert.helper import graph_from_smiles, canonicalize_smiles
 from typing import Union, Optional, List
 
 
@@ -36,6 +36,24 @@ def ranks_to_df(data, key="rank_genes_groups"):
         dfs.append(series)
 
     return pd.concat(dfs, axis=1)
+
+
+def drug_names_to_smiles(
+    drug_names: List[str], dataset: sc.AnnData, perturbation_key: str, smiles_key: str
+):
+    """
+    Converts a list of drug names to a list of SMILES. The ordering is of the list is preserved.
+
+    TODO: This function will need to be rewritten to handle datasets with combinations.
+    This is not difficult to do, mainly we need to standardize how combinations of SMILES are stored in anndata.
+    """
+    name_to_smiles_map = {
+        drug: canonicalize_smiles(smiles)
+        for drug, smiles in dataset.obs.groupby(
+            [perturbation_key, smiles_key]
+        ).groups.keys()
+    }
+    return [name_to_smiles_map[name] for name in drug_names]
 
 
 indx = lambda a, i: a[i] if a is not None else None
@@ -100,7 +118,11 @@ class Dataset:
             drugs_names_unique = set()
             for d in self.drugs_names:
                 [drugs_names_unique.add(i) for i in d.split("+")]
+
             self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
+            self.smiles_unique_sorted = drug_names_to_smiles(
+                list(self.drugs_names_unique_sorted), data, perturbation_key, smiles_key
+            )
             self.max_num_perturbations = max(
                 len(name.split("+")) for name in self.drugs_names
             )

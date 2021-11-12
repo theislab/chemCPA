@@ -8,7 +8,6 @@ seml:
 
 slurm:
   experiments_per_job: 1
-  max_jobs_per_batch: 4
   sbatch_options_template: GPU
   sbatch_options:
     gres: gpu:1       # num GPUs
@@ -61,10 +60,8 @@ fixed:
   model.hparams.penalty_adversary: 1e-2
   model.hparams.batch_size: 128
   model.hparams.step_size_lr: 15
+  model.hparams.embedding_encoder_width: 512
+  model.hparams.embedding_encoder_depth: 0  # just a single linear layer for now
 
-
-gnn_model: # configures the GNN used in end-to-end training of the embedding (not used anymore)
-  fixed:
-    model.gnn_model.hparams.n_layers: 2
-    model.gnn_model.GCN.hparams.n_layers: 3
-    model.gnn_model.model_type: null
+  model.embedding.model: grover_base
+  model.embedding.directory: embeddings

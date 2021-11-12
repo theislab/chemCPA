@@ -6,8 +6,6 @@ from typing import Union
 import numpy as np
 import torch
 
-from compert.graph_model.graph_model import Drugemb
-
 
 def _move_inputs(*inputs, device="cuda"):
     def mv_input(x):
@@ -203,7 +201,7 @@ class ComPert(torch.nn.Module):
         doser_type="logsigm",
         decoder_activation="linear",
         hparams="",
-        drug_embeddings: Union[None, Drugemb] = None,
+        drug_embeddings: Union[None, torch.nn.Embedding] = None,
         use_drugs_idx=False,
     ):
         super(ComPert, self).__init__()
@@ -251,8 +249,18 @@ class ComPert(torch.nn.Module):
                         self.num_drugs, self.hparams["dim"]
                     )
                 )
+                embedding_requires_grad = True
             else:
                 self.drug_embeddings = drug_embeddings
+                embedding_requires_grad = False
+
+            self.drug_embedding_encoder = MLP(
+                [self.drug_embeddings.embedding_dim]
+                + [self.hparams["embedding_encoder_width"]]
+                * self.hparams["embedding_encoder_depth"]
+                + [self.hparams["dim"]],
+                last_layer_act="linear",
+            )
 
             if use_drugs_idx:
                 # there will only ever be a single drug, so no binary cross entropy needed
@@ -320,7 +328,8 @@ class ComPert(torch.nn.Module):
         _parameters = (
             get_params(self.encoder, True)
             + get_params(self.decoder, True)
-            + get_params(self.drug_embeddings, has_drugs)
+            + get_params(self.drug_embeddings, has_drugs and embedding_requires_grad)
+            + get_params(self.drug_embedding_encoder, True)
         )
         for emb in self.covariates_embeddings:
             _parameters.extend(get_params(emb, has_covariates))
@@ -405,6 +414,8 @@ class ComPert(torch.nn.Module):
             if default
             else int(np.random.choice([64, 128, 256, 512])),
             "step_size_lr": 45 if default else int(np.random.choice([15, 25, 45])),
+            "embedding_encoder_width": 512,
+            "embedding_encoder_depth": 0,
         }
 
         # the user may fix some hparams
@@ -429,11 +440,7 @@ class ComPert(torch.nn.Module):
             drugs, drugs_idx, dosages, device=self.device
         )
 
-        if isinstance(self.drug_embeddings, Drugemb):
-            # drug embedding matrix
-            latent_drugs = self.drug_embeddings()
-        else:
-            latent_drugs = self.drug_embeddings.weight
+        latent_drugs = self.drug_embeddings.weight
 
         if drugs_idx is not None:
             assert drugs_idx.shape == dosages.shape and len(drugs_idx.shape) == 1
@@ -489,8 +496,11 @@ class ComPert(torch.nn.Module):
         latent_treated = latent_basal
 
         if self.num_drugs > 0:
-            latent_treated = latent_treated + self.compute_drug_embeddings_(
+            drug_embedding = self.compute_drug_embeddings_(
                 drugs=drugs, drugs_idx=drugs_idx, dosages=dosages
+            )
+            latent_treated = latent_treated + self.drug_embedding_encoder(
+                drug_embedding
             )
         if self.num_covariates[0] > 0:
             for cov_type, emb_cov in enumerate(self.covariates_embeddings):
