@@ -7,16 +7,20 @@ from argparse import Namespace
 from logging import Logger
 
 import torch
-from torch.utils.data import DataLoader
-
 from grover.data.dist_sampler import DistributedSampler
-from grover.data.groverdataset import get_data, split_data, GroverCollator, BatchMolDataset
+from grover.data.groverdataset import (
+    BatchMolDataset,
+    GroverCollator,
+    get_data,
+    split_data,
+)
 from grover.data.torchvocab import MolVocab
 from grover.model.models import GROVEREmbedding
 from grover.util.multi_gpu_wrapper import MultiGpuWrapper as mgw
 from grover.util.nn_utils import param_count
-from grover.util.utils import build_optimizer, build_lr_scheduler
+from grover.util.utils import build_lr_scheduler, build_optimizer
 from task.grovertrainer import GROVERTrainer
+from torch.utils.data import DataLoader
 
 
 def pretrain_model(args: Namespace, logger: Logger = None):
@@ -35,7 +39,13 @@ def pretrain_model(args: Namespace, logger: Logger = None):
     print("Total Time: %.3f" % (e_time - s_time))
 
 
-def pre_load_data(dataset: BatchMolDataset, rank: int, num_replicas: int, sample_per_file: int = None, epoch: int = 0):
+def pre_load_data(
+    dataset: BatchMolDataset,
+    rank: int,
+    num_replicas: int,
+    sample_per_file: int = None,
+    epoch: int = 0,
+):
     """
     Pre-load data at the beginning of each epoch.
     :param dataset: the training dataset.
@@ -46,8 +56,13 @@ def pre_load_data(dataset: BatchMolDataset, rank: int, num_replicas: int, sample
     :param epoch: the epoch number.
     :return:
     """
-    mock_sampler = DistributedSampler(dataset, num_replicas=num_replicas, rank=rank, shuffle=False,
-                                      sample_per_file=sample_per_file)
+    mock_sampler = DistributedSampler(
+        dataset,
+        num_replicas=num_replicas,
+        rank=rank,
+        shuffle=False,
+        sample_per_file=sample_per_file,
+    )
     mock_sampler.set_epoch(epoch)
     pre_indices = mock_sampler.get_indices()
     for i in pre_indices:
@@ -90,13 +105,15 @@ def run_training(args, logger):
         print(args)
         if args.enable_multi_gpu:
             debug("Total workers: %d" % (mgw.size()))
-        debug('Loading data')
+        debug("Loading data")
     data, sample_per_file = get_data(data_path=args.data_path)
 
     # data splitting
     if master_worker:
-        debug(f'Splitting data with seed 0.')
-    train_data, test_data, _ = split_data(data=data, sizes=(0.9, 0.1, 0.0), seed=0, logger=logger)
+        debug(f"Splitting data with seed 0.")
+    train_data, test_data, _ = split_data(
+        data=data, sizes=(0.9, 0.1, 0.0), seed=0, logger=logger
+    )
 
     # Here the true train data size is the train_data divided by #GPUs
     if args.enable_multi_gpu:
@@ -104,8 +121,10 @@ def run_training(args, logger):
     else:
         args.train_data_size = len(train_data)
     if master_worker:
-        debug(f'Total size = {len(data):,} | '
-              f'train size = {len(train_data):,} | val size = {len(test_data):,}')
+        debug(
+            f"Total size = {len(data):,} | "
+            f"train size = {len(train_data):,} | val size = {len(test_data):,}"
+        )
 
     # load atom and bond vocabulary and the semantic motif labels.
     atom_vocab = MolVocab.load_vocab(args.atom_vocab_path)
@@ -115,10 +134,14 @@ def run_training(args, logger):
     # Hard coding here, since we haven't load any data yet!
     fg_size = 85
     shared_dict = {}
-    mol_collator = GroverCollator(shared_dict=shared_dict, atom_vocab=atom_vocab, bond_vocab=bond_vocab, args=args)
+    mol_collator = GroverCollator(
+        shared_dict=shared_dict, atom_vocab=atom_vocab, bond_vocab=bond_vocab, args=args
+    )
     if master_worker:
-        debug("atom vocab size: %d, bond vocab size: %d, Number of FG tasks: %d" % (atom_vocab_size,
-                                                                                    bond_vocab_size, fg_size))
+        debug(
+            "atom vocab size: %d, bond vocab size: %d, Number of FG tasks: %d"
+            % (atom_vocab_size, bond_vocab_size, fg_size)
+        )
 
     # Define the distributed sampler. If using the single card, the sampler will be None.
     train_sampler = None
@@ -127,11 +150,17 @@ def run_training(args, logger):
     if args.enable_multi_gpu:
         # If not shuffle, the performance may decayed.
         train_sampler = DistributedSampler(
-            train_data, num_replicas=mgw.size(), rank=mgw.rank(), shuffle=True, sample_per_file=sample_per_file)
+            train_data,
+            num_replicas=mgw.size(),
+            rank=mgw.rank(),
+            shuffle=True,
+            sample_per_file=sample_per_file,
+        )
         # Here sample_per_file in test_sampler is None, indicating the test sampler would not divide the test samples by
         # rank. (TODO: bad design here.)
         test_sampler = DistributedSampler(
-            test_data, num_replicas=mgw.size(), rank=mgw.rank(), shuffle=False)
+            test_data, num_replicas=mgw.size(), rank=mgw.rank(), shuffle=False
+        )
         train_sampler.set_epoch(args.epochs)
         test_sampler.set_epoch(1)
         # if we enables multi_gpu training. shuffle should be disabled.
@@ -145,35 +174,41 @@ def run_training(args, logger):
         print("Pre-loaded test data: %d" % test_data.count_loaded_datapoints())
 
     # Build dataloader
-    train_data_dl = DataLoader(train_data,
-                               batch_size=args.batch_size,
-                               shuffle=shuffle,
-                               num_workers=12,
-                               sampler=train_sampler,
-                               collate_fn=mol_collator)
-    test_data_dl = DataLoader(test_data,
-                              batch_size=args.batch_size,
-                              shuffle=shuffle,
-                              num_workers=10,
-                              sampler=test_sampler,
-                              collate_fn=mol_collator)
+    train_data_dl = DataLoader(
+        train_data,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        num_workers=12,
+        sampler=train_sampler,
+        collate_fn=mol_collator,
+    )
+    test_data_dl = DataLoader(
+        test_data,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        num_workers=10,
+        sampler=test_sampler,
+        collate_fn=mol_collator,
+    )
 
     # Build the embedding model.
     grover_model = GROVEREmbedding(args)
 
     #  Build the trainer.
-    trainer = GROVERTrainer(args=args,
-                            embedding_model=grover_model,
-                            atom_vocab_size=atom_vocab_size,
-                            bond_vocab_size=bond_vocab_size,
-                            fg_szie=fg_size,
-                            train_dataloader=train_data_dl,
-                            test_dataloader=test_data_dl,
-                            optimizer_builder=build_optimizer,
-                            scheduler_builder=build_lr_scheduler,
-                            logger=logger,
-                            with_cuda=with_cuda,
-                            enable_multi_gpu=args.enable_multi_gpu)
+    trainer = GROVERTrainer(
+        args=args,
+        embedding_model=grover_model,
+        atom_vocab_size=atom_vocab_size,
+        bond_vocab_size=bond_vocab_size,
+        fg_szie=fg_size,
+        train_dataloader=train_data_dl,
+        test_dataloader=test_data_dl,
+        optimizer_builder=build_optimizer,
+        scheduler_builder=build_lr_scheduler,
+        logger=logger,
+        with_cuda=with_cuda,
+        enable_multi_gpu=args.enable_multi_gpu,
+    )
 
     # Restore the interrupted training.
     model_dir = os.path.join(args.save_dir, "model")
@@ -182,11 +217,19 @@ def run_training(args, logger):
     if master_worker:
         resume_from_epoch, resume_scheduler_step = trainer.restore(model_dir)
     if args.enable_multi_gpu:
-        resume_from_epoch = mgw.broadcast(torch.tensor(resume_from_epoch), root_rank=0, name="resume_from_epoch").item()
-        resume_scheduler_step = mgw.broadcast(torch.tensor(resume_scheduler_step),
-                                              root_rank=0, name="resume_scheduler_step").item()
+        resume_from_epoch = mgw.broadcast(
+            torch.tensor(resume_from_epoch), root_rank=0, name="resume_from_epoch"
+        ).item()
+        resume_scheduler_step = mgw.broadcast(
+            torch.tensor(resume_scheduler_step),
+            root_rank=0,
+            name="resume_scheduler_step",
+        ).item()
         trainer.scheduler.current_step = resume_scheduler_step
-        print("Restored epoch: %d Restored scheduler step: %d" % (resume_from_epoch, trainer.scheduler.current_step))
+        print(
+            "Restored epoch: %d Restored scheduler step: %d"
+            % (resume_from_epoch, trainer.scheduler.current_step)
+        )
     trainer.broadcast_parameters()
 
     # Print model details.
@@ -219,20 +262,22 @@ def run_training(args, logger):
 
         # print information.
         if master_worker:
-            print('Epoch: {:04d}'.format(epoch),
-                  'loss_train: {:.6f}'.format(train_loss),
-                  'loss_val: {:.6f}'.format(val_loss),
-                  'loss_val_av: {:.6f}'.format(val_av_loss),
-                  'loss_val_bv: {:.6f}'.format(val_bv_loss),
-                  'loss_val_fg: {:.6f}'.format(val_fg_loss),
-                  'cur_lr: {:.5f}'.format(trainer.scheduler.get_lr()[0]),
-                  't_time: {:.4f}s'.format(t_time),
-                  'v_time: {:.4f}s'.format(v_time),
-                  'd_time: {:.4f}s'.format(d_time), flush=True)
+            print(
+                "Epoch: {:04d}".format(epoch),
+                "loss_train: {:.6f}".format(train_loss),
+                "loss_val: {:.6f}".format(val_loss),
+                "loss_val_av: {:.6f}".format(val_av_loss),
+                "loss_val_bv: {:.6f}".format(val_bv_loss),
+                "loss_val_fg: {:.6f}".format(val_fg_loss),
+                "cur_lr: {:.5f}".format(trainer.scheduler.get_lr()[0]),
+                "t_time: {:.4f}s".format(t_time),
+                "v_time: {:.4f}s".format(v_time),
+                "d_time: {:.4f}s".format(d_time),
+                flush=True,
+            )
 
             if epoch % args.save_interval == 0:
                 trainer.save(epoch, model_dir)
-
 
             trainer.save_tmp(epoch, model_dir, rank)
 

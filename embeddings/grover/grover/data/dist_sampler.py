@@ -3,9 +3,10 @@ The re-implemented distributed sampler for the distributed training of GROVER.
 """
 import math
 import time
+
 import torch
-from torch.utils.data.sampler import Sampler
 import torch.distributed as dist
+from torch.utils.data.sampler import Sampler
 
 
 class DistributedSampler(Sampler):
@@ -26,7 +27,9 @@ class DistributedSampler(Sampler):
         rank (optional): Rank of the current process within num_replicas.
     """
 
-    def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True, sample_per_file=None):
+    def __init__(
+        self, dataset, num_replicas=None, rank=None, shuffle=True, sample_per_file=None
+    ):
         if num_replicas is None:
             if not dist.is_available():
                 raise RuntimeError("Requires distributed package to be available")
@@ -52,7 +55,7 @@ class DistributedSampler(Sampler):
             indices = self.sub_indices_of_rank(indices)
         else:
             # add extra samples to make it evenly divisible
-            indices += indices[:(self.total_size - len(indices))]
+            indices += indices[: (self.total_size - len(indices))]
             assert len(indices) == self.total_size
             # subsample
             s = self.rank * self.num_samples
@@ -81,13 +84,15 @@ class DistributedSampler(Sampler):
         g.manual_seed((self.epoch + 1) * 2 + 3)
 
         # the fake file indices to cache
-        f_indices = list(range(int(math.ceil(len(indices) * 1.0 / self.sample_per_file))))
+        f_indices = list(
+            range(int(math.ceil(len(indices) * 1.0 / self.sample_per_file)))
+        )
         idx = torch.randperm(len(f_indices), generator=g).tolist()
         f_indices = [f_indices[i] for i in idx]
 
         file_per_rank = int(math.ceil(len(f_indices) * 1.0 / self.num_replicas))
         # add extra fake file to make it evenly divisible
-        f_indices += f_indices[:(file_per_rank * self.num_replicas - len(f_indices))]
+        f_indices += f_indices[: (file_per_rank * self.num_replicas - len(f_indices))]
 
         # divide index by rank
         rank_s = self.rank * file_per_rank
@@ -127,10 +132,14 @@ if __name__ == "__main__":
 
     dataset = [1] * 190001
     res = []
-    ds = DistributedSampler(dataset, num_replicas=2, rank=0, shuffle=True, sample_per_file=777)
+    ds = DistributedSampler(
+        dataset, num_replicas=2, rank=0, shuffle=True, sample_per_file=777
+    )
     res.extend(ds.get_indices())
     print(len(ds.get_indices()))
-    ds = DistributedSampler(dataset, num_replicas=2, rank=1, shuffle=True, sample_per_file=777)
+    ds = DistributedSampler(
+        dataset, num_replicas=2, rank=1, shuffle=True, sample_per_file=777
+    )
     res.extend(ds.get_indices())
     print(len(ds.get_indices()))
     print(len(set(res)))

@@ -15,13 +15,16 @@ FeaturesGenerator = Callable[[Molecule], np.ndarray]
 FEATURES_GENERATOR_REGISTRY = {}
 
 
-def register_features_generator(features_generator_name: str) -> Callable[[FeaturesGenerator], FeaturesGenerator]:
+def register_features_generator(
+    features_generator_name: str,
+) -> Callable[[FeaturesGenerator], FeaturesGenerator]:
     """
     Registers a features generator.
 
     :param features_generator_name: The name to call the FeaturesGenerator.
     :return: A decorator which will add a FeaturesGenerator to the registry using the specified name.
     """
+
     def decorator(features_generator: FeaturesGenerator) -> FeaturesGenerator:
         FEATURES_GENERATOR_REGISTRY[features_generator_name] = features_generator
         return features_generator
@@ -37,8 +40,10 @@ def get_features_generator(features_generator_name: str) -> FeaturesGenerator:
     :return: The desired FeaturesGenerator.
     """
     if features_generator_name not in FEATURES_GENERATOR_REGISTRY:
-        raise ValueError(f'Features generator "{features_generator_name}" could not be found. '
-                         f'If this generator relies on rdkit features, you may need to install descriptastorus.')
+        raise ValueError(
+            f'Features generator "{features_generator_name}" could not be found. '
+            f"If this generator relies on rdkit features, you may need to install descriptastorus."
+        )
 
     return FEATURES_GENERATOR_REGISTRY[features_generator_name]
 
@@ -52,10 +57,10 @@ MORGAN_RADIUS = 2
 MORGAN_NUM_BITS = 2048
 
 
-@register_features_generator('morgan')
-def morgan_binary_features_generator(mol: Molecule,
-                                     radius: int = MORGAN_RADIUS,
-                                     num_bits: int = MORGAN_NUM_BITS) -> np.ndarray:
+@register_features_generator("morgan")
+def morgan_binary_features_generator(
+    mol: Molecule, radius: int = MORGAN_RADIUS, num_bits: int = MORGAN_NUM_BITS
+) -> np.ndarray:
     """
     Generates a binary Morgan fingerprint for a molecule.
 
@@ -72,10 +77,10 @@ def morgan_binary_features_generator(mol: Molecule,
     return features
 
 
-@register_features_generator('morgan_count')
-def morgan_counts_features_generator(mol: Molecule,
-                                     radius: int = MORGAN_RADIUS,
-                                     num_bits: int = MORGAN_NUM_BITS) -> np.ndarray:
+@register_features_generator("morgan_count")
+def morgan_counts_features_generator(
+    mol: Molecule, radius: int = MORGAN_RADIUS, num_bits: int = MORGAN_NUM_BITS
+) -> np.ndarray:
     """
     Generates a counts-based Morgan fingerprint for a molecule.
 
@@ -95,7 +100,7 @@ def morgan_counts_features_generator(mol: Molecule,
 try:
     from descriptastorus.descriptors import rdDescriptors, rdNormalizedDescriptors
 
-    @register_features_generator('rdkit_2d')
+    @register_features_generator("rdkit_2d")
     def rdkit_2d_features_generator(mol: Molecule) -> np.ndarray:
         """
         Generates RDKit 2D features for a molecule.
@@ -109,7 +114,7 @@ try:
 
         return features
 
-    @register_features_generator('rdkit_2d_normalized')
+    @register_features_generator("rdkit_2d_normalized")
     def rdkit_2d_features_normalized_generator(mol: Molecule) -> np.ndarray:
         """
         Generates RDKit 2D normalized features for a molecule.
@@ -121,6 +126,8 @@ try:
         generator = rdNormalizedDescriptors.RDKit2DNormalized()
         features = generator.process(smiles)[1:]
         return features
+
+
 except ImportError:
     pass
 

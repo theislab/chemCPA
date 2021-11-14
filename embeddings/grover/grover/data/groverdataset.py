@@ -1,19 +1,19 @@
 """
 The dataset used in training GROVER.
 """
+import csv
 import math
 import os
-import csv
-from typing import Union, List
-import numpy as np
-import torch
-from torch.utils.data.dataset import Dataset
-from rdkit import Chem
+from typing import List, Union
 
 import grover.util.utils as feautils
+import numpy as np
+import torch
 from grover.data import mol2graph
 from grover.data.moldataset import MoleculeDatapoint
 from grover.data.task_labels import atom_to_vocab, bond_to_vocab
+from rdkit import Chem
+from torch.utils.data.dataset import Dataset
 
 
 def get_data(data_path, logger=None):
@@ -41,16 +41,14 @@ def get_data(data_path, logger=None):
     for i in range(n_files):
         smiles_path_i = os.path.join(smiles_path, str(i) + ".csv")
         feature_path_i = os.path.join(feature_path, str(i) + ".npz")
-        n_samples_i = sample_per_file if i != (n_files - 1) else n_samples % sample_per_file
+        n_samples_i = (
+            sample_per_file if i != (n_files - 1) else n_samples % sample_per_file
+        )
         datapoints.append(BatchDatapoint(smiles_path_i, feature_path_i, n_samples_i))
     return BatchMolDataset(datapoints), sample_per_file
 
 
-def split_data(data,
-               split_type='random',
-               sizes=(0.8, 0.1, 0.1),
-               seed=0,
-               logger=None):
+def split_data(data, split_type="random", sizes=(0.8, 0.1, 0.1), seed=0, logger=None):
     """
     Split data with given train/validation/test ratio.
     :param data:
@@ -79,11 +77,12 @@ def split_data(data,
 
 
 class BatchDatapoint:
-    def __init__(self,
-                 smiles_file,
-                 feature_file,
-                 n_samples,
-                 ):
+    def __init__(
+        self,
+        smiles_file,
+        feature_file,
+        n_samples,
+    ):
         self.smiles_file = smiles_file
         self.feature_file = feature_file
         # deal with the last batch graph numbers.
@@ -99,8 +98,7 @@ class BatchDatapoint:
             next(reader)
             for i, line in enumerate(reader):
                 # line = line[0]
-                d = MoleculeDatapoint(line=line,
-                                      features=features[i])
+                d = MoleculeDatapoint(line=line, features=features[i])
                 self.datapoints.append(d)
 
         assert len(self.datapoints) == self.n_samples
@@ -127,8 +125,7 @@ class BatchDatapoint:
 
 
 class BatchMolDataset(Dataset):
-    def __init__(self, data: List[BatchDatapoint],
-                 graph_per_file=None):
+    def __init__(self, data: List[BatchDatapoint], graph_per_file=None):
         self.data = data
 
         self.len = 0
@@ -191,7 +188,9 @@ class GroverCollator(object):
             perm = np.random.permutation(mol.GetNumAtoms())[:n_mask]
             for p in perm:
                 atom = mol.GetAtomWithIdx(int(p))
-                mlabel[p] = self.atom_vocab.stoi.get(atom_to_vocab(mol, atom), self.atom_vocab.other_index)
+                mlabel[p] = self.atom_vocab.stoi.get(
+                    atom_to_vocab(mol, atom), self.atom_vocab.other_index
+                )
 
             vocab_label.extend(mlabel)
         return vocab_label
@@ -220,7 +219,9 @@ class GroverCollator(object):
                     if bond is None:
                         continue
                     if virtual_bond_id in perm:
-                        label = self.bond_vocab.stoi.get(bond_to_vocab(mol, bond), self.bond_vocab.other_index)
+                        label = self.bond_vocab.stoi.get(
+                            bond_to_vocab(mol, bond), self.bond_vocab.other_index
+                        )
                         mlabel.extend([label])
                     else:
                         mlabel.extend([0])
@@ -233,15 +234,20 @@ class GroverCollator(object):
 
     def __call__(self, batch):
         smiles_batch = [d.smiles for d in batch]
-        batchgraph = mol2graph(smiles_batch, self.shared_dict, self.args).get_components()
+        batchgraph = mol2graph(
+            smiles_batch, self.shared_dict, self.args
+        ).get_components()
 
         atom_vocab_label = torch.Tensor(self.atom_random_mask(smiles_batch)).long()
         bond_vocab_label = torch.Tensor(self.bond_random_mask(smiles_batch)).long()
         fgroup_label = torch.Tensor([d.features for d in batch]).float()
         # may be some mask here
-        res = {"graph_input": batchgraph,
-               "targets": {"av_task": atom_vocab_label,
-                           "bv_task": bond_vocab_label,
-                           "fg_task": fgroup_label}
-               }
+        res = {
+            "graph_input": batchgraph,
+            "targets": {
+                "av_task": atom_vocab_label,
+                "bv_task": bond_vocab_label,
+                "fg_task": fgroup_label,
+            },
+        }
         return res

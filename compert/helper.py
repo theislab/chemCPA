@@ -1,19 +1,19 @@
+import warnings
 from typing import Optional
 
-import scanpy as sc
-import pandas as pd
 import dgl
+import pandas as pd
+import scanpy as sc
 from dgllife.utils import (
-    smiles_to_bigraph,
-    CanonicalAtomFeaturizer,
-    CanonicalBondFeaturizer,
     AttentiveFPAtomFeaturizer,
     AttentiveFPBondFeaturizer,
+    CanonicalAtomFeaturizer,
+    CanonicalBondFeaturizer,
     PretrainAtomFeaturizer,
     PretrainBondFeaturizer,
+    smiles_to_bigraph,
 )
 from rdkit import Chem
-import warnings
 
 
 def rank_genes_groups_by_cov(

@@ -8,21 +8,22 @@ from argparse import Namespace
 from typing import Callable, List, Union
 
 import numpy as np
-from rdkit import Chem
-from torch.utils.data.dataset import Dataset
-
 from grover.data.molfeaturegenerator import get_features_generator
 from grover.data.scaler import StandardScaler
+from rdkit import Chem
+from torch.utils.data.dataset import Dataset
 
 
 class MoleculeDatapoint:
     """A MoleculeDatapoint contains a single molecule and its associated features and targets."""
 
-    def __init__(self,
-                 line: List[str],
-                 args: Namespace = None,
-                 features: np.ndarray = None,
-                 use_compound_names: bool = False):
+    def __init__(
+        self,
+        line: List[str],
+        args: Namespace = None,
+        features: np.ndarray = None,
+        use_compound_names: bool = False,
+    ):
         """
         Initializes a MoleculeDatapoint, which contains a single molecule.
 
@@ -39,7 +40,9 @@ class MoleculeDatapoint:
             self.args = args
 
         if features is not None and self.features_generator is not None:
-            raise ValueError('Currently cannot provide both loaded features and a features generator.')
+            raise ValueError(
+                "Currently cannot provide both loaded features and a features generator."
+            )
 
         self.features = features
 
@@ -51,7 +54,6 @@ class MoleculeDatapoint:
 
         self.smiles = line[0]  # str
 
-
         # Generate additional features if given a generator
         if self.features_generator is not None:
             self.features = []
@@ -59,8 +61,10 @@ class MoleculeDatapoint:
             for fg in self.features_generator:
                 features_generator = get_features_generator(fg)
                 if mol is not None and mol.GetNumHeavyAtoms() > 0:
-                    if fg in ['morgan', 'morgan_count']:
-                        self.features.extend(features_generator(mol, num_bits=args.num_bits))
+                    if fg in ["morgan", "morgan_count"]:
+                        self.features.extend(
+                            features_generator(mol, num_bits=args.num_bits)
+                        )
                     else:
                         self.features.extend(features_generator(mol))
 
@@ -69,10 +73,12 @@ class MoleculeDatapoint:
         # Fix nans in features
         if self.features is not None:
             replace_token = 0
-            self.features = np.where(np.isnan(self.features), replace_token, self.features)
+            self.features = np.where(
+                np.isnan(self.features), replace_token, self.features
+            )
 
         # Create targets
-        self.targets = [float(x) if x != '' else None for x in line[1:]]
+        self.targets = [float(x) if x != "" else None for x in line[1:]]
 
     def set_features(self, features: np.ndarray):
         """
@@ -156,7 +162,7 @@ class MoleculeDataset(Dataset):
 
         :return: The number of tasks.
         """
-        if self.args.dataset_type == 'multiclass':
+        if self.args.dataset_type == "multiclass":
             return int(max([i[0] for i in self.targets()])) + 1
         else:
             return self.data[0].num_tasks() if len(self.data) > 0 else None
@@ -167,7 +173,11 @@ class MoleculeDataset(Dataset):
 
         :return: The size of the features.
         """
-        return len(self.data[0].features) if len(self.data) > 0 and self.data[0].features is not None else None
+        return (
+            len(self.data[0].features)
+            if len(self.data) > 0 and self.data[0].features is not None
+            else None
+        )
 
     def shuffle(self, seed: int = None):
         """
@@ -179,7 +189,9 @@ class MoleculeDataset(Dataset):
             random.seed(seed)
         random.shuffle(self.data)
 
-    def normalize_features(self, scaler: StandardScaler = None, replace_nan_token: int = 0) -> StandardScaler:
+    def normalize_features(
+        self, scaler: StandardScaler = None, replace_nan_token: int = 0
+    ) -> StandardScaler:
         """
         Normalizes the features of the dataset using a StandardScaler (subtract mean, divide by standard deviation).
 

@@ -9,19 +9,18 @@ import random
 from argparse import Namespace
 from collections import defaultdict
 from logging import Logger
-from typing import List, Set, Tuple, Union, Dict
+from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 import torch
+from grover.data import MoleculeDatapoint, MoleculeDataset, StandardScaler
+from grover.model.models import GroverFinetuneTask, GroverFpGeneration
+from grover.util.nn_utils import initialize_weights
+from grover.util.scheduler import NoamLR
 from rdkit import Chem
 from rdkit.Chem.Scaffolds import MurckoScaffold
 from torch import nn as nn
 from tqdm import tqdm as core_tqdm
-
-from grover.data import MoleculeDatapoint, MoleculeDataset, StandardScaler
-from grover.model.models import GroverFpGeneration, GroverFinetuneTask
-from grover.util.nn_utils import initialize_weights
-from grover.util.scheduler import NoamLR
 
 
 def get_model_args():
@@ -30,13 +29,39 @@ def get_model_args():
 
     :return: a list containing parameters
     """
-    return ['model_type', 'ensemble_size', 'input_layer', 'hidden_size', 'bias', 'depth',
-            'dropout', 'activation', 'undirected', 'ffn_hidden_size', 'ffn_num_layers',
-            'atom_message', 'weight_decay', 'select_by_loss', 'skip_epoch', 'backbone',
-            'embedding_output_type', 'self_attention', 'attn_hidden', 'attn_out', 'dense',
-            'bond_drop_rate', 'distinct_init', 'aug_rate', 'fine_tune_coff', 'nencoders',
-            'dist_coff', 'no_attach_fea', 'coord', "num_attn_head", "num_mt_block",
-            ]
+    return [
+        "model_type",
+        "ensemble_size",
+        "input_layer",
+        "hidden_size",
+        "bias",
+        "depth",
+        "dropout",
+        "activation",
+        "undirected",
+        "ffn_hidden_size",
+        "ffn_num_layers",
+        "atom_message",
+        "weight_decay",
+        "select_by_loss",
+        "skip_epoch",
+        "backbone",
+        "embedding_output_type",
+        "self_attention",
+        "attn_hidden",
+        "attn_out",
+        "dense",
+        "bond_drop_rate",
+        "distinct_init",
+        "aug_rate",
+        "fine_tune_coff",
+        "nencoders",
+        "dist_coff",
+        "no_attach_fea",
+        "coord",
+        "num_attn_head",
+        "num_mt_block",
+    ]
 
 
 def save_features(path: str, features: List[np.ndarray]):
@@ -64,10 +89,10 @@ def load_features(path: str) -> np.ndarray:
     """
     extension = os.path.splitext(path)[1]
 
-    if extension == '.npz':
-        features = np.load(path)['features']
+    if extension == ".npz":
+        features = np.load(path)["features"]
     else:
-        raise ValueError(f'Features path extension {extension} not supported.')
+        raise ValueError(f"Features path extension {extension} not supported.")
 
     return features
 
@@ -115,7 +140,6 @@ def get_num_tasks(path: str) -> int:
     return len(get_header(path)) - 1
 
 
-
 def filter_invalid_smiles(data: MoleculeDataset) -> MoleculeDataset:
     """
     Filters out invalid SMILES.
@@ -125,24 +149,26 @@ def filter_invalid_smiles(data: MoleculeDataset) -> MoleculeDataset:
     """
     datapoint_list = []
     for idx, datapoint in enumerate(data):
-        if datapoint.smiles == '':
-            print(f'invalid smiles {idx}: {datapoint.smiles}')
+        if datapoint.smiles == "":
+            print(f"invalid smiles {idx}: {datapoint.smiles}")
             continue
         mol = Chem.MolFromSmiles(datapoint.smiles)
         if mol.GetNumHeavyAtoms() == 0:
-            print(f'invalid heavy {idx}')
+            print(f"invalid heavy {idx}")
             continue
         datapoint_list.append(datapoint)
     return MoleculeDataset(datapoint_list)
 
 
-def get_data(path: str,
-             skip_invalid_smiles: bool = True,
-             args: Namespace = None,
-             features_path: List[str] = None,
-             max_data_size: int = None,
-             use_compound_names: bool = None,
-             logger: Logger = None) -> MoleculeDataset:
+def get_data(
+    path: str,
+    skip_invalid_smiles: bool = True,
+    args: Namespace = None,
+    features_path: List[str] = None,
+    max_data_size: int = None,
+    use_compound_names: bool = None,
+    logger: Logger = None,
+) -> MoleculeDataset:
     """
     Gets smiles string and target values (and optionally compound names if provided) from a CSV file.
 
@@ -161,19 +187,29 @@ def get_data(path: str,
 
     if args is not None:
         # Prefer explicit function arguments but default to args if not provided
-        features_path = features_path if features_path is not None else args.features_path
-        max_data_size = max_data_size if max_data_size is not None else args.max_data_size
-        use_compound_names = use_compound_names if use_compound_names is not None else args.use_compound_names
+        features_path = (
+            features_path if features_path is not None else args.features_path
+        )
+        max_data_size = (
+            max_data_size if max_data_size is not None else args.max_data_size
+        )
+        use_compound_names = (
+            use_compound_names
+            if use_compound_names is not None
+            else args.use_compound_names
+        )
     else:
         use_compound_names = False
 
-    max_data_size = max_data_size or float('inf')
+    max_data_size = max_data_size or float("inf")
 
     # Load features
     if features_path is not None:
         features_data = []
         for feat_path in features_path:
-            features_data.append(load_features(feat_path))  # each is num_data x num_features
+            features_data.append(
+                load_features(feat_path)
+            )  # each is num_data x num_features
         features_data = np.concatenate(features_data, axis=1)
         args.features_dim = len(features_data[0])
     else:
@@ -200,14 +236,17 @@ def get_data(path: str,
             if len(lines) >= max_data_size:
                 break
 
-        data = MoleculeDataset([
-            MoleculeDatapoint(
-                line=line,
-                args=args,
-                features=features_data[i] if features_data is not None else None,
-                use_compound_names=use_compound_names
-            ) for i, line in tqdm(enumerate(lines), total=len(lines), disable=True)
-        ])
+        data = MoleculeDataset(
+            [
+                MoleculeDatapoint(
+                    line=line,
+                    args=args,
+                    features=features_data[i] if features_data is not None else None,
+                    use_compound_names=use_compound_names,
+                )
+                for i, line in tqdm(enumerate(lines), total=len(lines), disable=True)
+            ]
+        )
 
     # Filter out invalid SMILES
     if skip_invalid_smiles:
@@ -215,13 +254,17 @@ def get_data(path: str,
         data = filter_invalid_smiles(data)
 
         if len(data) < original_data_len:
-            debug(f'Warning: {original_data_len - len(data)} SMILES are invalid.')
+            debug(f"Warning: {original_data_len - len(data)} SMILES are invalid.")
 
     return data
 
 
-def get_data_from_smiles(smiles: List[str], skip_invalid_smiles: bool = True, logger: Logger = None,
-                         args: Namespace = None) -> MoleculeDataset:
+def get_data_from_smiles(
+    smiles: List[str],
+    skip_invalid_smiles: bool = True,
+    logger: Logger = None,
+    args: Namespace = None,
+) -> MoleculeDataset:
     """
     Converts SMILES to a MoleculeDataset.
 
@@ -232,7 +275,9 @@ def get_data_from_smiles(smiles: List[str], skip_invalid_smiles: bool = True, lo
     """
     debug = logger.debug if logger is not None else print
 
-    data = MoleculeDataset([MoleculeDatapoint(line=[smile], args=args) for smile in smiles])
+    data = MoleculeDataset(
+        [MoleculeDatapoint(line=[smile], args=args) for smile in smiles]
+    )
 
     # Filter out invalid SMILES
     if skip_invalid_smiles:
@@ -240,19 +285,19 @@ def get_data_from_smiles(smiles: List[str], skip_invalid_smiles: bool = True, lo
         data = filter_invalid_smiles(data)
 
         if len(data) < original_data_len:
-            debug(f'Warning: {original_data_len - len(data)} SMILES are invalid.')
+            debug(f"Warning: {original_data_len - len(data)} SMILES are invalid.")
 
     return data
 
 
-def split_data(data: MoleculeDataset,
-               split_type: str = 'random',
-               sizes: Tuple[float, float, float] = (0.8, 0.1, 0.1),
-               seed: int = 0,
-               args: Namespace = None,
-               logger: Logger = None) -> Tuple[MoleculeDataset,
-                                               MoleculeDataset,
-                                               MoleculeDataset]:
+def split_data(
+    data: MoleculeDataset,
+    split_type: str = "random",
+    sizes: Tuple[float, float, float] = (0.8, 0.1, 0.1),
+    seed: int = 0,
+    args: Namespace = None,
+    logger: Logger = None,
+) -> Tuple[MoleculeDataset, MoleculeDataset, MoleculeDataset]:
     """
     Splits data into training, validation, and test splits.
 
@@ -268,24 +313,29 @@ def split_data(data: MoleculeDataset,
     assert len(sizes) == 3 and sum(sizes) == 1
 
     if args is not None:
-        folds_file, val_fold_index, test_fold_index = \
-            args.folds_file, args.val_fold_index, args.test_fold_index
+        folds_file, val_fold_index, test_fold_index = (
+            args.folds_file,
+            args.val_fold_index,
+            args.test_fold_index,
+        )
     else:
         folds_file = val_fold_index = test_fold_index = None
 
-    if split_type == 'crossval':
+    if split_type == "crossval":
         index_set = args.crossval_index_sets[args.seed]
         data_split = []
         for split in range(3):
             split_indices = []
             for index in index_set[split]:
-                with open(os.path.join(args.crossval_index_dir, f'{index}.pkl'), 'rb') as rf:
+                with open(
+                    os.path.join(args.crossval_index_dir, f"{index}.pkl"), "rb"
+                ) as rf:
                     split_indices.extend(pickle.load(rf))
             data_split.append([data[i] for i in split_indices])
         train, val, test = tuple(data_split)
         return MoleculeDataset(train), MoleculeDataset(val), MoleculeDataset(test)
 
-    elif split_type == 'index_predetermined':
+    elif split_type == "index_predetermined":
         split_indices = args.crossval_index_sets[args.seed]
         assert len(split_indices) == 3
         data_split = []
@@ -294,18 +344,22 @@ def split_data(data: MoleculeDataset,
         train, val, test = tuple(data_split)
         return MoleculeDataset(train), MoleculeDataset(val), MoleculeDataset(test)
 
-    elif split_type == 'predetermined':
+    elif split_type == "predetermined":
         if not val_fold_index:
-            assert sizes[2] == 0  # test set is created separately so use all of the other data for train and val
+            assert (
+                sizes[2] == 0
+            )  # test set is created separately so use all of the other data for train and val
         assert folds_file is not None
         assert test_fold_index is not None
 
         try:
-            with open(folds_file, 'rb') as f:
+            with open(folds_file, "rb") as f:
                 all_fold_indices = pickle.load(f)
         except UnicodeDecodeError:
-            with open(folds_file, 'rb') as f:
-                all_fold_indices = pickle.load(f, encoding='latin1')  # in case we're loading indices from python2
+            with open(folds_file, "rb") as f:
+                all_fold_indices = pickle.load(
+                    f, encoding="latin1"
+                )  # in case we're loading indices from python2
         # assert len(data) == sum([len(fold_indices) for fold_indices in all_fold_indices])
 
         log_scaffold_stats(data, all_fold_indices, logger=logger)
@@ -332,10 +386,12 @@ def split_data(data: MoleculeDataset,
 
         return MoleculeDataset(train), MoleculeDataset(val), MoleculeDataset(test)
 
-    elif split_type == 'scaffold_balanced':
-        return scaffold_split(data, sizes=sizes, balanced=True, seed=seed, logger=logger)
+    elif split_type == "scaffold_balanced":
+        return scaffold_split(
+            data, sizes=sizes, balanced=True, seed=seed, logger=logger
+        )
 
-    elif split_type == 'random':
+    elif split_type == "random":
         data.shuffle(seed=seed)
 
         train_size = int(sizes[0] * len(data))
@@ -376,14 +432,16 @@ def get_class_sizes(data: MoleculeDataset) -> List[List[float]]:
         try:
             ones = np.count_nonzero(task_targets) / len(task_targets)
         except ZeroDivisionError:
-            ones = float('nan')
-            print('Warning: class has no targets')
+            ones = float("nan")
+            print("Warning: class has no targets")
         class_sizes.append([1 - ones, ones])
 
     return class_sizes
 
 
-def generate_scaffold(mol: Union[str, Chem.Mol], include_chirality: bool = False) -> str:
+def generate_scaffold(
+    mol: Union[str, Chem.Mol], include_chirality: bool = False
+) -> str:
     """
     Compute the Bemis-Murcko scaffold for a SMILES string.
 
@@ -392,13 +450,16 @@ def generate_scaffold(mol: Union[str, Chem.Mol], include_chirality: bool = False
     :return:
     """
     mol = Chem.MolFromSmiles(mol) if type(mol) == str else mol
-    scaffold = MurckoScaffold.MurckoScaffoldSmiles(mol=mol, includeChirality=include_chirality)
+    scaffold = MurckoScaffold.MurckoScaffoldSmiles(
+        mol=mol, includeChirality=include_chirality
+    )
 
     return scaffold
 
 
-def scaffold_to_smiles(mols: Union[List[str], List[Chem.Mol]],
-                       use_indices: bool = False) -> Dict[str, Union[Set[str], Set[int]]]:
+def scaffold_to_smiles(
+    mols: Union[List[str], List[Chem.Mol]], use_indices: bool = False
+) -> Dict[str, Union[Set[str], Set[int]]]:
     """
     Computes scaffold for each smiles string and returns a mapping from scaffolds to sets of smiles.
 
@@ -418,13 +479,13 @@ def scaffold_to_smiles(mols: Union[List[str], List[Chem.Mol]],
     return scaffolds
 
 
-def scaffold_split(data: MoleculeDataset,
-                   sizes: Tuple[float, float, float] = (0.8, 0.1, 0.1),
-                   balanced: bool = False,
-                   seed: int = 0,
-                   logger: logging.Logger = None) -> Tuple[MoleculeDataset,
-                                                           MoleculeDataset,
-                                                           MoleculeDataset]:
+def scaffold_split(
+    data: MoleculeDataset,
+    sizes: Tuple[float, float, float] = (0.8, 0.1, 0.1),
+    balanced: bool = False,
+    seed: int = 0,
+    logger: logging.Logger = None,
+) -> Tuple[MoleculeDataset, MoleculeDataset, MoleculeDataset]:
     """
     Split a dataset by scaffold so that no molecules sharing a scaffold are in the same split.
 
@@ -439,14 +500,20 @@ def scaffold_split(data: MoleculeDataset,
     assert sum(sizes) == 1
 
     # Split
-    train_size, val_size, test_size = sizes[0] * len(data), sizes[1] * len(data), sizes[2] * len(data)
+    train_size, val_size, test_size = (
+        sizes[0] * len(data),
+        sizes[1] * len(data),
+        sizes[2] * len(data),
+    )
     train, val, test = [], [], []
     train_scaffold_count, val_scaffold_count, test_scaffold_count = 0, 0, 0
 
     # Map from scaffold to index in the data
     scaffold_to_indices = scaffold_to_smiles(data.smiles(), use_indices=True)
 
-    if balanced:  # Put stuff that's bigger than half the val/test size into train, rest just order randomly
+    if (
+        balanced
+    ):  # Put stuff that's bigger than half the val/test size into train, rest just order randomly
         index_sets = list(scaffold_to_indices.values())
         big_index_sets = []
         small_index_sets = []
@@ -460,9 +527,11 @@ def scaffold_split(data: MoleculeDataset,
         random.shuffle(small_index_sets)
         index_sets = big_index_sets + small_index_sets
     else:  # Sort from largest to smallest scaffold sets
-        index_sets = sorted(list(scaffold_to_indices.values()),
-                            key=lambda index_set: len(index_set),
-                            reverse=True)
+        index_sets = sorted(
+            list(scaffold_to_indices.values()),
+            key=lambda index_set: len(index_set),
+            reverse=True,
+        )
 
     for index_set in index_sets:
         if len(train) + len(index_set) <= train_size:
@@ -476,10 +545,12 @@ def scaffold_split(data: MoleculeDataset,
             test_scaffold_count += 1
 
     if logger is not None:
-        logger.debug(f'Total scaffolds = {len(scaffold_to_indices):,} | '
-                     f'train scaffolds = {train_scaffold_count:,} | '
-                     f'val scaffolds = {val_scaffold_count:,} | '
-                     f'test scaffolds = {test_scaffold_count:,}')
+        logger.debug(
+            f"Total scaffolds = {len(scaffold_to_indices):,} | "
+            f"train scaffolds = {train_scaffold_count:,} | "
+            f"val scaffolds = {val_scaffold_count:,} | "
+            f"test scaffolds = {test_scaffold_count:,}"
+        )
 
     log_scaffold_stats(data, index_sets, logger=logger)
 
@@ -491,11 +562,13 @@ def scaffold_split(data: MoleculeDataset,
     return MoleculeDataset(train), MoleculeDataset(val), MoleculeDataset(test)
 
 
-def log_scaffold_stats(data: MoleculeDataset,
-                       index_sets: List[Set[int]],
-                       num_scaffolds: int = 10,
-                       num_labels: int = 20,
-                       logger: logging.Logger = None) -> List[Tuple[List[float], List[int]]]:
+def log_scaffold_stats(
+    data: MoleculeDataset,
+    index_sets: List[Set[int]],
+    num_scaffolds: int = 10,
+    num_labels: int = 20,
+    logger: logging.Logger = None,
+) -> List[Tuple[List[float], List[int]]]:
     """
     Logs and returns statistics about counts and average target values in molecular scaffolds.
 
@@ -517,11 +590,16 @@ def log_scaffold_stats(data: MoleculeDataset,
         targets = np.array(targets, dtype=np.float)
         target_avgs.append(np.nanmean(targets, axis=0))
         counts.append(np.count_nonzero(~np.isnan(targets), axis=0))
-    stats = [(target_avgs[i][:num_labels], counts[i][:num_labels]) for i in range(min(num_scaffolds, len(target_avgs)))]
+    stats = [
+        (target_avgs[i][:num_labels], counts[i][:num_labels])
+        for i in range(min(num_scaffolds, len(target_avgs)))
+    ]
 
     if logger is not None:
-        logger.debug('Label averages per scaffold, in decreasing order of scaffold frequency,'
-                     f'capped at {num_scaffolds} scaffolds and {num_labels} labels: {stats}')
+        logger.debug(
+            "Label averages per scaffold, in decreasing order of scaffold frequency,"
+            f"capped at {num_scaffolds} scaffolds and {num_labels} labels: {stats}"
+        )
 
     return stats
 
@@ -538,7 +616,7 @@ def makedirs(path: str, isfile: bool = False):
     """
     if isfile:
         path = os.path.dirname(path)
-    if path != '':
+    if path != "":
         os.makedirs(path, exist_ok=True)
 
 
@@ -549,8 +627,7 @@ def load_args(path: str) -> Namespace:
     :param path: Path where model checkpoint is saved.
     :return: The arguments Namespace that the model was trained with.
     """
-    return torch.load(path, map_location=lambda storage, loc: storage)['args']
-
+    return torch.load(path, map_location=lambda storage, loc: storage)["args"]
 
 
 def get_ffn_layer_id(model: GroverFinetuneTask):
@@ -576,17 +653,23 @@ def build_optimizer(model: nn.Module, args: Namespace):
         ffn_params = get_ffn_layer_id(model)
     else:
         # if not, init adam optimizer normally.
-        return torch.optim.Adam(model.parameters(), lr=args.init_lr, weight_decay=args.weight_decay)
+        return torch.optim.Adam(
+            model.parameters(), lr=args.init_lr, weight_decay=args.weight_decay
+        )
     base_params = filter(lambda p: id(p) not in ffn_params, model.parameters())
     ffn_params = filter(lambda p: id(p) in ffn_params, model.parameters())
     if args.fine_tune_coff == 0:
         for param in base_params:
             param.requires_grad = False
 
-    optimizer = torch.optim.Adam([
-        {'params': base_params, 'lr': args.init_lr * args.fine_tune_coff},
-        {'params': ffn_params, 'lr': args.init_lr}
-    ], lr=args.init_lr, weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(
+        [
+            {"params": base_params, "lr": args.init_lr * args.fine_tune_coff},
+            {"params": ffn_params, "lr": args.init_lr},
+        ],
+        lr=args.init_lr,
+        weight_decay=args.weight_decay,
+    )
 
     return optimizer
 
@@ -611,11 +694,13 @@ def build_lr_scheduler(optimizer, args: Namespace, total_epochs: List[int] = Non
         init_lr=args.init_lr,
         max_lr=args.max_lr,
         final_lr=args.final_lr,
-        fine_tune_coff=args.fine_tune_coff
+        fine_tune_coff=args.fine_tune_coff,
     )
 
 
-def create_logger(name: str, save_dir: str = None, quiet: bool = False) -> logging.Logger:
+def create_logger(
+    name: str, save_dir: str = None, quiet: bool = False
+) -> logging.Logger:
     """
     Creates a logger with a stream handler and two file handlers.
 
@@ -641,9 +726,9 @@ def create_logger(name: str, save_dir: str = None, quiet: bool = False) -> loggi
 
     if save_dir is not None:
         makedirs(save_dir)
-        fh_v = logging.FileHandler(os.path.join(save_dir, 'verbose.log'))
+        fh_v = logging.FileHandler(os.path.join(save_dir, "verbose.log"))
         fh_v.setLevel(logging.DEBUG)
-        fh_q = logging.FileHandler(os.path.join(save_dir, 'quiet.log'))
+        fh_q = logging.FileHandler(os.path.join(save_dir, "quiet.log"))
         fh_q.setLevel(logging.INFO)
 
         logger.addHandler(fh_v)
@@ -652,10 +737,12 @@ def create_logger(name: str, save_dir: str = None, quiet: bool = False) -> loggi
     return logger
 
 
-def load_checkpoint(path: str,
-                    current_args: Namespace = None,
-                    cuda: bool = None,
-                    logger: logging.Logger = None):
+def load_checkpoint(
+    path: str,
+    current_args: Namespace = None,
+    cuda: bool = None,
+    logger: logging.Logger = None,
+):
     """
     Loads a model checkpoint.
 
@@ -669,7 +756,7 @@ def load_checkpoint(path: str,
 
     # Load model and args
     state = torch.load(path, map_location=lambda storage, loc: storage)
-    args, loaded_state_dict = state['args'], state['state_dict']
+    args, loaded_state_dict = state["args"], state["state_dict"]
     model_ralated_args = get_model_args()
 
     if current_args is not None:
@@ -690,11 +777,18 @@ def load_checkpoint(path: str,
     for param_name in loaded_state_dict.keys():
         new_param_name = param_name
         if new_param_name not in model_state_dict:
-            debug(f'Pretrained parameter "{param_name}" cannot be found in model parameters.')
-        elif model_state_dict[new_param_name].shape != loaded_state_dict[param_name].shape:
-            debug(f'Pretrained parameter "{param_name}" '
-                  f'of shape {loaded_state_dict[param_name].shape} does not match corresponding '
-                  f'model parameter of shape {model_state_dict[new_param_name].shape}.')
+            debug(
+                f'Pretrained parameter "{param_name}" cannot be found in model parameters.'
+            )
+        elif (
+            model_state_dict[new_param_name].shape
+            != loaded_state_dict[param_name].shape
+        ):
+            debug(
+                f'Pretrained parameter "{param_name}" '
+                f"of shape {loaded_state_dict[param_name].shape} does not match corresponding "
+                f"model parameter of shape {model_state_dict[new_param_name].shape}."
+            )
         else:
             debug(f'Loading pretrained parameter "{param_name}".')
             pretrained_state_dict[new_param_name] = loaded_state_dict[param_name]
@@ -703,7 +797,7 @@ def load_checkpoint(path: str,
     model.load_state_dict(model_state_dict)
 
     if cuda:
-        debug('Moving model to cuda')
+        debug("Moving model to cuda")
         model = model.cuda()
 
     return model
@@ -718,10 +812,10 @@ def get_loss_func(args: Namespace, model=None):
     """
     if hasattr(model, "get_loss_func"):
         return model.get_loss_func(args)
-    if args.dataset_type == 'classification':
-        return nn.BCEWithLogitsLoss(reduction='none')
-    if args.dataset_type == 'regression':
-        return nn.MSELoss(reduction='none')
+    if args.dataset_type == "classification":
+        return nn.BCEWithLogitsLoss(reduction="none")
+    if args.dataset_type == "regression":
+        return nn.MSELoss(reduction="none")
 
     raise ValueError(f'Dataset type "{args.dataset_type}" not supported.')
 
@@ -735,20 +829,25 @@ def load_scalars(path: str):
     """
     state = torch.load(path, map_location=lambda storage, loc: storage)
 
-    scaler = StandardScaler(state['data_scaler']['means'],
-                            state['data_scaler']['stds']) if state['data_scaler'] is not None else None
-    features_scaler = StandardScaler(state['features_scaler']['means'],
-                                     state['features_scaler']['stds'],
-                                     replace_nan_token=0) if state['features_scaler'] is not None else None
+    scaler = (
+        StandardScaler(state["data_scaler"]["means"], state["data_scaler"]["stds"])
+        if state["data_scaler"] is not None
+        else None
+    )
+    features_scaler = (
+        StandardScaler(
+            state["features_scaler"]["means"],
+            state["features_scaler"]["stds"],
+            replace_nan_token=0,
+        )
+        if state["features_scaler"] is not None
+        else None
+    )
 
     return scaler, features_scaler
 
 
-def save_checkpoint(path: str,
-                    model,
-                    scaler,
-                    features_scaler,
-                    args: Namespace = None):
+def save_checkpoint(path: str, model, scaler, features_scaler, args: Namespace = None):
     """
     Saves a model checkpoint.
 
@@ -759,16 +858,17 @@ def save_checkpoint(path: str,
     :param path: Path where checkpoint will be saved.
     """
     state = {
-        'args': args,
-        'state_dict': model.state_dict(),
-        'data_scaler': {
-            'means': scaler.means,
-            'stds': scaler.stds
-        } if scaler is not None else None,
-        'features_scaler': {
-            'means': features_scaler.means,
-            'stds': features_scaler.stds
-        } if features_scaler is not None else None
+        "args": args,
+        "state_dict": model.state_dict(),
+        "data_scaler": {"means": scaler.means, "stds": scaler.stds}
+        if scaler is not None
+        else None,
+        "features_scaler": {
+            "means": features_scaler.means,
+            "stds": features_scaler.stds,
+        }
+        if features_scaler is not None
+        else None,
     }
     torch.save(state, path)
 
@@ -780,7 +880,7 @@ def build_model(args: Namespace, model_idx=0):
     :param args: Arguments.
     :return: A MPNN containing the MPN encoder along with final linear layers with parameters initialized.
     """
-    if hasattr(args, 'num_tasks'):
+    if hasattr(args, "num_tasks"):
         args.output_size = args.num_tasks
     else:
         args.output_size = 1

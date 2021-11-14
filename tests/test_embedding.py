@@ -1,4 +1,3 @@
-import numpy
 import pandas as pd
 import torch.testing
 

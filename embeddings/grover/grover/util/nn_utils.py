@@ -28,10 +28,16 @@ def index_select_nd(source: torch.Tensor, index: torch.Tensor) -> torch.Tensor:
     """
     index_size = index.size()  # (num_atoms/num_bonds, max_num_bonds)
     suffix_dim = source.size()[1:]  # (hidden_size,)
-    final_size = index_size + suffix_dim  # (num_atoms/num_bonds, max_num_bonds, hidden_size)
+    final_size = (
+        index_size + suffix_dim
+    )  # (num_atoms/num_bonds, max_num_bonds, hidden_size)
 
-    target = source.index_select(dim=0, index=index.view(-1))  # (num_atoms/num_bonds * max_num_bonds, hidden_size)
-    target = target.view(final_size)  # (num_atoms/num_bonds, max_num_bonds, hidden_size)
+    target = source.index_select(
+        dim=0, index=index.view(-1)
+    )  # (num_atoms/num_bonds * max_num_bonds, hidden_size)
+    target = target.view(
+        final_size
+    )  # (num_atoms/num_bonds, max_num_bonds, hidden_size)
 
     return target
 
@@ -43,17 +49,17 @@ def get_activation_function(activation: str) -> nn.Module:
     :param activation: The name of the activation function.
     :return: The activation function module.
     """
-    if activation == 'ReLU':
+    if activation == "ReLU":
         return nn.ReLU()
-    elif activation == 'LeakyReLU':
+    elif activation == "LeakyReLU":
         return nn.LeakyReLU(0.1)
-    elif activation == 'PReLU':
+    elif activation == "PReLU":
         return nn.PReLU()
-    elif activation == 'tanh':
+    elif activation == "tanh":
         return nn.Tanh()
-    elif activation == 'SELU':
+    elif activation == "SELU":
         return nn.SELU()
-    elif activation == 'ELU':
+    elif activation == "ELU":
         return nn.ELU()
     elif activation == "Linear":
         return lambda x: x
@@ -67,16 +73,20 @@ def initialize_weights(model: nn.Module, distinct_init=False, model_idx=0):
 
     :param model: An nn.Module.
     """
-    init_fns = [nn.init.kaiming_normal_, nn.init.kaiming_uniform_,
-               nn.init.xavier_normal_, nn.init.xavier_uniform_]
+    init_fns = [
+        nn.init.kaiming_normal_,
+        nn.init.kaiming_uniform_,
+        nn.init.xavier_normal_,
+        nn.init.xavier_uniform_,
+    ]
     for param in model.parameters():
         if param.dim() == 1:
             nn.init.constant_(param, 0)
         else:
             if distinct_init:
                 init_fn = init_fns[model_idx % 4]
-                if 'kaiming' in init_fn.__name__:
-                    init_fn(param, nonlinearity='relu')
+                if "kaiming" in init_fn.__name__:
+                    init_fn(param, nonlinearity="relu")
                 else:
                     init_fn(param)
             else:

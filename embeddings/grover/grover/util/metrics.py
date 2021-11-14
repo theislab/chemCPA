@@ -2,10 +2,19 @@
 The evaluation metrics.
 """
 import math
-from typing import List, Callable, Union
+from typing import Callable, List, Union
 
-from sklearn.metrics import accuracy_score, mean_squared_error, roc_auc_score, mean_absolute_error, r2_score, \
-    precision_recall_curve, auc, recall_score, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    auc,
+    confusion_matrix,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_recall_curve,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+)
 
 
 def accuracy(targets: List[int], preds: List[float], threshold: float = 0.5) -> float:
@@ -34,7 +43,9 @@ def recall(targets: List[int], preds: List[float], threshold: float = 0.5) -> fl
     return recall_score(targets, hard_preds)
 
 
-def sensitivity(targets: List[int], preds: List[float], threshold: float = 0.5) -> float:
+def sensitivity(
+    targets: List[int], preds: List[float], threshold: float = 0.5
+) -> float:
     """
     Computes the sensitivity of a binary prediction task using a given threshold for generating hard predictions.
 
@@ -46,7 +57,9 @@ def sensitivity(targets: List[int], preds: List[float], threshold: float = 0.5) 
     return recall(targets, preds, threshold)
 
 
-def specificity(targets: List[int], preds: List[float], threshold: float = 0.5) -> float:
+def specificity(
+    targets: List[int], preds: List[float], threshold: float = 0.5
+) -> float:
     """
     Computes the specificity of a binary prediction task using a given threshold for generating hard predictions.
 
@@ -60,7 +73,6 @@ def specificity(targets: List[int], preds: List[float], threshold: float = 0.5) 
     return tn / float(tn + fp)
 
 
-
 def rmse(targets: List[float], preds: List[float]) -> float:
     """
     Computes the root mean squared error.
@@ -72,7 +84,9 @@ def rmse(targets: List[float], preds: List[float]) -> float:
     return math.sqrt(mean_squared_error(targets, preds))
 
 
-def get_metric_func(metric: str) -> Callable[[Union[List[int], List[float]], List[float]], float]:
+def get_metric_func(
+    metric: str,
+) -> Callable[[Union[List[int], List[float]], List[float]], float]:
     """
     Gets the metric function corresponding to a given metric name.
 
@@ -80,31 +94,31 @@ def get_metric_func(metric: str) -> Callable[[Union[List[int], List[float]], Lis
     :return: A metric function which takes as arguments a list of targets and a list of predictions and returns.
     """
     # Note: If you want to add a new metric, please also update the parser argument --metric in parsing.py.
-    if metric == 'auc':
+    if metric == "auc":
         return roc_auc_score
 
-    if metric == 'prc-auc':
+    if metric == "prc-auc":
         return prc_auc
 
-    if metric == 'rmse':
+    if metric == "rmse":
         return rmse
 
-    if metric == 'mae':
+    if metric == "mae":
         return mean_absolute_error
 
-    if metric == 'r2':
+    if metric == "r2":
         return r2_score
 
-    if metric == 'accuracy':
+    if metric == "accuracy":
         return accuracy
 
-    if metric == 'recall':
+    if metric == "recall":
         return recall
 
-    if metric == 'sensitivity':
+    if metric == "sensitivity":
         return sensitivity
 
-    if metric == 'specificity':
+    if metric == "specificity":
         return specificity
 
     raise ValueError(f'Metric "{metric}" not supported.')

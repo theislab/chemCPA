@@ -1,9 +1,11 @@
 import inspect
+from typing import Union
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Union
 from dgl import DGLGraph
+
 from compert.graph_model.helper_gnn import (
     AttentiveFPPredictor,
     GATPredictor,
@@ -11,7 +13,6 @@ from compert.graph_model.helper_gnn import (
     MPNNPredictor,
     Weave_GNN,
 )
-
 
 use_cuda = lambda model: model.cuda() if torch.cuda.is_available() else model
 

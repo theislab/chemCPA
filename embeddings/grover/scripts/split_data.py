@@ -1,21 +1,26 @@
 """
 The data splitting script for pretraining.
 """
-import os
-from argparse import ArgumentParser
 import csv
+import os
 import shutil
-import numpy as np
-
+from argparse import ArgumentParser
 
 import grover.util.utils as fea_utils
-
+import numpy as np
 
 parser = ArgumentParser()
-parser.add_argument("--data_path", default="../drug_data/grover_data/delaneyfreesolvlipo.csv")
-parser.add_argument("--features_path", default="../drug_data/grover_data/delaneyfreesolvlipo_molbert.npz")
+parser.add_argument(
+    "--data_path", default="../drug_data/grover_data/delaneyfreesolvlipo.csv"
+)
+parser.add_argument(
+    "--features_path",
+    default="../drug_data/grover_data/delaneyfreesolvlipo_molbert.npz",
+)
 parser.add_argument("--sample_per_file", type=int, default=1000)
-parser.add_argument("--output_path", default="../drug_data/grover_data/delaneyfreesolvlipo")
+parser.add_argument(
+    "--output_path", default="../drug_data/grover_data/delaneyfreesolvlipo"
+)
 
 
 def load_smiles(data_path):
@@ -76,7 +81,7 @@ def run():
         save_features(fea_path, i, sfea)
 
     summary_path = os.path.join(args.output_path, "summary.txt")
-    summary_fout = open(summary_path, 'w')
+    summary_fout = open(summary_path, "w")
     summary_fout.write("n_files:%d\n" % nfold)
     summary_fout.write("n_samples:%d\n" % n_graphs)
     summary_fout.write("sample_per_file:%d\n" % args.sample_per_file)

@@ -1,6 +1,6 @@
 from pprint import pprint
 
-from seml.config import read_config, generate_configs
+from seml.config import generate_configs, read_config
 
 from compert.seml_sweep_icb import ExperimentWrapper
 

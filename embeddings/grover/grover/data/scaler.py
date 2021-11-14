@@ -4,6 +4,7 @@ This implementation is adapted from
 https://github.com/chemprop/chemprop/blob/master/chemprop/data/scaler.py
 """
 from typing import Any, List
+
 import numpy as np
 
 
@@ -14,7 +15,12 @@ class StandardScaler:
     When transforming a dataset, the StandardScaler subtracts the means and divides by the standard deviations.
     """
 
-    def __init__(self, means: np.ndarray = None, stds: np.ndarray = None, replace_nan_token: Any = None):
+    def __init__(
+        self,
+        means: np.ndarray = None,
+        stds: np.ndarray = None,
+        replace_nan_token: Any = None,
+    ):
         """
         Initialize StandardScaler, optionally with means and standard deviations precomputed.
 
@@ -26,7 +32,7 @@ class StandardScaler:
         self.stds = stds
         self.replace_nan_token = replace_nan_token
 
-    def fit(self, X: List[List[float]]) -> 'StandardScaler':
+    def fit(self, X: List[List[float]]) -> "StandardScaler":
         """
         Learns means and standard deviations across the 0th axis.
 
@@ -36,7 +42,9 @@ class StandardScaler:
         X = np.array(X).astype(float)
         self.means = np.nanmean(X, axis=0)
         self.stds = np.nanstd(X, axis=0)
-        self.means = np.where(np.isnan(self.means), np.zeros(self.means.shape), self.means)
+        self.means = np.where(
+            np.isnan(self.means), np.zeros(self.means.shape), self.means
+        )
         self.stds = np.where(np.isnan(self.stds), np.ones(self.stds.shape), self.stds)
         self.stds = np.where(self.stds == 0, np.ones(self.stds.shape), self.stds)
 
@@ -51,7 +59,9 @@ class StandardScaler:
         """
         X = np.array(X).astype(float)
         transformed_with_nan = (X - self.means) / self.stds
-        transformed_with_none = np.where(np.isnan(transformed_with_nan), self.replace_nan_token, transformed_with_nan)
+        transformed_with_none = np.where(
+            np.isnan(transformed_with_nan), self.replace_nan_token, transformed_with_nan
+        )
 
         return transformed_with_none
 
@@ -65,6 +75,9 @@ class StandardScaler:
         if isinstance(X, np.ndarray) or isinstance(X, list):
             X = np.array(X).astype(float)
             transformed_with_nan = X * self.stds + self.means
-            transformed_with_none = np.where(np.isnan(transformed_with_nan),
-                                             self.replace_nan_token, transformed_with_nan)
+            transformed_with_none = np.where(
+                np.isnan(transformed_with_nan),
+                self.replace_nan_token,
+                transformed_with_nan,
+            )
         return transformed_with_none

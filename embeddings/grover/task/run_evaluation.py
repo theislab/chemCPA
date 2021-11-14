@@ -8,14 +8,18 @@ from typing import List
 import numpy as np
 import torch
 import torch.utils.data.distributed
-
 from grover.data.scaler import StandardScaler
-from grover.util.utils import get_class_sizes, get_data, split_data, get_task_names, get_loss_func
-from grover.util.utils import load_checkpoint
-from task.predict import evaluate_predictions
 from grover.util.metrics import get_metric_func
 from grover.util.nn_utils import param_count
-from task.predict import predict
+from grover.util.utils import (
+    get_class_sizes,
+    get_data,
+    get_loss_func,
+    get_task_names,
+    load_checkpoint,
+    split_data,
+)
+from task.predict import evaluate_predictions, predict
 
 
 def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
@@ -34,29 +38,33 @@ def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
     torch.cuda.set_device(0)
 
     # Get data
-    debug('Loading data')
+    debug("Loading data")
     args.task_names = get_task_names(args.data_path)
     data = get_data(path=args.data_path, args=args, logger=logger)
     args.num_tasks = data.num_tasks()
     args.features_size = data.features_size()
-    debug(f'Number of tasks = {args.num_tasks}')
+    debug(f"Number of tasks = {args.num_tasks}")
 
     # Split data
-    debug(f'Splitting data with seed {args.seed}')
+    debug(f"Splitting data with seed {args.seed}")
 
-    train_data, val_data, test_data = split_data(data=data,
-                                                 split_type=args.split_type,
-                                                 sizes=[0.8, 0.1, 0.1],
-                                                 seed=args.seed,
-                                                 args=args,
-                                                 logger=logger)
+    train_data, val_data, test_data = split_data(
+        data=data,
+        split_type=args.split_type,
+        sizes=[0.8, 0.1, 0.1],
+        seed=args.seed,
+        args=args,
+        logger=logger,
+    )
 
-    if args.dataset_type == 'classification':
+    if args.dataset_type == "classification":
         class_sizes = get_class_sizes(data)
-        debug('Class sizes')
+        debug("Class sizes")
         for i, task_class_sizes in enumerate(class_sizes):
-            debug(f'{args.task_names[i]} '
-                  f'{", ".join(f"{cls}: {size * 100:.2f}%" for cls, size in enumerate(task_class_sizes))}')
+            debug(
+                f"{args.task_names[i]} "
+                f'{", ".join(f"{cls}: {size * 100:.2f}%" for cls, size in enumerate(task_class_sizes))}'
+            )
 
     if args.features_scaling:
         features_scaler = train_data.normalize_features(replace_nan_token=0)
@@ -67,13 +75,15 @@ def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
 
     args.train_data_size = len(train_data)
 
-    debug(f'Total size = {len(data):,} | '
-          f'train size = {len(train_data):,} | val size = {len(val_data):,} | test size = {len(test_data):,}')
+    debug(
+        f"Total size = {len(data):,} | "
+        f"train size = {len(train_data):,} | val size = {len(val_data):,} | test size = {len(test_data):,}"
+    )
 
     # Initialize scaler  (regression only)
     scaler = None
-    if args.dataset_type == 'regression':
-        debug('Fitting scaler')
+    if args.dataset_type == "regression":
+        debug("Fitting scaler")
         _, train_targets = train_data.smiles(), train_data.targets()
         scaler = StandardScaler().fit(train_targets)
         scaled_targets = scaler.transform(train_targets).tolist()
@@ -96,12 +106,14 @@ def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
         for path in args.checkpoint_paths:
             if "fold_%d" % cur_model in path:
                 target_path = path
-        debug(f'Loading model {args.seed} from {target_path}')
-        model = load_checkpoint(target_path, current_args=args, cuda=args.cuda, logger=logger)
+        debug(f"Loading model {args.seed} from {target_path}")
+        model = load_checkpoint(
+            target_path, current_args=args, cuda=args.cuda, logger=logger
+        )
         # Get loss and metric functions
         loss_func = get_loss_func(args, model)
 
-    debug(f'Number of parameters = {param_count(model):,}')
+    debug(f"Number of parameters = {param_count(model):,}")
 
     test_preds, _ = predict(
         model=model,
@@ -111,7 +123,7 @@ def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
         logger=logger,
         shared_dict={},
         scaler=scaler,
-        args=args
+        args=args,
     )
 
     test_scores = evaluate_predictions(
@@ -120,7 +132,7 @@ def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
         num_tasks=args.num_tasks,
         metric_func=metric_func,
         dataset_type=args.dataset_type,
-        logger=logger
+        logger=logger,
     )
 
     if len(test_preds) != 0:
@@ -128,12 +140,12 @@ def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
 
     # Average test score
     avg_test_score = np.nanmean(test_scores)
-    info(f'Model test {args.metric} = {avg_test_score:.6f}')
+    info(f"Model test {args.metric} = {avg_test_score:.6f}")
 
     if args.show_individual_scores:
         # Individual test scores
         for task_name, test_score in zip(args.task_names, test_scores):
-            info(f'Model test {task_name} {args.metric} = {test_score:.6f}')
+            info(f"Model test {task_name} {args.metric} = {test_score:.6f}")
 
     # Evaluate ensemble on test set
     avg_test_preds = (sum_test_preds / args.ensemble_size).tolist()
@@ -144,7 +156,7 @@ def run_evaluation(args: Namespace, logger: Logger = None) -> List[float]:
         num_tasks=args.num_tasks,
         metric_func=metric_func,
         dataset_type=args.dataset_type,
-        logger=logger
+        logger=logger,
     )
 
     # If you want to save the prediction result, uncomment these lines.

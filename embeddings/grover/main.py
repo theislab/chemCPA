@@ -2,15 +2,14 @@ import random
 
 import numpy as np
 import torch
-from rdkit import RDLogger
-
-from grover.util.parsing import parse_args, get_newest_train_args
+from grover.data.torchvocab import MolVocab
+from grover.util.parsing import get_newest_train_args, parse_args
 from grover.util.utils import create_logger
+from rdkit import RDLogger
 from task.cross_validate import cross_validate
 from task.fingerprint import generate_fingerprints
 from task.predict import make_predictions, write_prediction
 from task.pretrain import pretrain_model
-from grover.data.torchvocab import MolVocab
 
 
 def setup(seed):
@@ -22,7 +21,7 @@ def setup(seed):
     torch.backends.cudnn.deterministic = True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # setup random seed
     setup(seed=42)
     # Avoid the pylint warning.
@@ -35,21 +34,21 @@ if __name__ == '__main__':
     mol_vocab = MolVocab
 
     args = parse_args()
-    if args.parser_name == 'finetune':
-        logger = create_logger(name='train', save_dir=args.save_dir, quiet=False)
+    if args.parser_name == "finetune":
+        logger = create_logger(name="train", save_dir=args.save_dir, quiet=False)
         cross_validate(args, logger)
-    elif args.parser_name == 'pretrain':
-        logger = create_logger(name='pretrain', save_dir=args.save_dir)
+    elif args.parser_name == "pretrain":
+        logger = create_logger(name="pretrain", save_dir=args.save_dir)
         pretrain_model(args, logger)
     elif args.parser_name == "eval":
-        logger = create_logger(name='eval', save_dir=args.save_dir, quiet=False)
+        logger = create_logger(name="eval", save_dir=args.save_dir, quiet=False)
         cross_validate(args, logger)
-    elif args.parser_name == 'fingerprint':
+    elif args.parser_name == "fingerprint":
         train_args = get_newest_train_args()
-        logger = create_logger(name='fingerprint', save_dir=None, quiet=False)
+        logger = create_logger(name="fingerprint", save_dir=None, quiet=False)
         feas = generate_fingerprints(args, logger)
         np.savez_compressed(args.output_path, fps=feas)
-    elif args.parser_name == 'predict':
+    elif args.parser_name == "predict":
         train_args = get_newest_train_args()
         avg_preds, test_smiles = make_predictions(args, train_args)
         write_prediction(avg_preds, test_smiles, args)

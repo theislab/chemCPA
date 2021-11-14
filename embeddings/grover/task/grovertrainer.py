@@ -3,31 +3,33 @@ The GROVER trainer.
 """
 import os
 import time
+from collections.abc import Callable
 from logging import Logger
 from typing import List, Tuple
-from collections.abc import Callable
+
 import torch
+from grover.model.models import GroverTask
+from grover.util.multi_gpu_wrapper import MultiGpuWrapper as mgw
 from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from grover.model.models import GroverTask
-from grover.util.multi_gpu_wrapper import MultiGpuWrapper as mgw
-
 
 class GROVERTrainer:
-    def __init__(self,
-                 args,
-                 embedding_model: Module,
-                 atom_vocab_size: int,  # atom vocab size
-                 bond_vocab_size: int,
-                 fg_szie: int,
-                 train_dataloader: DataLoader,
-                 test_dataloader: DataLoader,
-                 optimizer_builder: Callable,
-                 scheduler_builder: Callable,
-                 logger: Logger = None,
-                 with_cuda: bool = False,
-                 enable_multi_gpu: bool = False):
+    def __init__(
+        self,
+        args,
+        embedding_model: Module,
+        atom_vocab_size: int,  # atom vocab size
+        bond_vocab_size: int,
+        fg_szie: int,
+        train_dataloader: DataLoader,
+        test_dataloader: DataLoader,
+        optimizer_builder: Callable,
+        scheduler_builder: Callable,
+        logger: Logger = None,
+        with_cuda: bool = False,
+        enable_multi_gpu: bool = False,
+    ):
         """
         The init function of GROVERTrainer
         :param args: the input arguments.
@@ -47,7 +49,9 @@ class GROVERTrainer:
         self.args = args
         self.with_cuda = with_cuda
         self.grover = embedding_model
-        self.model = GroverTask(args, embedding_model, atom_vocab_size, bond_vocab_size, fg_szie)
+        self.model = GroverTask(
+            args, embedding_model, atom_vocab_size, bond_vocab_size, fg_szie
+        )
         self.loss_func = self.model.get_loss_func(args)
         self.enable_multi_gpu = enable_multi_gpu
 
@@ -65,8 +69,9 @@ class GROVERTrainer:
         self.optimizer = optimizer_builder(self.model, self.args)
         self.scheduler = scheduler_builder(self.optimizer, self.args)
         if self.enable_multi_gpu:
-            self.optimizer = mgw.DistributedOptimizer(self.optimizer,
-                                                      named_parameters=self.model.named_parameters())
+            self.optimizer = mgw.DistributedOptimizer(
+                self.optimizer, named_parameters=self.model.named_parameters()
+            )
         self.args = args
         self.n_iter = 0
 
@@ -98,7 +103,9 @@ class GROVERTrainer:
         # return self.mock_iter(epoch, self.test_data, train=False)
         return self.iter(epoch, self.test_data, train=False)
 
-    def mock_iter(self, epoch: int, data_loader: DataLoader, train: bool = True) -> List:
+    def mock_iter(
+        self, epoch: int, data_loader: DataLoader, train: bool = True
+    ) -> List:
         """
         Perform a mock iteration. For test only.
         :param epoch: the current epoch number.
@@ -129,7 +136,14 @@ class GROVERTrainer:
 
         loss_sum, iter_count = 0, 0
         cum_loss_sum, cum_iter_count = 0, 0
-        av_loss_sum, bv_loss_sum, fg_loss_sum, av_dist_loss_sum, bv_dist_loss_sum, fg_dist_loss_sum = 0, 0, 0, 0, 0, 0
+        (
+            av_loss_sum,
+            bv_loss_sum,
+            fg_loss_sum,
+            av_dist_loss_sum,
+            bv_dist_loss_sum,
+            fg_dist_loss_sum,
+        ) = (0, 0, 0, 0, 0, 0)
         # loss_func = self.model.get_loss_func(self.args)
 
         for _, item in enumerate(data_loader):
@@ -152,7 +166,15 @@ class GROVERTrainer:
             #     vis_graph.render(f"{self.args.backbone}_model_{task}_vis.png", format="png")
             # exit()
 
-            loss, av_loss, bv_loss, fg_loss, av_dist_loss, bv_dist_loss, fg_dist_loss = self.loss_func(preds, targets)
+            (
+                loss,
+                av_loss,
+                bv_loss,
+                fg_loss,
+                av_dist_loss,
+                bv_dist_loss,
+                fg_dist_loss,
+            ) = self.loss_func(preds, targets)
 
             loss_sum += loss.item()
             iter_count += self.args.batch_size
@@ -174,9 +196,15 @@ class GROVERTrainer:
             av_loss_sum += av_loss.item()
             bv_loss_sum += bv_loss.item()
             fg_loss_sum += fg_loss.item()
-            av_dist_loss_sum += av_dist_loss.item() if type(av_dist_loss) != float else av_dist_loss
-            bv_dist_loss_sum += bv_dist_loss.item() if type(bv_dist_loss) != float else bv_dist_loss
-            fg_dist_loss_sum += fg_dist_loss.item() if type(fg_dist_loss) != float else fg_dist_loss
+            av_dist_loss_sum += (
+                av_dist_loss.item() if type(av_dist_loss) != float else av_dist_loss
+            )
+            bv_dist_loss_sum += (
+                bv_dist_loss.item() if type(bv_dist_loss) != float else bv_dist_loss
+            )
+            fg_dist_loss_sum += (
+                fg_dist_loss.item() if type(fg_dist_loss) != float else fg_dist_loss
+            )
 
             cum_iter_count += 1
             self.n_iter += self.args.batch_size
@@ -195,8 +223,18 @@ class GROVERTrainer:
         bv_dist_loss_sum /= cum_iter_count
         fg_dist_loss_sum /= cum_iter_count
 
-        return self.n_iter, cum_loss_sum, (av_loss_sum, bv_loss_sum, fg_loss_sum, av_dist_loss_sum,
-                                           bv_dist_loss_sum, fg_dist_loss_sum)
+        return (
+            self.n_iter,
+            cum_loss_sum,
+            (
+                av_loss_sum,
+                bv_loss_sum,
+                fg_loss_sum,
+                av_dist_loss_sum,
+                bv_dist_loss_sum,
+                fg_dist_loss_sum,
+            ),
+        )
 
     def save(self, epoch, file_path, name=None) -> str:
         """
@@ -209,24 +247,31 @@ class GROVERTrainer:
         now = time.localtime()
         if name is None:
             name = "_%04d_%02d_%02d_%02d_%02d_%02d" % (
-                now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
+                now.tm_year,
+                now.tm_mon,
+                now.tm_mday,
+                now.tm_hour,
+                now.tm_min,
+                now.tm_sec,
+            )
         output_path = file_path + name + ".ep%d" % epoch
         scaler = None
         features_scaler = None
         state = {
-            'args': self.args,
-            'state_dict': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-            'scheduler_step': self.scheduler.current_step,
+            "args": self.args,
+            "state_dict": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "scheduler_step": self.scheduler.current_step,
             "epoch": epoch,
-            'data_scaler': {
-                'means': scaler.means,
-                'stds': scaler.stds
-            } if scaler is not None else None,
-            'features_scaler': {
-                'means': features_scaler.means,
-                'stds': features_scaler.stds
-            } if features_scaler is not None else None
+            "data_scaler": {"means": scaler.means, "stds": scaler.stds}
+            if scaler is not None
+            else None,
+            "features_scaler": {
+                "means": features_scaler.means,
+                "stds": features_scaler.stds,
+            }
+            if features_scaler is not None
+            else None,
         }
         torch.save(state, output_path)
 
@@ -250,11 +295,11 @@ class GROVERTrainer:
             os.makedirs(store_path, exist_ok=True)
         store_path = os.path.join(store_path, "model.%d" % rank)
         state = {
-            'args': self.args,
-            'state_dict': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-            'scheduler_step': self.scheduler.current_step,
-            "epoch": epoch
+            "args": self.args,
+            "state_dict": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "scheduler_step": self.scheduler.current_step,
+            "epoch": epoch,
         }
         torch.save(state, store_path)
 

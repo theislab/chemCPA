@@ -20,16 +20,19 @@ class NoamLR(_LRScheduler):
     total_epochs * steps_per_epoch). This is roughly based on the learning rate
     schedule from SelfAttention is All You Need, section 5.3 (https://arxiv.org/abs/1706.03762).
     """
-    def __init__(self,
-                 optimizer,
-                 warmup_epochs: List[Union[float, int]],
-                 total_epochs: List[int],
-                 steps_per_epoch: int,
-                 init_lr: List[float],
-                 max_lr: List[float],
-                 final_lr: List[float],
-                 fine_tune_coff: float = 1.0,
-                 fine_tune_param_idx: int = 0):
+
+    def __init__(
+        self,
+        optimizer,
+        warmup_epochs: List[Union[float, int]],
+        total_epochs: List[int],
+        steps_per_epoch: int,
+        init_lr: List[float],
+        max_lr: List[float],
+        final_lr: List[float],
+        fine_tune_coff: float = 1.0,
+        fine_tune_param_idx: int = 0,
+    ):
         """
         Initializes the learning rate scheduler.
 
@@ -68,7 +71,9 @@ class NoamLR(_LRScheduler):
         self.total_steps = self.total_epochs * self.steps_per_epoch
         self.linear_increment = (self.max_lr - self.init_lr) / self.warmup_steps
 
-        self.exponential_gamma = (self.final_lr / self.max_lr) ** (1 / (self.total_steps - self.warmup_steps))
+        self.exponential_gamma = (self.final_lr / self.max_lr) ** (
+            1 / (self.total_steps - self.warmup_steps)
+        )
         super(NoamLR, self).__init__(optimizer)
 
     def get_lr(self) -> List[float]:
@@ -88,10 +93,15 @@ class NoamLR(_LRScheduler):
             self.current_step += 1
         for i in range(self.num_lrs):
             if self.current_step <= self.warmup_steps[i]:
-                self.lr[i] = self.init_lr[i] + self.current_step * self.linear_increment[i]
+                self.lr[i] = (
+                    self.init_lr[i] + self.current_step * self.linear_increment[i]
+                )
             elif self.current_step <= self.total_steps[i]:
-                self.lr[i] = self.max_lr[i] * (self.exponential_gamma[i] ** (self.current_step - self.warmup_steps[i]))
+                self.lr[i] = self.max_lr[i] * (
+                    self.exponential_gamma[i]
+                    ** (self.current_step - self.warmup_steps[i])
+                )
             else:  # theoretically this case should never be reached since training should stop at total_steps
                 self.lr[i] = self.final_lr[i]
             self.lr[i] *= self.lr_coff[i]
-            self.optimizer.param_groups[i]['lr'] = self.lr[i]
+            self.optimizer.param_groups[i]["lr"] = self.lr[i]

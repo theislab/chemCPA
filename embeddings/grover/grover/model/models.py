@@ -2,15 +2,14 @@
 The GROVER models for pretraining, finetuning and fingerprint generating.
 """
 from argparse import Namespace
-from typing import List, Dict, Callable
+from typing import Callable, Dict, List
 
 import numpy as np
 import torch
-from torch import nn as nn
-
 from grover.data import get_atom_fdim, get_bond_fdim
-from grover.model.layers import Readout, GTransEncoder
+from grover.model.layers import GTransEncoder, Readout
 from grover.util.nn_utils import get_activation_function
+from torch import nn as nn
 
 
 class GROVEREmbedding(nn.Module):
@@ -35,17 +34,19 @@ class GROVEREmbedding(nn.Module):
             # dualtrans is the old name.
             if not hasattr(args, "dropout"):
                 args.dropout = 0
-            self.encoders = GTransEncoder(args,
-                                          hidden_size=args.hidden_size,
-                                          edge_fdim=edge_dim,
-                                          node_fdim=node_dim,
-                                          dropout=args.dropout,
-                                          activation=args.activation,
-                                          num_mt_block=args.num_mt_block,
-                                          num_attn_head=args.num_attn_head,
-                                          atom_emb_output=self.embedding_output_type,
-                                          bias=args.bias,
-                                          cuda=args.cuda)
+            self.encoders = GTransEncoder(
+                args,
+                hidden_size=args.hidden_size,
+                edge_fdim=edge_dim,
+                node_fdim=node_dim,
+                dropout=args.dropout,
+                activation=args.activation,
+                num_mt_block=args.num_mt_block,
+                num_attn_head=args.num_attn_head,
+                atom_emb_output=self.embedding_output_type,
+                bias=args.bias,
+                cuda=args.cuda,
+            )
 
     def forward(self, graph_batch: List) -> Dict:
         """
@@ -56,21 +57,34 @@ class GROVEREmbedding(nn.Module):
         :return: a dict containing the embedding results.
         """
         output = self.encoders(graph_batch)
-        if self.embedding_output_type == 'atom':
-            return {"atom_from_atom": output[0], "atom_from_bond": output[1],
-                    "bond_from_atom": None, "bond_from_bond": None}  # atom_from_atom, atom_from_bond
-        elif self.embedding_output_type == 'bond':
-            return {"atom_from_atom": None, "atom_from_bond": None,
-                    "bond_from_atom": output[0], "bond_from_bond": output[1]}  # bond_from_atom, bond_from_bond
+        if self.embedding_output_type == "atom":
+            return {
+                "atom_from_atom": output[0],
+                "atom_from_bond": output[1],
+                "bond_from_atom": None,
+                "bond_from_bond": None,
+            }  # atom_from_atom, atom_from_bond
+        elif self.embedding_output_type == "bond":
+            return {
+                "atom_from_atom": None,
+                "atom_from_bond": None,
+                "bond_from_atom": output[0],
+                "bond_from_bond": output[1],
+            }  # bond_from_atom, bond_from_bond
         elif self.embedding_output_type == "both":
-            return {"atom_from_atom": output[0][0], "bond_from_atom": output[0][1],
-                    "atom_from_bond": output[1][0], "bond_from_bond": output[1][1]}
+            return {
+                "atom_from_atom": output[0][0],
+                "bond_from_atom": output[0][1],
+                "atom_from_bond": output[1][0],
+                "bond_from_bond": output[1][1],
+            }
 
 
 class AtomVocabPrediction(nn.Module):
     """
     The atom-wise vocabulary prediction task. The atom vocabulary is constructed by the context.
     """
+
     def __init__(self, args, vocab_size, hidden_size=None):
         """
         :param args: the argument.
@@ -97,6 +111,7 @@ class BondVocabPrediction(nn.Module):
     """
     The bond-wise vocabulary prediction task. The bond vocabulary is constructed by the context.
     """
+
     def __init__(self, args, vocab_size, hidden_size=None):
         """
         Might need to use different architecture for bond vocab prediction.
@@ -140,6 +155,7 @@ class FunctionalGroupPrediction(nn.Module):
     """
     The functional group (semantic motifs) prediction task. This is a graph-level task.
     """
+
     def __init__(self, args, fg_size):
         """
         :param args: The arguments.
@@ -168,27 +184,44 @@ class FunctionalGroupPrediction(nn.Module):
         :return: a dict contains the predicted logits.
         """
 
-        preds_atom_from_atom, preds_atom_from_bond, preds_bond_from_atom, preds_bond_from_bond = \
-            None, None, None, None
+        (
+            preds_atom_from_atom,
+            preds_atom_from_bond,
+            preds_bond_from_atom,
+            preds_bond_from_bond,
+        ) = (None, None, None, None)
 
         if embeddings["bond_from_atom"] is not None:
-            preds_bond_from_atom = self.linear_bond_from_atom(self.readout(embeddings["bond_from_atom"], bscope))
+            preds_bond_from_atom = self.linear_bond_from_atom(
+                self.readout(embeddings["bond_from_atom"], bscope)
+            )
         if embeddings["bond_from_bond"] is not None:
-            preds_bond_from_bond = self.linear_bond_from_bond(self.readout(embeddings["bond_from_bond"], bscope))
+            preds_bond_from_bond = self.linear_bond_from_bond(
+                self.readout(embeddings["bond_from_bond"], bscope)
+            )
 
         if embeddings["atom_from_atom"] is not None:
-            preds_atom_from_atom = self.linear_atom_from_atom(self.readout(embeddings["atom_from_atom"], ascope))
+            preds_atom_from_atom = self.linear_atom_from_atom(
+                self.readout(embeddings["atom_from_atom"], ascope)
+            )
         if embeddings["atom_from_bond"] is not None:
-            preds_atom_from_bond = self.linear_atom_from_bond(self.readout(embeddings["atom_from_bond"], ascope))
+            preds_atom_from_bond = self.linear_atom_from_bond(
+                self.readout(embeddings["atom_from_bond"], ascope)
+            )
 
-        return {"atom_from_atom": preds_atom_from_atom, "atom_from_bond": preds_atom_from_bond,
-                "bond_from_atom": preds_bond_from_atom, "bond_from_bond": preds_bond_from_bond}
+        return {
+            "atom_from_atom": preds_atom_from_atom,
+            "atom_from_bond": preds_atom_from_bond,
+            "bond_from_atom": preds_bond_from_atom,
+            "bond_from_bond": preds_bond_from_bond,
+        }
 
 
 class GroverTask(nn.Module):
     """
     The pretrain module.
     """
+
     def __init__(self, args, grover, atom_vocab_size, bond_vocab_size, fg_size):
         super(GroverTask, self).__init__()
         self.grover = grover
@@ -208,6 +241,7 @@ class GroverTask(nn.Module):
         :param args: the arguments.
         :return: the loss fucntion for GroverTask.
         """
+
         def loss_func(preds, targets, dist_coff=args.dist_coff):
             """
             The loss function for GroverTask.
@@ -216,7 +250,9 @@ class GroverTask(nn.Module):
             :param dist_coff: the default disagreement coefficient for the distances between different branches.
             :return:
             """
-            av_task_loss = nn.NLLLoss(ignore_index=0, reduction="mean")  # same for av and bv
+            av_task_loss = nn.NLLLoss(
+                ignore_index=0, reduction="mean"
+            )  # same for av and bv
 
             fg_task_loss = nn.BCEWithLogitsLoss(reduction="mean")
             # av_task_dist_loss = nn.KLDivLoss(reduction="mean")
@@ -225,35 +261,59 @@ class GroverTask(nn.Module):
             sigmoid = nn.Sigmoid()
 
             av_atom_loss, av_bond_loss, av_dist_loss = 0.0, 0.0, 0.0
-            fg_atom_from_atom_loss, fg_atom_from_bond_loss, fg_atom_dist_loss = 0.0, 0.0, 0.0
+            fg_atom_from_atom_loss, fg_atom_from_bond_loss, fg_atom_dist_loss = (
+                0.0,
+                0.0,
+                0.0,
+            )
             bv_atom_loss, bv_bond_loss, bv_dist_loss = 0.0, 0.0, 0.0
-            fg_bond_from_atom_loss, fg_bond_from_bond_loss, fg_bond_dist_loss = 0.0, 0.0, 0.0
+            fg_bond_from_atom_loss, fg_bond_from_bond_loss, fg_bond_dist_loss = (
+                0.0,
+                0.0,
+                0.0,
+            )
 
             if preds["av_task"][0] is not None:
-                av_atom_loss = av_task_loss(preds['av_task'][0], targets["av_task"])
-                fg_atom_from_atom_loss = fg_task_loss(preds["fg_task"]["atom_from_atom"], targets["fg_task"])
+                av_atom_loss = av_task_loss(preds["av_task"][0], targets["av_task"])
+                fg_atom_from_atom_loss = fg_task_loss(
+                    preds["fg_task"]["atom_from_atom"], targets["fg_task"]
+                )
 
             if preds["av_task"][1] is not None:
-                av_bond_loss = av_task_loss(preds['av_task'][1], targets["av_task"])
-                fg_atom_from_bond_loss = fg_task_loss(preds["fg_task"]["atom_from_bond"], targets["fg_task"])
+                av_bond_loss = av_task_loss(preds["av_task"][1], targets["av_task"])
+                fg_atom_from_bond_loss = fg_task_loss(
+                    preds["fg_task"]["atom_from_bond"], targets["fg_task"]
+                )
 
             if preds["bv_task"][0] is not None:
-                bv_atom_loss = av_task_loss(preds['bv_task'][0], targets["bv_task"])
-                fg_bond_from_atom_loss = fg_task_loss(preds["fg_task"]["bond_from_atom"], targets["fg_task"])
+                bv_atom_loss = av_task_loss(preds["bv_task"][0], targets["bv_task"])
+                fg_bond_from_atom_loss = fg_task_loss(
+                    preds["fg_task"]["bond_from_atom"], targets["fg_task"]
+                )
 
             if preds["bv_task"][1] is not None:
-                bv_bond_loss = av_task_loss(preds['bv_task'][1], targets["bv_task"])
-                fg_bond_from_bond_loss = fg_task_loss(preds["fg_task"]["bond_from_bond"], targets["fg_task"])
+                bv_bond_loss = av_task_loss(preds["bv_task"][1], targets["bv_task"])
+                fg_bond_from_bond_loss = fg_task_loss(
+                    preds["fg_task"]["bond_from_bond"], targets["fg_task"]
+                )
 
             if preds["av_task"][0] is not None and preds["av_task"][1] is not None:
-                av_dist_loss = av_task_dist_loss(preds['av_task'][0], preds['av_task'][1])
-                fg_atom_dist_loss = fg_task_dist_loss(sigmoid(preds["fg_task"]["atom_from_atom"]),
-                                                      sigmoid(preds["fg_task"]["atom_from_bond"]))
+                av_dist_loss = av_task_dist_loss(
+                    preds["av_task"][0], preds["av_task"][1]
+                )
+                fg_atom_dist_loss = fg_task_dist_loss(
+                    sigmoid(preds["fg_task"]["atom_from_atom"]),
+                    sigmoid(preds["fg_task"]["atom_from_bond"]),
+                )
 
             if preds["bv_task"][0] is not None and preds["bv_task"][1] is not None:
-                bv_dist_loss = av_task_dist_loss(preds['bv_task'][0], preds['bv_task'][1])
-                fg_bond_dist_loss = fg_task_dist_loss(sigmoid(preds["fg_task"]["bond_from_atom"]),
-                                                      sigmoid(preds["fg_task"]["bond_from_bond"]))
+                bv_dist_loss = av_task_dist_loss(
+                    preds["bv_task"][0], preds["bv_task"][1]
+                )
+                fg_bond_dist_loss = fg_task_dist_loss(
+                    sigmoid(preds["fg_task"]["bond_from_atom"]),
+                    sigmoid(preds["fg_task"]["bond_from_bond"]),
+                )
 
             av_loss = av_atom_loss + av_bond_loss
             bv_loss = bv_atom_loss + bv_bond_loss
@@ -271,10 +331,24 @@ class GroverTask(nn.Module):
             #                                       av_dist_loss,
             #                                       fg_dist_loss))
             # return av_loss + fg_loss + dist_coff * dist_loss
-            overall_loss = av_loss + bv_loss + fg_loss + dist_coff * av_dist_loss + \
-                           dist_coff * bv_dist_loss + fg_dist_loss
+            overall_loss = (
+                av_loss
+                + bv_loss
+                + fg_loss
+                + dist_coff * av_dist_loss
+                + dist_coff * bv_dist_loss
+                + fg_dist_loss
+            )
 
-            return overall_loss, av_loss, bv_loss, fg_loss, av_dist_loss, bv_dist_loss, fg_dist_loss
+            return (
+                overall_loss,
+                av_loss,
+                bv_loss,
+                fg_loss,
+                av_dist_loss,
+                bv_dist_loss,
+                fg_dist_loss,
+            )
 
         return loss_func
 
@@ -290,7 +364,8 @@ class GroverTask(nn.Module):
         embeddings = self.grover(graph_batch)
 
         av_task_pred_atom = self.av_task_atom(
-            embeddings["atom_from_atom"])  # if None: means not go through this fowward
+            embeddings["atom_from_atom"]
+        )  # if None: means not go through this fowward
         av_task_pred_bond = self.av_task_bond(embeddings["atom_from_bond"])
 
         bv_task_pred_atom = self.bv_task_atom(embeddings["bond_from_atom"])
@@ -298,9 +373,11 @@ class GroverTask(nn.Module):
 
         fg_task_pred_all = self.fg_task_all(embeddings, a_scope, b_scope)
 
-        return {"av_task": (av_task_pred_atom, av_task_pred_bond),
-                "bv_task": (bv_task_pred_atom, bv_task_pred_bond),
-                "fg_task": fg_task_pred_all}
+        return {
+            "av_task": (av_task_pred_atom, av_task_pred_bond),
+            "bv_task": (bv_task_pred_atom, bv_task_pred_bond),
+            "fg_task": fg_task_pred_all,
+        }
 
 
 class GroverFpGeneration(nn.Module):
@@ -308,6 +385,7 @@ class GroverFpGeneration(nn.Module):
     GroverFpGeneration class.
     It loads the pre-trained model and produce the fingerprints for input molecules.
     """
+
     def __init__(self, args):
         """
         Init function.
@@ -356,8 +434,15 @@ class GroverFpGeneration(nn.Module):
             fp = torch.cat([mol_bond_from_atom_output, mol_bond_from_bodd_output], 1)
         else:
             # the both case.
-            fp = torch.cat([mol_atom_from_atom_output, mol_atom_from_bond_output,
-                            mol_bond_from_atom_output, mol_bond_from_bodd_output], 1)
+            fp = torch.cat(
+                [
+                    mol_atom_from_atom_output,
+                    mol_atom_from_bond_output,
+                    mol_bond_from_atom_output,
+                    mol_bond_from_bodd_output,
+                ],
+                1,
+            )
         if features_batch is not None:
             fp = torch.cat([fp, features_batch], 1)
         return fp
@@ -367,6 +452,7 @@ class GroverFinetuneTask(nn.Module):
     """
     The finetune
     """
+
     def __init__(self, args):
         super(GroverFinetuneTask, self).__init__()
 
@@ -376,19 +462,22 @@ class GroverFinetuneTask(nn.Module):
         self.grover = GROVEREmbedding(args)
 
         if args.self_attention:
-            self.readout = Readout(rtype="self_attention", hidden_size=self.hidden_size,
-                                   attn_hidden=args.attn_hidden,
-                                   attn_out=args.attn_out)
+            self.readout = Readout(
+                rtype="self_attention",
+                hidden_size=self.hidden_size,
+                attn_hidden=args.attn_hidden,
+                attn_out=args.attn_out,
+            )
         else:
             self.readout = Readout(rtype="mean", hidden_size=self.hidden_size)
 
         self.mol_atom_from_atom_ffn = self.create_ffn(args)
         self.mol_atom_from_bond_ffn = self.create_ffn(args)
-        #self.ffn = nn.ModuleList()
-        #self.ffn.append(self.mol_atom_from_atom_ffn)
-        #self.ffn.append(self.mol_atom_from_bond_ffn)
+        # self.ffn = nn.ModuleList()
+        # self.ffn.append(self.mol_atom_from_atom_ffn)
+        # self.ffn.append(self.mol_atom_from_bond_ffn)
 
-        self.classification = args.dataset_type == 'classification'
+        self.classification = args.dataset_type == "classification"
         if self.classification:
             self.sigmoid = nn.Sigmoid()
 
@@ -415,40 +504,36 @@ class GroverFinetuneTask(nn.Module):
         # TODO: ffn_hidden_size
         # Create FFN layers
         if args.ffn_num_layers == 1:
-            ffn = [
-                dropout,
-                nn.Linear(first_linear_dim, args.output_size)
-            ]
+            ffn = [dropout, nn.Linear(first_linear_dim, args.output_size)]
         else:
-            ffn = [
-                dropout,
-                nn.Linear(first_linear_dim, args.ffn_hidden_size)
-            ]
+            ffn = [dropout, nn.Linear(first_linear_dim, args.ffn_hidden_size)]
             for _ in range(args.ffn_num_layers - 2):
-                ffn.extend([
+                ffn.extend(
+                    [
+                        activation,
+                        dropout,
+                        nn.Linear(args.ffn_hidden_size, args.ffn_hidden_size),
+                    ]
+                )
+            ffn.extend(
+                [
                     activation,
                     dropout,
-                    nn.Linear(args.ffn_hidden_size, args.ffn_hidden_size),
-                ])
-            ffn.extend([
-                activation,
-                dropout,
-                nn.Linear(args.ffn_hidden_size, args.output_size),
-            ])
+                    nn.Linear(args.ffn_hidden_size, args.output_size),
+                ]
+            )
 
         # Create FFN model
         return nn.Sequential(*ffn)
 
     @staticmethod
     def get_loss_func(args):
-        def loss_func(preds, targets,
-                      dt=args.dataset_type,
-                      dist_coff=args.dist_coff):
+        def loss_func(preds, targets, dt=args.dataset_type, dist_coff=args.dist_coff):
 
-            if dt == 'classification':
-                pred_loss = nn.BCEWithLogitsLoss(reduction='none')
-            elif dt == 'regression':
-                pred_loss = nn.MSELoss(reduction='none')
+            if dt == "classification":
+                pred_loss = nn.BCEWithLogitsLoss(reduction="none")
+            elif dt == "regression":
+                pred_loss = nn.MSELoss(reduction="none")
             else:
                 raise ValueError(f'Dataset type "{args.dataset_type}" not supported.')
 
@@ -459,7 +544,7 @@ class GroverFinetuneTask(nn.Module):
                 return pred_loss(preds, targets)
 
             # in train mode.
-            dist_loss = nn.MSELoss(reduction='none')
+            dist_loss = nn.MSELoss(reduction="none")
             # dist_loss = nn.CosineSimilarity(dim=0)
             # print(pred_loss)
 
@@ -488,10 +573,13 @@ class GroverFinetuneTask(nn.Module):
         else:
             features_batch = None
 
-
         if features_batch is not None:
-            mol_atom_from_atom_output = torch.cat([mol_atom_from_atom_output, features_batch], 1)
-            mol_atom_from_bond_output = torch.cat([mol_atom_from_bond_output, features_batch], 1)
+            mol_atom_from_atom_output = torch.cat(
+                [mol_atom_from_atom_output, features_batch], 1
+            )
+            mol_atom_from_bond_output = torch.cat(
+                [mol_atom_from_bond_output, features_batch], 1
+            )
 
         if self.training:
             atom_ffn_output = self.mol_atom_from_atom_ffn(mol_atom_from_atom_output)

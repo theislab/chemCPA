@@ -1,8 +1,8 @@
-import pandas as pd
-import numpy as np
-import torch
-from typing import List
 from pathlib import Path
+from typing import List
+
+import pandas as pd
+import torch
 
 
 def get_chemical_representation(

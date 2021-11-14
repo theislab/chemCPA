@@ -6,12 +6,13 @@ import numpy as np
 import torch
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
-import scanpy as sc
-import pandas as pd
+from typing import List, Optional, Union
 
+import pandas as pd
+import scanpy as sc
 from sklearn.preprocessing import OneHotEncoder
-from compert.helper import graph_from_smiles, canonicalize_smiles
-from typing import Union, Optional, List
+
+from compert.helper import canonicalize_smiles, graph_from_smiles
 
 
 def ranks_to_df(data, key="rank_genes_groups"):

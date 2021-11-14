@@ -1,19 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import init
-
 from dgl import function as fn
 from dgl.nn.pytorch import Set2Set
 from dgl.nn.pytorch.utils import Identity
 from dgl.utils import expand_as_pair
-
 from dgllife.model.gnn import AttentiveFPGNN, gat, gcn, weave
 from dgllife.model.readout import (
     AttentiveFPReadout,
     weave_readout,
     weighted_sum_and_max,
 )
+from torch.nn import init
 
 GCN = gcn.GCN
 GAT = gat.GAT
