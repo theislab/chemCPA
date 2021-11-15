@@ -214,6 +214,7 @@ def evaluate_r2(autoencoder, dataset, genes_control):
         bool_de = dataset.var_names.isin(np.array(dataset.de_genes[pert_category]))
         idx_de = bool2idx(bool_de)
 
+        # spending a lot of time here, could this be precomputed?
         idx_all = bool2idx(dataset.pert_categories == pert_category)
         idx, n_idx = idx_all[0], len(idx_all)
 

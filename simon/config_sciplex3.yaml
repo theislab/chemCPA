@@ -7,11 +7,12 @@ seml:
   project_root_dir: ..
 
 slurm:
-  experiments_per_job: 1
+  max_simultaneous_jobs: 4
+  experiments_per_job: 2
   sbatch_options_template: GPU
   sbatch_options:
     gres: gpu:1       # num GPUs
-    mem: 20G          # memory
+    mem: 32G          # memory
     cpus-per-task: 6  # num cores
     time: 0-04:01     # max time, D-HH:MM
 ###### BEGIN PARAMETER CONFIGURATION ######
@@ -24,7 +25,7 @@ fixed:
   training.save_checkpoints: True
   training.save_dir: sweeps/checkpoints/trapnell_logsigm_grover
   
-  model.additional_params.seed: 30 # random seed
+  model.additional_params.seed: 40 # random seed
   model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder

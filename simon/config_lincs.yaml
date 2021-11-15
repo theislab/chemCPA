@@ -7,8 +7,8 @@ seml:
   project_root_dir: ..
 
 slurm:
-  max_simultaneous_jobs: 4
-  experiments_per_job: 2
+  max_simultaneous_jobs: 2
+  experiments_per_job: 1
   sbatch_options_template: GPU
   sbatch_options:
     gres: gpu:1       # num GPUs
@@ -76,5 +76,5 @@ grid:
   model.embedding.model:
     type: choice
     options:
-      - grover_base
       - None
+#       - grover_base
