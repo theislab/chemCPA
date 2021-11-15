@@ -7,5 +7,6 @@ dependencies:
   - jupyter
   - pandas
   - pip
+  - pyarrow
   - pip:
     - tensorflow-gpu

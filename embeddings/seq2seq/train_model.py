@@ -3,8 +3,61 @@ from pathlib import Path
 import deepchem as dc
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from deepchem.models.optimizers import ExponentialDecay
 from rdkit import Chem
+
+# I generated these on 15.11.2021. If we update the smiles or add new drug
+# then these should be stored anew.
+TOKENS = [
+    "#",
+    "(",
+    ")",
+    "*",
+    "+",
+    "-",
+    ".",
+    "/",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "=",
+    "@",
+    "A",
+    "B",
+    "C",
+    "F",
+    "H",
+    "I",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "S",
+    "[",
+    "\\",
+    "]",
+    "a",
+    "c",
+    "d",
+    "e",
+    "g",
+    "i",
+    "l",
+    "n",
+    "o",
+    "r",
+    "s",
+    "t",
+    "u",
+]
+MAX_LENGTH = 461
 
 
 def load_train_val(datasets_fpath="../../datasets"):
@@ -37,15 +90,16 @@ def get_model(train_smiles, model_dir="data", encoder_layers=2, decoder_layers=2
     batch_size = 100
     batches_per_epoch = int(len(train_smiles) / batch_size)
     model = dc.models.SeqToSeq(
-        tokens,
-        tokens,
-        max_length,
+        TOKENS,
+        TOKENS,
+        MAX_LENGTH,
         encoder_layers=encoder_layers,
         decoder_layers=decoder_layers,
         embedding_dimension=256,
         model_dir=model_dir,
         batch_size=batch_size,
         learning_rate=ExponentialDecay(0.001, 0.9, batches_per_epoch),
+        tensorboard=True,
     )
     return model
 
@@ -60,13 +114,13 @@ def train_model(model, train_smiles):
     # there are ~92K molecules, batchsize is 100 -> ~920 train steps per epoch
     model.fit_sequences(
         generate_sequences(50),
-        checkpoint_interval=5000,
-        max_checkpoints_to_keep=20,
     )
 
 
 if __name__ == "__main__":
     print(Path().cwd())
+    # make sure GPU is available
+    assert len(tf.config.list_physical_devices("GPU")) > 0
     train_smiles, val_smiles = load_train_val()
     model = get_model(train_smiles)
     train_model(model, train_smiles)
