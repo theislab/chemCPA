@@ -93,6 +93,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
     cov_type = ds_treated.covariate_keys[0]
     for pert_category in np.unique(ds_treated.pert_categories):
         covariate = pert_category.split("_")[0]
+        # the next line is where it is spending all it's time. Why?
         idx_treated_all = bool2idx(ds_treated.pert_categories == pert_category)
         idx_treated, n_idx_treated = idx_treated_all[0], len(idx_treated_all)
 
@@ -286,15 +287,15 @@ def evaluate(autoencoder, datasets, disentangle=False):
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
             ),
-            "training_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["training_treated"], datasets["training_control"]
-            ),
-            "test_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["test_treated"], datasets["test_control"]
-            ),
-            "ood_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["ood"], datasets["test_control"]
-            ),
+            # "training_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["training_treated"], datasets["training_control"]
+            # ),
+            # "test_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["test_treated"], datasets["test_control"]
+            # ),
+            # "ood_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["ood"], datasets["test_control"]
+            # ),
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": 1 / datasets["test"].num_drugs
             if datasets["test"].num_drugs > 0
