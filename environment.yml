@@ -23,7 +23,7 @@ dependencies:
   - rdkit
   - pytest
   - pyarrow
-  - precommit
+  - pre-commit
   - pip
   - pip:
     - seml
