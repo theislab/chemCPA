@@ -68,7 +68,7 @@ class ExperimentWrapper:
         if embedding["model"] is not None:
             # ComPert will use the provided embedding, which is frozen during training
             self.drug_embeddings = get_chemical_representation(
-                smiles=self.dataset.smiles_unique_sorted,
+                smiles=self.dataset.canon_smiles_unique_sorted,
                 embedding_model=embedding["model"],
                 data_dir=embedding["directory"],
                 device=device,
