@@ -10,6 +10,7 @@ pretrained_models/*
 git-lfs-folders/*
 cpa_binaries.tar
 notebooks/*.pth
+embeddings/*/data/*
 
 # embeddings
 *.parquet
@@ -149,5 +150,4 @@ dmypy.json
 
 # VSCode 
 settings.json
-
 scripts/*.yaml  
