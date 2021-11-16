@@ -39,7 +39,7 @@ def ranks_to_df(data, key="rank_genes_groups"):
     return pd.concat(dfs, axis=1)
 
 
-def drug_names_to_smiles(
+def drug_names_to_once_canon_smiles(
     drug_names: List[str], dataset: sc.AnnData, perturbation_key: str, smiles_key: str
 ):
     """
@@ -121,7 +121,7 @@ class Dataset:
                 [drugs_names_unique.add(i) for i in d.split("+")]
 
             self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
-            self.smiles_unique_sorted = drug_names_to_smiles(
+            self.canon_smiles_unique_sorted = drug_names_to_once_canon_smiles(
                 list(self.drugs_names_unique_sorted), data, perturbation_key, smiles_key
             )
             self.max_num_perturbations = max(

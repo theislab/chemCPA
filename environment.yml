@@ -20,7 +20,7 @@ dependencies:
   - cudatoolkit=10.2
   - dglteam::dgl
   - dglteam::dgllife
-  - rdkit
+  - rdkit=2021.09.2
   - pytest
   - pyarrow
   - pre-commit

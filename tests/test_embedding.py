@@ -33,7 +33,7 @@ def test_embedding_idx_roundtrip():
             use_drugs_idx=use_drugs_idx
         )
         embedding = get_chemical_representation(
-            smiles=dataset.smiles_unique_sorted,
+            smiles=dataset.canon_smiles_unique_sorted,
             embedding_model="grover_base",
         )
         device = embedding.weight.device

@@ -219,6 +219,6 @@ def get_featurisers(mol_featurizer: str = "canonical", return_shape: bool = True
 
 def canonicalize_smiles(smiles: Optional[str]):
     if smiles:
-        return Chem.MolToSmiles(Chem.MolFromSmiles(smiles), canonical=True)
+        return Chem.CanonSmiles(smiles)
     else:
         return None
