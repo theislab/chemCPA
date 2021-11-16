@@ -99,7 +99,6 @@ def get_model(train_smiles, model_dir="data", encoder_layers=2, decoder_layers=2
         model_dir=model_dir,
         batch_size=batch_size,
         learning_rate=ExponentialDecay(0.001, 0.9, batches_per_epoch),
-        tensorboard=True,
     )
     return model
 

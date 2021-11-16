@@ -8,10 +8,11 @@
 #SBATCH --mem=16G
 #SBATCH --exclude=supergpu05
 #SBATCH --gres=gpu:1
+#SBATCH --gres=mps:40
 #SBATCH --qos=gpu
 #SBATCH --time 05:00:00
 #SBATCH --nice=10000
 
 echo "Started running $(date)"
-/home/icb/simon.boehm/miniconda3/envs/cpa_seq2seq/bin/python3 generate_embeddings.py
+/home/icb/simon.boehm/miniconda3/envs/cpa_seq2seq/bin/python3 train_model.py
 echo "Ending $(date)"
