@@ -1,0 +1,17 @@
+name: jtvae_dgl
+channels:
+  - pytorch
+  - rdkit
+  - dglteam
+  - conda-forge
+dependencies:
+  - pytorch::pytorch>=1.5.0
+  - python=3.6
+  - rdkit==2018.09.3
+  - jupyter
+  - pyarrow
+  - tqdm
+  - dglteam::dgl>=0.7.0
+  - pip
+  - pip:
+      - dgllife
