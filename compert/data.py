@@ -121,6 +121,10 @@ class Dataset:
                 [drugs_names_unique.add(i) for i in d.split("+")]
 
             self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
+
+            self._drugs_name_to_idx = {
+                smiles: idx for idx, smiles in enumerate(self.drugs_names_unique_sorted)
+            }
             self.canon_smiles_unique_sorted = drug_names_to_once_canon_smiles(
                 list(self.drugs_names_unique_sorted), data, perturbation_key, smiles_key
             )
@@ -283,7 +287,7 @@ class Dataset:
         For the given drug, return it's index. The index will be persistent for each dataset (since the list is sorted).
         Raises ValueError if the drug doesn't exist in the dataset.
         """
-        return list(self.drugs_names_unique_sorted).index(drug_name)
+        return self._drugs_name_to_idx[drug_name]
 
     def __getitem__(self, i):
         if self.use_drugs_idx:
