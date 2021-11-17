@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import List
-
+from compert.paths import EMBEDDING_DIR
 import pandas as pd
 import torch
 
@@ -8,7 +8,7 @@ import torch
 def get_chemical_representation(
     smiles: List[str],
     embedding_model: str,
-    data_dir="embeddings/",
+    data_dir=None,
     device="cuda",
 ):
     """
@@ -17,12 +17,49 @@ def get_chemical_representation(
 
     :return: torch.nn.Embedding, shape [len(smiles), dim_embedding]. Embeddings are ordered as in `smiles`-list.
     """
-    assert embedding_model in ("grover_base",)
+    assert embedding_model in ("grover_base", "weave", "MPNN", "AttentiveFP", "GCN")
+
+    if data_dir is None:
+        data_dir = EMBEDDING_DIR
+    else:
+        data_dir = Path(data_dir)
     assert Path(data_dir).exists()
 
     if embedding_model == "grover_base":
         df = pd.read_parquet(
-            Path(data_dir) / "grover" / "data" / "embeddings" / "grover_base.parquet"
+            data_dir / "grover" / "data" / "embeddings" / "grover_base.parquet"
+        )
+    elif embedding_model == "weave":
+        df = pd.read_parquet(
+            data_dir
+            / "dgl"
+            / "data"
+            / "embeddings"
+            / "Weave_canonical_PCBA_embedding_lincs_trapnell.parquet"
+        )
+    elif embedding_model == "MPNN":
+        df = pd.read_parquet(
+            data_dir
+            / "dgl"
+            / "data"
+            / "embeddings"
+            / "MPNN_canonical_PCBA_embedding_lincs_trapnell.parquet"
+        )
+    elif embedding_model == "GCN":
+        df = pd.read_parquet(
+            data_dir
+            / "dgl"
+            / "data"
+            / "embeddings"
+            / "GCN_canonical_PCBA_embedding_lincs_trapnell.parquet"
+        )
+    elif embedding_model == "AttentiveFP":
+        df = pd.read_parquet(
+            data_dir
+            / "dgl"
+            / "data"
+            / "embeddings"
+            / "AttentiveFP_canonical_PCBA_embedding_lincs_trapnell.parquet"
         )
 
     emb = torch.tensor(df.loc[smiles].values, dtype=torch.float32, device=device)
