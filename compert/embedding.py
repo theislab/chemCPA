@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import List
-from compert.paths import EMBEDDING_DIR
+
 import pandas as pd
 import torch
+
+from compert.paths import EMBEDDING_DIR
 
 
 def get_chemical_representation(
@@ -20,7 +22,7 @@ def get_chemical_representation(
     assert embedding_model in ("grover_base", "weave", "MPNN", "AttentiveFP", "GCN")
 
     if data_dir is None:
-        data_dir = EMBEDDING_DIR
+        data_dir = Path(EMBEDDING_DIR)
     else:
         data_dir = Path(data_dir)
     assert Path(data_dir).exists()
