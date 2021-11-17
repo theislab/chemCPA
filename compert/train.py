@@ -93,6 +93,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
     cov_type = ds_treated.covariate_keys[0]
     for pert_category in np.unique(ds_treated.pert_categories):
         covariate = pert_category.split("_")[0]
+        # the next line is where it is spending all it's time. Why?
         idx_treated_all = bool2idx(ds_treated.pert_categories == pert_category)
         idx_treated, n_idx_treated = idx_treated_all[0], len(idx_treated_all)
 
@@ -213,6 +214,7 @@ def evaluate_r2(autoencoder, dataset, genes_control):
         bool_de = dataset.var_names.isin(np.array(dataset.de_genes[pert_category]))
         idx_de = bool2idx(bool_de)
 
+        # spending a lot of time here, could this be precomputed?
         idx_all = bool2idx(dataset.pert_categories == pert_category)
         idx, n_idx = idx_all[0], len(idx_all)
 

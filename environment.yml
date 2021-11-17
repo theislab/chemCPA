@@ -23,6 +23,4 @@ dependencies:
   - pytest
   - pyarrow
   - pre-commit
-  - pip
-  - pip:
-    - seml
+  - seml
