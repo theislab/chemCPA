@@ -19,7 +19,14 @@ def get_chemical_representation(
 
     :return: torch.nn.Embedding, shape [len(smiles), dim_embedding]. Embeddings are ordered as in `smiles`-list.
     """
-    assert embedding_model in ("grover_base", "weave", "MPNN", "AttentiveFP", "GCN")
+    assert embedding_model in (
+        "grover_base",
+        "weave",
+        "MPNN",
+        "AttentiveFP",
+        "GCN",
+        "seq2seq",
+    )
 
     if data_dir is None:
         data_dir = Path(EMBEDDING_DIR)
@@ -63,6 +70,8 @@ def get_chemical_representation(
             / "embeddings"
             / "AttentiveFP_canonical_PCBA_embedding_lincs_trapnell.parquet"
         )
+    elif embedding_model == "seq2seq":
+        df = pd.read_parquet(Path(data_dir) / "seq2seq" / "data" / "seq2seq.parquet")
 
     emb = torch.tensor(df.loc[smiles].values, dtype=torch.float32, device=device)
     assert emb.shape[0] == len(smiles)

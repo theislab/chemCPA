@@ -1,0 +1,12 @@
+name: cpa_seq2seq
+channels:
+  - conda-forge
+dependencies:
+  - rdkit
+  - deepchem==2.5.0
+  - jupyter
+  - pandas
+  - pip
+  - pyarrow
+  - pip:
+    - tensorflow-gpu
