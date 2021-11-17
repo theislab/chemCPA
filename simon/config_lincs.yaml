@@ -18,8 +18,8 @@ slurm:
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
-  training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
-  training.num_epochs: 500 # maximum epochs for training
+  training.checkpoint_freq: 150 # checkpoint frequency to save intermediate results
+  training.num_epochs: 300 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
   training.ignore_evaluation: False
   training.save_checkpoints: True
@@ -76,5 +76,5 @@ grid:
   model.embedding.model:
     type: choice
     options:
-      - None
-#       - grover_base
+      - grover_base
+#       - None
