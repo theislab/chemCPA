@@ -180,15 +180,7 @@ class ExperimentWrapper:
             self.autoencoder.history["epoch"].append(epoch)
 
             # print some stats for each epoch
-            print(
-                f"{epoch:4}",
-                ", ".join(
-                    [
-                        f"{key}: {value:7.5f}"
-                        for key, value in epoch_training_stats.items()
-                    ]
-                ),
-            )
+            pjson({"epoch": epoch, "training_stats": epoch_training_stats})
 
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes
