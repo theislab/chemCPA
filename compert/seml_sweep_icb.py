@@ -1,7 +1,10 @@
 import json
 import os
+import signal
+import subprocess
 import time
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 import seml
@@ -15,6 +18,30 @@ seml.setup_logger(ex)
 @ex.post_run_hook
 def collect_stats(_run):
     seml.collect_exp_stats(_run)
+
+
+def start_profiler(seed, save_dir):
+    print("Starting the profiler.")
+    profiler_process = subprocess.Popen(
+        [
+            "py-spy",
+            "record",
+            "--pid",
+            str(os.getpid()),
+            "--rate",
+            "3",  # three samples per second should be fine-grained enough and the outfile won't get too large
+            "--format",
+            "speedscope",
+            "--output",
+            str(Path(save_dir) / f"profile_{seed}.speedscope"),
+        ]
+    )
+    return profiler_process
+
+
+def stop_profiler(profiler):
+    # Send same signal as CTRL+C would
+    profiler.send_signal(signal.SIGINT)
 
 
 @ex.config
@@ -40,6 +67,8 @@ class ExperimentWrapper:
     This allows a modular design of the configuration, where certain sub-dictionaries (e.g., "data") are parsed by
     specific method. This avoids having one large "main" function which takes all parameters as input.
     """
+
+    profiler = None
 
     def __init__(self, init_all=True):
         if init_all:
@@ -113,6 +142,13 @@ class ExperimentWrapper:
         # pjson({"training_args": args})
         # pjson({"autoencoder_params": self.autoencoder.hparams})
 
+    @ex.capture(prefix="profiling")
+    def init_profiler(self, run_profiler: bool, outdir: str):
+        if run_profiler:
+            if not Path(outdir).exists():
+                Path(outdir).mkdir(parents=True)
+            self.profiler = start_profiler(self.seed, outdir)
+
     @ex.capture
     def init_all(self, seed: int):
         """
@@ -120,6 +156,7 @@ class ExperimentWrapper:
         """
 
         self.seed = seed
+        self.init_profiler()
         self.init_dataset()
         self.init_drug_embedding()
         self.init_model()
@@ -244,6 +281,8 @@ class ExperimentWrapper:
                     pjson({"early_stop": epoch})
                     break
 
+        if self.profiler:
+            stop_profiler(self.profiler)
         results = self.autoencoder.history
         # results = pd.DataFrame.from_dict(results) # not same length!
         results["total_epochs"] = epoch

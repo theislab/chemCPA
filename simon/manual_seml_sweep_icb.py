@@ -21,6 +21,7 @@ if __name__ == "__main__":
 
     exp.seed = 1337
     # loads the dataset splits
+    exp.init_profiler(**args["profiling"])
     exp.init_dataset(**args["dataset"])
 
     exp.init_drug_embedding(embedding=args["model"]["embedding"])

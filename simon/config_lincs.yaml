@@ -18,6 +18,9 @@ slurm:
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
+  profiling.run_profiler: True
+  profiling.outdir: "./"
+
   training.checkpoint_freq: 150 # checkpoint frequency to save intermediate results
   training.num_epochs: 300 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time

@@ -24,3 +24,4 @@ dependencies:
   - pyarrow
   - pre-commit
   - seml
+  - py-spy
