@@ -11,10 +11,10 @@ class Profiler:
     outpath: Path
     _process: subprocess.Popen
 
-    def __init__(self, seed: int, save_dir: str):
+    def __init__(self, seed: str, save_dir: str):
         """
         Creates a new profiler without start it yet.
-        @param seed: random integer used for generating unique filepath.
+        @param seed: random string used for generating unique filepath.
         @param save_dir: directory to save the file to.
         """
         assert Path(save_dir).is_dir(), f"{save_dir} is not a directory!"
@@ -58,6 +58,10 @@ class Profiler:
             # collect the zombie process
             self._process.wait(timeout=2)
 
-        # upload the profiling results to mongoDB
+        # upload the profiling results to mongoDB as a binary
         if self.outpath.is_file():
-            experiment.add_artifact(str(self.outpath))
+            experiment.add_artifact(
+                str(self.outpath),
+                name="py_spy_profile",
+                content_type="application/octet-stream",
+            )

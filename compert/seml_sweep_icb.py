@@ -29,6 +29,28 @@ def config():
         )
 
 
+profiler = None
+
+
+@ex.pre_run_hook(prefix="profiling")
+def init_profiler(run_profiler: bool, outdir: str):
+    if run_profiler:
+        if not Path(outdir).exists():
+            Path(outdir).mkdir(parents=True)
+        global profiler
+        profiler = Profiler(
+            str(seml.utils.make_hash(ex.current_run.config)),
+            outdir,
+        )
+        profiler.start()
+
+
+@ex.post_run_hook
+def stop_profiler():
+    if profiler:
+        profiler.stop(experiment=ex)
+
+
 def pjson(s):
     """
     Prints a string in JSON format and flushes stdout
@@ -117,14 +139,6 @@ class ExperimentWrapper:
         # pjson({"training_args": args})
         # pjson({"autoencoder_params": self.autoencoder.hparams})
 
-    @ex.capture(prefix="profiling")
-    def init_profiler(self, run_profiler: bool, outdir: str):
-        if run_profiler:
-            if not Path(outdir).exists():
-                Path(outdir).mkdir(parents=True)
-            self.profiler = Profiler(self.seed, outdir)
-            self.profiler.start()
-
     @ex.capture
     def init_all(self, seed: int):
         """
@@ -132,7 +146,6 @@ class ExperimentWrapper:
         """
 
         self.seed = seed
-        self.init_profiler()
         self.init_dataset()
         self.init_drug_embedding()
         self.init_model()
@@ -257,8 +270,6 @@ class ExperimentWrapper:
                     pjson({"early_stop": epoch})
                     break
 
-        if self.profiler is not None:
-            self.profiler.stop(experiment=ex)
         results = self.autoencoder.history
         # results = pd.DataFrame.from_dict(results) # not same length!
         results["total_epochs"] = epoch
