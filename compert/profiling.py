@@ -1,4 +1,3 @@
-import dataclasses
 import os
 import shutil
 import signal
@@ -15,6 +14,8 @@ class Profiler:
     def __init__(self, seed: int, save_dir: str):
         """
         Creates a new profiler without start it yet.
+        @param seed: random integer used for generating unique filepath.
+        @param save_dir: directory to save the file to.
         """
         assert Path(save_dir).is_dir(), f"{save_dir} is not a directory!"
         self.outpath = Path(save_dir) / f"profile_{seed}.speedscope"
@@ -22,7 +23,6 @@ class Profiler:
 
     def start(self):
         """Start recording the current Python process"""
-        print("Starting the profiler.")
         # starts py-spy in a new subprocess
         self._process = subprocess.Popen(
             [
@@ -42,8 +42,10 @@ class Profiler:
         )
 
     def stop(self, experiment: sacred.Experiment):
-        """Stop recording and save the results to a file and to MongoDB"""
-        print("stopping the profiler")
+        """
+        Stop recording and save the results to a file and to MongoDB
+        @param experiment: The seml / sacred experiment.
+        """
         # First, send same signal as CTRL+C would. Py-spy should quit and save the results.
         self._process.send_signal(signal.SIGINT)
         try:
