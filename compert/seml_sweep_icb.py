@@ -65,8 +65,6 @@ class ExperimentWrapper:
     specific method. This avoids having one large "main" function which takes all parameters as input.
     """
 
-    profiler = None
-
     def __init__(self, init_all=True):
         if init_all:
             self.init_all()
