@@ -1,5 +1,7 @@
+import dataclasses
 import json
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -20,28 +22,51 @@ def collect_stats(_run):
     seml.collect_exp_stats(_run)
 
 
+@dataclasses.dataclass
+class Profiler:
+    outpath: Path
+    process: subprocess.Popen
+
+
 def start_profiler(seed, save_dir):
     print("Starting the profiler.")
+    assert Path(save_dir).is_dir(), f"{save_dir} is not a directory!"
+    outpath = Path(save_dir) / f"profile_{seed}.speedscope"
+    # starts py-spy in a new subprocess
     profiler_process = subprocess.Popen(
         [
-            "py-spy",
+            shutil.which("py-spy"),
             "record",
             "--pid",
-            str(os.getpid()),
+            str(os.getpid()),  # tells py-spy to profile the current Python process
             "--rate",
             "3",  # three samples per second should be fine-grained enough and the outfile won't get too large
             "--format",
-            "speedscope",
+            "speedscope",  # look at profiles via https://speedscope.app
             "--output",
-            str(Path(save_dir) / f"profile_{seed}.speedscope"),
+            str(outpath),  # file to save results at (once profiling has finished)
         ]
     )
-    return profiler_process
+    return Profiler(outpath=outpath, process=profiler_process)
 
 
-def stop_profiler(profiler):
-    # Send same signal as CTRL+C would
-    profiler.send_signal(signal.SIGINT)
+def stop_profiler(profiler: Profiler):
+    print("stopping the profiler")
+    # First, send same signal as CTRL+C would. Py-spy should quit and save the results.
+    profiler.process.send_signal(signal.SIGINT)
+    try:
+        # if the profiler didn't exit after 10s, kill it
+        profiler.process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        # sends SIGKILL. py-spy will quit, but will not save a profile.
+        profiler.process.kill()
+        print("killed py-spy due to timeout.")
+        # collect the zombie process
+        profiler.process.wait(timeout=2)
+
+    # upload the profiling results to mongoDB
+    if profiler.outpath.is_file():
+        ex.add_artifact(str(profiler.outpath))
 
 
 @ex.config
@@ -281,7 +306,7 @@ class ExperimentWrapper:
                     pjson({"early_stop": epoch})
                     break
 
-        if self.profiler:
+        if self.profiler is not None:
             stop_profiler(self.profiler)
         results = self.autoencoder.history
         # results = pd.DataFrame.from_dict(results) # not same length!
