@@ -7,8 +7,9 @@ from pathlib import Path
 import numpy as np
 import seml
 import torch
-from profiling import Profiler
 from sacred import Experiment
+
+from compert.profiling import Profiler
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -156,6 +157,7 @@ class ExperimentWrapper:
         max_minutes: int,
         checkpoint_freq: int,
         ignore_evaluation: bool,
+        run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
     ):
@@ -228,7 +230,9 @@ class ExperimentWrapper:
                         evaluation_stats = evaluate(self.autoencoder, self.datasets)
                     else:
                         evaluation_stats = evaluate(
-                            self.autoencoder, self.datasets, disentangle=True
+                            self.autoencoder,
+                            self.datasets,
+                            disentangle=run_eval_disentangle,
                         )
                     for key, val in evaluation_stats.items():
                         if not (key in self.autoencoder.history.keys()):

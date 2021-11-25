@@ -24,6 +24,7 @@ fixed:
   training.num_epochs: 10 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
   training.ignore_evaluation: False
+  training.run_eval_disentangle: True
   training.save_checkpoints: False
   training.save_dir: sweeps/checkpoints
   
