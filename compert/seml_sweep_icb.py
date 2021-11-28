@@ -9,7 +9,11 @@ import seml
 import torch
 from sacred import Experiment
 
+from compert.data import load_dataset_splits
+from compert.embedding import get_chemical_representation
+from compert.model import ComPert
 from compert.profiling import Profiler
+from compert.train import custom_collate, evaluate, evaluate_r2
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -78,7 +82,6 @@ class ExperimentWrapper:
         Since we set prefix="dataset ", this method only gets passed the respective sub-dictionary, enabling a modular
         experiment design.
         """
-        from compert.data import load_dataset_splits
 
         if dataset_type in ("kang", "trapnell", "lincs"):
             self.datasets, self.dataset = load_dataset_splits(
@@ -87,8 +90,6 @@ class ExperimentWrapper:
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, embedding: dict):
-        from compert.embedding import get_chemical_representation
-
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if embedding["model"] is not None:
             # ComPert will use the provided embedding, which is frozen during training
@@ -104,7 +105,6 @@ class ExperimentWrapper:
 
     @ex.capture(prefix="model")
     def init_model(self, hparams: dict, additional_params: dict):
-        from compert.model import ComPert
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -123,7 +123,6 @@ class ExperimentWrapper:
         """
         Instantiates a torch DataLoader for the given batchsize
         """
-        from compert.train import custom_collate
 
         self.datasets.update(
             {
@@ -161,7 +160,6 @@ class ExperimentWrapper:
         save_checkpoints: bool,
         save_dir: str,
     ):
-        from compert.train import evaluate, evaluate_r2
 
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")

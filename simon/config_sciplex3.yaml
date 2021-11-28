@@ -8,11 +8,12 @@ seml:
 
 slurm:
   max_simultaneous_jobs: 4
+  # 2 experiments in 1 job seems to work for Trapnell without getting GPU memory problems
   experiments_per_job: 2
   sbatch_options_template: GPU
   sbatch_options:
     gres: gpu:1       # num GPUs
-    mem: 32G          # memory
+    mem: 50G          # memory
     cpus-per-task: 6  # num cores
     time: 0-04:01     # max time, D-HH:MM
 ###### BEGIN PARAMETER CONFIGURATION ######
