@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
 import json
+from collections import Iterable
 from typing import Union
 
 import numpy as np
@@ -9,10 +10,12 @@ import torch
 
 def _move_inputs(*inputs, device="cuda"):
     def mv_input(x):
-        if type(x) == list:
-            return [mv_input(y) for y in x]
+        if x is None:
+            return None
+        elif isinstance(x, torch.Tensor):
+            return x.to(device)
         else:
-            return x.to(device) if x is not None else None
+            return [mv_input(y) for y in x]
 
     return [mv_input(x) for x in inputs]
 

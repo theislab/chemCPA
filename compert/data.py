@@ -407,22 +407,3 @@ def load_dataset_splits(
         return splits, dataset
     else:
         return splits
-
-
-if __name__ == "__main__":
-    print("Strating\n...")
-    config = {
-        "dataset_path": "datasets/trapnell_cpa_subset.h5ad",  # full path to the anndata dataset
-        "perturbation_key": "condition",
-        "covariate_keys": "cell_type",  # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
-        "dose_key": "dose",
-        "split_key": "split1",  # necessary field for train, test, ood splits.
-        "smiles_key": "SMILES",
-        "split_key": "split1",
-        "mol_featurizer": "canonical",
-        "pert_category": "cov_drug_dose_name",
-    }
-    for featurizer in ["canonical", "AttentiveFP", "Pretrain"]:
-        config["mol_featurizer"] = featurizer
-        load_dataset_splits(**config)
-        print(f'Finished for {config["mol_featurizer"]}.\n\n\n')
