@@ -229,7 +229,7 @@ class ExperimentWrapper:
                         raise ValueError(
                             "Please provide a valid directory path in the 'save_dir' argument."
                         )
-                    file_name = f"{ex.observers[0].run_entry['config_hash']}_{ex.current_run.start_time.strftime('%Y-%m-%d_%H-%M-%S-%f')}"
+                    file_name = f"{ex.observers[0].run_entry['config_hash']}_{ex.current_run.start_time.strftime('%Y-%m-%d_%H-%M-%S-%f')}.pt"
                     torch.save(
                         (
                             self.autoencoder.state_dict(),
