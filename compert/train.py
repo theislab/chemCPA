@@ -7,8 +7,6 @@ import sklearn.model_selection
 import torch
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import balanced_accuracy_score, make_scorer
-from sklearn.model_selection import cross_val_score
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from torchmetrics import R2Score
 
@@ -134,10 +132,12 @@ def evaluate_disentanglement(autoencoder, dataset, subsampling_ratio=0.1):
     """
 
     # generate random indices to subselect the dataset
+    assert 0.0 < subsampling_ratio <= 1.0
     indices = np.random.choice(
         len(dataset), size=int(len(dataset) * subsampling_ratio), replace=False
     )
     data = dataset[indices]
+    print(f"Size of disentanglement testdata: {data[0].shape} (total {len(dataset)})")
 
     if dataset.use_drugs_idx:
         genes, drugs_idx, dosages, covariates = (
