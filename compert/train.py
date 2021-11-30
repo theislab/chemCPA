@@ -123,7 +123,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
     return mean(logfold_score)
 
 
-def evaluate_disentanglement(autoencoder, dataset, subsampling_ratio=0.1):
+def evaluate_disentanglement(autoencoder, dataset, n_samples=10000):
     """
     Given a ComPert model, this function measures the correlation between
     its latent space and 1) a dataset's drug vectors 2) a datasets covariate
@@ -132,9 +132,9 @@ def evaluate_disentanglement(autoencoder, dataset, subsampling_ratio=0.1):
     """
 
     # generate random indices to subselect the dataset
-    assert 0.0 < subsampling_ratio <= 1.0
+    assert n_samples > 0
     indices = np.random.choice(
-        len(dataset), size=int(len(dataset) * subsampling_ratio), replace=False
+        len(dataset), size=min(n_samples, len(dataset)), replace=False
     )
     data = dataset[indices]
     print(f"Size of disentanglement testdata: {data[0].shape} (total {len(dataset)})")
@@ -170,8 +170,8 @@ def evaluate_disentanglement(autoencoder, dataset, subsampling_ratio=0.1):
     clf = LogisticRegression(
         solver="saga",
         multi_class="multinomial",
-        max_iter=3000,
-        n_jobs=-1,
+        max_iter=100,
+        n_jobs=1,  # no parallelization possible with multinomial loss
         tol=1e-2,
     )
 
