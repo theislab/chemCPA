@@ -33,7 +33,7 @@ def test_dataset_idx_ohe():
     for i in range(len(d_idx)):
         genes_idx, idx, dosage, cov_idx = d_idx[i]
         genes_ohe, drug, cov_ohe = d_ohe[i]
-        torch.testing.assert_equal(genes_idx, genes_ohe)
+        torch.testing.assert_close(genes_idx, genes_ohe)
         # make sure the OHE and the index representation encode the same info
-        torch.testing.assert_equal(drug[idx], dosage)
-        torch.testing.assert_equal(cov_idx, cov_ohe)
+        torch.testing.assert_close(drug[idx], dosage)
+        torch.testing.assert_close(cov_idx, cov_ohe)

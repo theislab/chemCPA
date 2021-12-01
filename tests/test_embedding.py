@@ -33,6 +33,7 @@ def test_embedding_idx_roundtrip():
             use_drugs_idx=use_drugs_idx
         )
         embedding = get_chemical_representation(
+            data_dir="embeddings/",
             smiles=dataset.canon_smiles_unique_sorted,
             embedding_model="grover_base",
         )
@@ -43,7 +44,7 @@ def test_embedding_idx_roundtrip():
             list(dataset.drugs_names_unique_sorted).index("control"),
             device=device,
         )
-        torch.testing.assert_equal(embedding(control), control_emb.to(device))
+        torch.testing.assert_close(embedding(control), control_emb.to(device))
 
         model = ComPert(
             dataset.num_genes,

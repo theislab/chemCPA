@@ -136,7 +136,7 @@ class GeneralizedSigmoid(torch.nn.Module):
         Params
         ------
         nonlin : str (default: logsigm)
-            One of logsigm, sigm.
+            One of logsigm, sigm or None. If None, then the doser is disabled and just returns the dosage unchanged.
         """
         super(GeneralizedSigmoid, self).__init__()
         assert nonlin in ("sigm", "logsigm", None)
@@ -270,6 +270,7 @@ class ComPert(torch.nn.Module):
             else:
                 self.loss_adversary_drugs = torch.nn.BCEWithLogitsLoss()
             # set dosers
+            assert doser_type in ("mlp", "sigm", "logsigm", None)
             if doser_type == "mlp":
                 self.dosers = torch.nn.ModuleList()
                 for _ in range(self.num_drugs):
@@ -432,7 +433,14 @@ class ComPert(torch.nn.Module):
         Compute sum of drug embeddings, each of them multiplied by its
         dose-response curve.
 
-        Returns a tensor of shape [batch_size, drug_embedding_dimension]
+        If use_drugs_idx is True, then drugs_idx and dosages will be set.
+        If use_drugs_idx is False, then drugs will be set.
+
+        @param drugs: A vector of dim [batch_size, num_drugs], where each entry contains the dose of that drug.
+        @param drugs_idx: A vector of dim [batch_size]. Each entry contains the index of the applied drug. The
+            index is ∈ [0, num_drugs).
+        @param dosages: A vector of dim [batch_size]. Each entry contains the dose of the applied drug.
+        @return: a tensor of shape [batch_size, drug_embedding_dimension]
         """
         assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
 

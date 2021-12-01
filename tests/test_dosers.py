@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from compert.model import ComPert, GeneralizedSigmoid
 
 
-@pytest.mark.parametrize("nonlin", ["sigm", "logsigm"])
+@pytest.mark.parametrize("nonlin", ["sigm", "logsigm", None])
 def test_sigm_ohe_idx(nonlin):
     # test to make sure the generalized sigmoid doser has the same outputs
     # with indices and OHE
@@ -36,7 +36,7 @@ def test_sigm_ohe_idx(nonlin):
     assert ohe_s[3][2] == idx_s[3]
 
 
-@pytest.mark.parametrize("doser_type", ["logsigm", "sigm", "mlp"])
+@pytest.mark.parametrize("doser_type", ["logsigm", "sigm", "mlp", None])
 def test_drug_embedding(doser_type):
     drug_emb = torch.nn.Embedding.from_pretrained(
         torch.tensor(list(range(10 * 10)), dtype=torch.float32, device="cpu").view(
