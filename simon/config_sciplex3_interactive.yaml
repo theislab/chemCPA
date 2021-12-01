@@ -43,7 +43,7 @@ fixed:
   dataset.data_params.smiles_key: SMILES
   dataset.data_params.split_key: split # necessary field for train, test, ood splits.
   dataset.data_params.mol_featurizer: canonical
-  dataset.data_params.use_drugs_idx: True
+  dataset.data_params.use_drugs_idx: False
 
   model.hparams.dropout: 0.1
   model.hparams.dim: 128

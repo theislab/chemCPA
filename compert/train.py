@@ -3,11 +3,10 @@
 import time
 
 import numpy as np
+import sklearn.model_selection
 import torch
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import balanced_accuracy_score, make_scorer
-from sklearn.model_selection import cross_val_score
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from torchmetrics import R2Score
 
@@ -124,60 +123,79 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
     return mean(logfold_score)
 
 
-def evaluate_disentanglement(autoencoder, dataset, nonlinear=False):
+def evaluate_disentanglement(autoencoder, dataset, n_samples=10000):
     """
     Given a ComPert model, this function measures the correlation between
     its latent space and 1) a dataset's drug vectors 2) a datasets covariate
     vectors.
 
     """
+
+    # generate random indices to subselect the dataset
+    assert n_samples > 0
+    indices = np.random.choice(
+        len(dataset), size=min(n_samples, len(dataset)), replace=False
+    )
+    data = dataset[indices]
+    print(f"Size of disentanglement testdata: {data[0].shape} (total {len(dataset)})")
+
     if dataset.use_drugs_idx:
+        genes, drugs_idx, dosages, covariates = (
+            data[0],
+            data[1],
+            data[2],
+            data[3:],
+        )
         _, latent_basal = autoencoder.predict(
-            genes=dataset.genes,
-            drugs_idx=dataset.drugs_idx,
-            dosages=dataset.dosages,
-            covariates=dataset.covariates,
+            genes=genes,
+            drugs_idx=drugs_idx,
+            dosages=dosages,
+            covariates=covariates,
             return_latent_basal=True,
         )
     else:
+        genes, drugs, covariates = data[0], data[1], data[2:]
         _, latent_basal = autoencoder.predict(
-            genes=dataset.genes,
-            drugs=dataset.drugs,
-            covariates=dataset.covariates,
+            genes=genes,
+            drugs=drugs,
+            covariates=covariates,
             return_latent_basal=True,
         )
 
+    # move output from GPU to CPU
     latent_basal = latent_basal.detach().cpu().numpy()
+    normalized_basal = StandardScaler().fit_transform(latent_basal)
+    bacc_scorer = make_scorer(balanced_accuracy_score)
 
-    if nonlinear:
-        clf = KNeighborsClassifier(n_neighbors=int(np.sqrt(len(latent_basal))))
-    else:
-        clf = LogisticRegression(
-            solver="saga",
-            multi_class="multinomial",
-            max_iter=3000,
-            # n_jobs=-1,
-            # verbose=2,
-            tol=1e-2,
-        )
+    clf = LogisticRegression(
+        solver="saga",
+        multi_class="multinomial",
+        max_iter=100,
+        n_jobs=1,  # no parallelization possible with multinomial loss
+        tol=1e-2,
+    )
 
-    pert_scores, cov_scores = 0, []
+    pert_score, cov_scores = 0, []
 
     def compute_score(labels):
-        scaler = StandardScaler().fit_transform(latent_basal)
-        scorer = make_scorer(balanced_accuracy_score)
-        return cross_val_score(clf, scaler, labels, scoring=scorer, cv=5, n_jobs=-1)
+        # generate a 80/20 split. There's probably a better way to do this
+        datasplit = sklearn.model_selection.KFold(n_splits=5).split(
+            normalized_basal, labels
+        )
+        train_index, test_index = next(iter(datasplit))
+        clf.fit(normalized_basal[train_index], labels[train_index])
+        return bacc_scorer(clf, normalized_basal[test_index], labels[test_index])
 
     if dataset.perturbation_key is not None:
-        pert_scores = compute_score(dataset.drugs_names)
+        pert_score = compute_score(dataset.drugs_names[indices])
     for cov in list(dataset.covariate_names):
         cov_scores = []
         if len(np.unique(dataset.covariate_names[cov])) == 0:
             cov_scores = [0]
             break
         else:
-            cov_scores.append(compute_score(dataset.covariate_names[cov]))
-        return [np.mean(pert_scores), *[np.mean(cov_score) for cov_score in cov_scores]]
+            cov_scores.append(compute_score(dataset.covariate_names[cov][indices]))
+        return [pert_score] + cov_scores
 
 
 def evaluate_r2(autoencoder, dataset, genes_control):
@@ -210,6 +228,7 @@ def evaluate_r2(autoencoder, dataset, genes_control):
 
         emb_covs = [repeat_n(cov[idx], num) for cov in dataset.covariates]
         if dataset.use_drugs_idx:
+            # spending a lot of time here. Why?
             emb_drugs = (
                 repeat_n(dataset.drugs_idx[idx], num).squeeze(),
                 repeat_n(dataset.dosages[idx], num).squeeze(),
