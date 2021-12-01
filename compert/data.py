@@ -199,25 +199,6 @@ class Dataset:
             self.drug_dict = None
             self.drugs = None
 
-        if smiles_key is not None:
-            mol_featurizers = ["canonical", "AttentiveFP", "Pretrain"]
-            if mol_featurizer not in mol_featurizers:
-                raise ValueError(f"mol_featurizer must be one of {mol_featurizers}")
-            graph_tuple = graph_from_smiles(
-                data.obs[[self.perturbation_key, self.smiles_key]],
-                self.perturbation_key,
-                self.smiles_key,
-                self.drugs_names_unique_sorted,
-                mol_featuriser=self.mol_featurizer,
-            )
-            self.batched_graph_collection = graph_tuple[0]
-            self.idx_wo_smiles = graph_tuple[1]
-            self.graph_feats_shape = graph_tuple[2]
-        else:
-            self.batched_graph_collection = None
-            self.idx_wo_smiles = None
-            self.graph_feats_shape = None
-
         if isinstance(covariate_keys, list) and covariate_keys:
             if not len(covariate_keys) == len(set(covariate_keys)):
                 raise ValueError(f"Duplicate keys were given in: {covariate_keys}")
@@ -318,10 +299,6 @@ class SubDataset:
         self.dose_key = dataset.dose_key
         self.covariate_keys = dataset.covariate_keys
         self.smiles_key = dataset.smiles_key
-
-        self.batched_graph_collection = dataset.batched_graph_collection
-        self.idx_wo_smiles = dataset.idx_wo_smiles
-        self.graph_feats_shape = dataset.graph_feats_shape
 
         self.covars_dict = dataset.atomic_сovars_dict
 

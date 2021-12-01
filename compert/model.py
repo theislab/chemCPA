@@ -224,6 +224,20 @@ class ComPert(torch.nn.Module):
         else:
             self.set_hparams_(seed, hparams)
 
+        # store the variables used for initialization (allows restoring model later).
+        self.init_args = {
+            "num_genes": num_genes,
+            "num_drugs": num_drugs,
+            "num_covariates": num_covariates,
+            "seed": seed,
+            "patients": patience,
+            "loss_ae": loss_ae,
+            "doser_type": doser_type,
+            "decoder_activation": decoder_activation,
+            "hparams": hparams,
+            "use_drugs_idx": use_drugs_idx,
+        }
+
         # set models
         self.encoder = MLP(
             [num_genes]
