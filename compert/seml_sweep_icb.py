@@ -2,11 +2,18 @@ import json
 import os
 import time
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 import seml
 import torch
 from sacred import Experiment
+
+from compert.data import load_dataset_splits
+from compert.embedding import get_chemical_representation
+from compert.model import ComPert
+from compert.profiling import Profiler
+from compert.train import custom_collate, evaluate, evaluate_r2
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -25,6 +32,28 @@ def config():
         ex.observers.append(
             seml.create_mongodb_observer(db_collection, overwrite=overwrite)
         )
+
+
+profiler = None
+
+
+@ex.pre_run_hook(prefix="profiling")
+def init_profiler(run_profiler: bool, outdir: str):
+    if run_profiler:
+        if not Path(outdir).exists():
+            Path(outdir).mkdir(parents=True)
+        global profiler
+        profiler = Profiler(
+            str(seml.utils.make_hash(ex.current_run.config)),
+            outdir,
+        )
+        profiler.start()
+
+
+@ex.post_run_hook
+def stop_profiler():
+    if profiler:
+        profiler.stop(experiment=ex)
 
 
 def pjson(s):
@@ -53,7 +82,6 @@ class ExperimentWrapper:
         Since we set prefix="dataset ", this method only gets passed the respective sub-dictionary, enabling a modular
         experiment design.
         """
-        from compert.data import load_dataset_splits
 
         if dataset_type in ("kang", "trapnell", "lincs"):
             self.datasets, self.dataset = load_dataset_splits(
@@ -62,8 +90,6 @@ class ExperimentWrapper:
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, embedding: dict):
-        from compert.embedding import get_chemical_representation
-
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if embedding["model"] is not None:
             # ComPert will use the provided embedding, which is frozen during training
@@ -79,7 +105,6 @@ class ExperimentWrapper:
 
     @ex.capture(prefix="model")
     def init_model(self, hparams: dict, additional_params: dict):
-        from compert.model import ComPert
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -98,7 +123,6 @@ class ExperimentWrapper:
         """
         Instantiates a torch DataLoader for the given batchsize
         """
-        from compert.train import custom_collate
 
         self.datasets.update(
             {
@@ -132,10 +156,10 @@ class ExperimentWrapper:
         max_minutes: int,
         checkpoint_freq: int,
         ignore_evaluation: bool,
+        run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
     ):
-        from compert.train import evaluate, evaluate_r2
 
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")
@@ -204,7 +228,9 @@ class ExperimentWrapper:
                         evaluation_stats = evaluate(self.autoencoder, self.datasets)
                     else:
                         evaluation_stats = evaluate(
-                            self.autoencoder, self.datasets, disentangle=True
+                            self.autoencoder,
+                            self.datasets,
+                            disentangle=run_eval_disentangle,
                         )
                     for key, val in evaluation_stats.items():
                         if not (key in self.autoencoder.history.keys()):

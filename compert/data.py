@@ -163,7 +163,7 @@ class Dataset:
                         else:
                             drug_ohe += float(d) * drugs_combos[j]
                     drugs.append(drug_ohe)
-                self.drugs = torch.Tensor(drugs)
+                self.drugs = torch.Tensor(np.array(drugs))
 
                 # store a mapping from int -> drug_name, where the integer equals the position
                 # of the drug in the OneHot encoding. Very convoluted, should be refactored.
