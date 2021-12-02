@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
 import time
 
 import numpy as np
@@ -164,13 +163,13 @@ def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
         )
         assert normalized_basal.size(0) == len(labels_tensor)
         dataset = torch.utils.data.TensorDataset(normalized_basal, labels_tensor)
-        data_loader = torch.utils.data.DataLoader(dataset, batch_size=128, shuffle=True)
+        data_loader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
         model = LogisticRegression(
             normalized_basal.size(1), len(unique_labels), device="cuda"
         )
-        optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
-        for epoch in range(1000):
+        for epoch in range(400):
             for X, y in data_loader:
                 pred = model(X)
                 loss = criterion(pred, y)
