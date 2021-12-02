@@ -25,7 +25,6 @@ fixed:
   training.num_epochs: 300 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
   training.ignore_evaluation: False
-  training.run_eval_disentangle: False
   training.save_checkpoints: True
   training.run_eval_disentangle: True
   training.save_dir: sweeps/checkpoints/lincs_logsigm_grover
