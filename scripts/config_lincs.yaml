@@ -91,15 +91,7 @@ fixed:
   dataset.data_params.smiles_key: canonical_smiles
   dataset.data_params.split_key: split1 # necessary field for train, test, ood splits. 
   
-grid:
-  dataset.data_params.mol_featurizer: 
-    type: choice 
-    options: 
-      - canonical
-      # - AttentiveFP 
-      # - Pretrain
-
-gnn_model: 
+gnn_model:
   fixed: 
     model.gnn_model.hparams.n_layers: 2
     model.gnn_model.GCN.hparams.n_layers: 2

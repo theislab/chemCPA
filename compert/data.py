@@ -12,7 +12,7 @@ import pandas as pd
 import scanpy as sc
 from sklearn.preprocessing import OneHotEncoder
 
-from compert.helper import canonicalize_smiles, graph_from_smiles
+from compert.helper import canonicalize_smiles
 
 
 def ranks_to_df(data, key="rank_genes_groups"):
@@ -77,7 +77,6 @@ class Dataset:
         smiles_key=None,
         pert_category="cov_drug_dose_name",
         split_key="split",
-        mol_featurizer="canonical",
         use_drugs_idx=False,
     ):
         """
@@ -102,7 +101,6 @@ class Dataset:
             covariate_keys = [covariate_keys]
         self.covariate_keys = covariate_keys
         self.smiles_key = smiles_key
-        self.mol_featurizer = mol_featurizer
         self.use_drugs_idx = use_drugs_idx
 
         if perturbation_key is not None:
@@ -353,7 +351,6 @@ def load_dataset_splits(
     smiles_key: Union[str, None],
     pert_category: str = "cov_drug_dose_name",
     split_key: str = "split",
-    mol_featurizer: str = "canonical",
     return_dataset: bool = False,
     use_drugs_idx=False,
 ):
@@ -366,7 +363,6 @@ def load_dataset_splits(
         smiles_key,
         pert_category,
         split_key,
-        mol_featurizer,
         use_drugs_idx,
     )
 

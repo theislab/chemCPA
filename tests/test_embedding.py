@@ -15,7 +15,6 @@ def test_embedding_idx_roundtrip():
         "dose_key": "dose",
         "covariate_keys": "cell_type",
         "smiles_key": "SMILES",
-        "mol_featurizer": "canonical",
         "split_key": "split",
     }
 
