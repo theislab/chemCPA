@@ -295,7 +295,7 @@ class ComPert(torch.nn.Module):
             else:
                 self.loss_adversary_drugs = torch.nn.BCEWithLogitsLoss()
             # set dosers
-            assert doser_type in ("mlp", "sigm", "logsigm", None)
+            assert doser_type in ("mlp", "sigm", "logsigm", "amortized", None)
             if doser_type == "mlp":
                 self.dosers = torch.nn.ModuleList()
                 for _ in range(self.num_drugs):
@@ -308,6 +308,16 @@ class ComPert(torch.nn.Module):
                             batch_norm=False,
                         )
                     )
+            elif doser_type == "amortized":
+                assert (
+                    use_drugs_idx
+                ), "Amortized doser not yet implemented for `use_drugs_idx=False`"
+                # should this also have `batch_norm=False`?
+                self.dosers = MLP(
+                    [self.drug_embeddings.embedding_dim + 1]
+                    + [self.hparams["dosers_width"]] * self.hparams["dosers_depth"]
+                    + [1],
+                )
             else:
                 self.dosers = GeneralizedSigmoid(
                     self.num_drugs, self.device, nonlin=doser_type
@@ -494,6 +504,12 @@ class ComPert(torch.nn.Module):
                         self.dosers[idx](dosage.unsqueeze(0)).sigmoid()
                     )
                 scaled_dosages = torch.cat(scaled_dosages, 0)
+        elif self.doser_type == "amortized":
+            # dosages are 1D, so we unsqueeze them to be (N, 1) which allows using torch.concat().
+            # after the dosers we squeeze them back to 1D
+            scaled_dosages = self.dosers(
+                torch.concat([latent_drugs, torch.unsqueeze(dosages, dim=-1)], dim=1)
+            ).squeeze()
         else:
             if drugs_idx is None:
                 scaled_dosages = self.dosers(drugs)
