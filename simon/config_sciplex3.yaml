@@ -44,7 +44,6 @@ fixed:
   dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: SMILES
   dataset.data_params.split_key: split # necessary field for train, test, ood splits.
-  dataset.data_params.mol_featurizer: canonical
   dataset.data_params.use_drugs_idx: False
 
   model.hparams.adversary_depth: 4
