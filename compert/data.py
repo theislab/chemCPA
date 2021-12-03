@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
+import logging
 import warnings
 
 import numpy as np
@@ -90,9 +90,9 @@ class Dataset:
             Example: cell type + drug name + drug dose. This seems unused?
         :param use_drugs_idx: Whether or not to encode drugs via their index, instead of via a OneHot encoding
         """
-        print(f"Starting to read in data: {fname}\n...")
+        logging.info(f"Starting to read in data: {fname}\n...")
         data = sc.read(fname)
-        print(f"Finished data loading.")
+        logging.info(f"Finished data loading.")
         self.genes = torch.Tensor(data.X.A)
         self.var_names = data.var_names
 

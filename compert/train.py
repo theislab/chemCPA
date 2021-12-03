@@ -1,16 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
 import time
 
 import numpy as np
-import sklearn.model_selection
 import torch
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import balanced_accuracy_score, make_scorer
-from sklearn.preprocessing import StandardScaler
+from torch import nn
 from torchmetrics import R2Score
 
-from compert.model import ComPert
+import compert.data
+from compert.model import ComPert, LogisticRegression
 
 
 def bool2idx(x):
@@ -123,7 +120,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
     return mean(logfold_score)
 
 
-def evaluate_disentanglement(autoencoder, dataset, n_samples=10000):
+def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
     """
     Given a ComPert model, this function measures the correlation between
     its latent space and 1) a dataset's drug vectors 2) a datasets covariate
@@ -132,69 +129,68 @@ def evaluate_disentanglement(autoencoder, dataset, n_samples=10000):
     """
 
     # generate random indices to subselect the dataset
-    assert n_samples > 0
-    indices = np.random.choice(
-        len(dataset), size=min(n_samples, len(dataset)), replace=False
-    )
-    data = dataset[indices]
-    print(f"Size of disentanglement testdata: {data[0].shape} (total {len(dataset)})")
+    print(f"Size of disentanglement testdata: {len(data)}")
 
-    if dataset.use_drugs_idx:
-        genes, drugs_idx, dosages, covariates = (
-            data[0],
-            data[1],
-            data[2],
-            data[3:],
-        )
-        _, latent_basal = autoencoder.predict(
-            genes=genes,
-            drugs_idx=drugs_idx,
-            dosages=dosages,
-            covariates=covariates,
-            return_latent_basal=True,
-        )
-    else:
-        genes, drugs, covariates = data[0], data[1], data[2:]
-        _, latent_basal = autoencoder.predict(
-            genes=genes,
-            drugs=drugs,
-            covariates=covariates,
-            return_latent_basal=True,
-        )
+    with torch.no_grad():
+        if data.use_drugs_idx:
+            _, latent_basal = autoencoder.predict(
+                genes=data.genes,
+                drugs_idx=data.drugs_idx,
+                dosages=data.dosages,
+                covariates=data.covariates,
+                return_latent_basal=True,
+            )
+        else:
+            _, latent_basal = autoencoder.predict(
+                genes=data.genes,
+                drugs=data.drugs,
+                covariates=data.covariates,
+                return_latent_basal=True,
+            )
 
-    # move output from GPU to CPU
-    latent_basal = latent_basal.detach().cpu().numpy()
-    normalized_basal = StandardScaler().fit_transform(latent_basal)
-    bacc_scorer = make_scorer(balanced_accuracy_score)
+    mean = latent_basal.mean(dim=0, keepdim=True)
+    stddev = latent_basal.std(0, unbiased=False, keepdim=True)
+    normalized_basal = (latent_basal - mean) / stddev
 
-    clf = LogisticRegression(
-        solver="saga",
-        multi_class="multinomial",
-        max_iter=100,
-        n_jobs=1,  # no parallelization possible with multinomial loss
-        tol=1e-2,
-    )
-
+    criterion = nn.CrossEntropyLoss()
     pert_score, cov_scores = 0, []
 
     def compute_score(labels):
-        # generate a 80/20 split. There's probably a better way to do this
-        datasplit = sklearn.model_selection.KFold(n_splits=5).split(
-            normalized_basal, labels
+        unique_labels = set(labels)
+        label_to_idx = {labels: idx for idx, labels in enumerate(unique_labels)}
+        labels_tensor = torch.tensor(
+            [label_to_idx[label] for label in labels], dtype=torch.long, device="cuda"
         )
-        train_index, test_index = next(iter(datasplit))
-        clf.fit(normalized_basal[train_index], labels[train_index])
-        return bacc_scorer(clf, normalized_basal[test_index], labels[test_index])
+        assert normalized_basal.size(0) == len(labels_tensor)
+        dataset = torch.utils.data.TensorDataset(normalized_basal, labels_tensor)
+        data_loader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
+        model = LogisticRegression(
+            normalized_basal.size(1), len(unique_labels), device="cuda"
+        )
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
-    if dataset.perturbation_key is not None:
-        pert_score = compute_score(dataset.drugs_names[indices])
-    for cov in list(dataset.covariate_names):
+        for epoch in range(400):
+            for X, y in data_loader:
+                pred = model(X)
+                loss = criterion(pred, y)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+        with torch.no_grad():
+            pred = model(normalized_basal).argmax(dim=1)
+            acc = torch.sum(pred == labels_tensor) / len(labels_tensor)
+        return acc.item()
+
+    if data.perturbation_key is not None:
+        pert_score = compute_score(data.drugs_names)
+    for cov in list(data.covariate_names):
         cov_scores = []
-        if len(np.unique(dataset.covariate_names[cov])) == 0:
+        if len(np.unique(data.covariate_names[cov])) == 0:
             cov_scores = [0]
             break
         else:
-            cov_scores.append(compute_score(dataset.covariate_names[cov][indices]))
+            cov_scores.append(compute_score(data.covariate_names[cov]))
         return [pert_score] + cov_scores
 
 
@@ -272,15 +268,15 @@ def evaluate(autoencoder, datasets, disentangle=False):
     """
     start_time = time.time()
     autoencoder.eval()
-    with torch.no_grad():
-        if disentangle:
-            disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
-            stats_disent_pert = disent_scores[0]
-            stats_disent_cov = disent_scores[1:]
-        else:
-            stats_disent_pert = [0]
-            stats_disent_cov = [0]
+    if disentangle:
+        disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
+        stats_disent_pert = disent_scores[0]
+        stats_disent_cov = disent_scores[1:]
+    else:
+        stats_disent_pert = [0]
+        stats_disent_cov = [0]
 
+    with torch.no_grad():
         evaluation_stats = {
             "training": evaluate_r2(
                 autoencoder,

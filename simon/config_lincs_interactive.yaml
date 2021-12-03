@@ -1,38 +1,39 @@
-# Config for hyperparameter-tuning CPA on LINCS
+# Config for hyperparameter-tuning CPA on SciPlex 3 with pretrained (and frozen) HierVAE drug embeddings.
 seml:
   executable: compert/seml_sweep_icb.py
-  name: cpa_lincs_grover
+  name: chemical_cpa_lincs
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
   project_root_dir: ..
 
 slurm:
-  max_simultaneous_jobs: 2
+  max_simultaneous_jobs: 1
   experiments_per_job: 1
   sbatch_options_template: GPU
   sbatch_options:
     gres: gpu:1       # num GPUs
     mem: 32G          # memory
     cpus-per-task: 6  # num cores
-    time: 0-12:01     # max time, D-HH:MM
+    time: 0-05:01     # max time, D-HH:MM
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
-  profiling.run_profiler: True
+  profiling.run_profiler: False
   profiling.outdir: "./"
 
-  training.checkpoint_freq: 150 # checkpoint frequency to save intermediate results
-  training.num_epochs: 300 # maximum epochs for training
+  training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
+  training.num_epochs: 1 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
-  training.ignore_evaluation: False
-  training.save_checkpoints: True
+  training.ignore_evaluation: True
+  training.save_checkpoints: False
   training.run_eval_disentangle: True
-  training.save_dir: sweeps/checkpoints/lincs_logsigm_grover
+  training.save_dir: sweeps/checkpoints
   
   model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
-  model.additional_params.doser_type: logsigm # non-linearity for doser function
+  model.additional_params.seed: 1337 # random seed
+  model.additional_params.doser_type: null # non-linearity for doser function
 
   dataset.dataset_type: lincs
   dataset.data_params.dataset_path: datasets/lincs_full_smiles.h5ad # full path to the anndata dataset
@@ -44,6 +45,7 @@ fixed:
   dataset.data_params.split_key: split1 # necessary field for train, test, ood splits.
   dataset.data_params.mol_featurizer: canonical
   dataset.data_params.use_drugs_idx: True
+
 
   model.hparams.adversary_depth: 4
   model.hparams.adversary_lr: 6.5e-05
@@ -70,15 +72,4 @@ fixed:
   model.hparams.embedding_encoder_depth: 1
 
   model.embedding.directory: embeddings
-
-grid:
-  model.additional_params.seed:
-    type: choice
-    options:
-      - 1337
-      - 42
-  model.embedding.model:
-    type: choice
-    options:
-      - grover_base
-#       - None
+  model.embedding.model: grover_base

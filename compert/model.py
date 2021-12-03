@@ -19,6 +19,15 @@ def _move_inputs(*inputs, device="cuda"):
     return [mv_input(x) for x in inputs]
 
 
+class LogisticRegression(torch.nn.Module):
+    def __init__(self, input_dim, output_dim, device="cuda"):
+        super(LogisticRegression, self).__init__()
+        self.linear = torch.nn.Linear(input_dim, output_dim, device=device)
+
+    def forward(self, x):
+        return self.linear(x)
+
+
 class NBLoss(torch.nn.Module):
     def __init__(self):
         super(NBLoss, self).__init__()
