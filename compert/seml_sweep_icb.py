@@ -1,4 +1,6 @@
 import json
+import logging
+import math
 import os
 import time
 from collections import defaultdict
@@ -205,6 +207,7 @@ class ExperimentWrapper:
 
             # print some stats for each epoch
             pjson({"epoch": epoch, "training_stats": epoch_training_stats})
+            training_nans = math.isnan(epoch_training_stats["loss_reconstruction"])
 
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes
@@ -212,7 +215,13 @@ class ExperimentWrapper:
             # decay learning rate if necessary
             # also check stopping condition: patience ran out OR
             # time ran out OR max epochs achieved
-            stop = ellapsed_minutes > max_minutes or (epoch == num_epochs - 1)
+            stop = (
+                ellapsed_minutes > max_minutes
+                or (epoch == num_epochs - 1)
+                or training_nans
+            )
+            if training_nans:
+                logging.warning("Stopping early due to NaNs")
 
             if ((epoch % checkpoint_freq) == 0 and epoch > 0) or stop:
                 evaluation_stats = {}
