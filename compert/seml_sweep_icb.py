@@ -247,13 +247,11 @@ class ExperimentWrapper:
                     }
                 )
 
-                improved_model = self.autoencoder.best_score == score
+                improved_model = self.autoencoder.best_score <= score
                 if save_checkpoints and improved_model:
                     if save_dir is None or not os.path.exists(save_dir):
-                        print(os.path.exists(save_dir))
-                        print(not os.path.exists(save_dir))
                         raise ValueError(
-                            "Please provide a valid directory path in the 'save_dir' argument."
+                            "Please provide a valid directory for 'save_dir'."
                         )
                     file_name = f"{ex.observers[0].run_entry['config_hash']}_{ex.current_run.start_time.strftime('%Y-%m-%d_%H-%M-%S-%f')}.pt"
                     torch.save(
