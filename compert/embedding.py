@@ -26,6 +26,7 @@ def get_chemical_representation(
         "AttentiveFP",
         "GCN",
         "seq2seq",
+        "rdkit"
     )
 
     if data_dir is None:
@@ -72,6 +73,14 @@ def get_chemical_representation(
         )
     elif embedding_model == "seq2seq":
         df = pd.read_parquet(Path(data_dir) / "seq2seq" / "data" / "seq2seq.parquet")
+    elif embedding_model == "rdkit":
+        df = pd.read_parquet(
+            data_dir
+            / "rdkit"
+            / "data"
+            / "embeddings"
+            / "rdkit2D_embedding_lincs_trapnell.parquet"
+        )
 
     emb = torch.tensor(df.loc[smiles].values, dtype=torch.float32, device=device)
     assert emb.shape[0] == len(smiles)
