@@ -2,6 +2,7 @@
 import time
 
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 from torchmetrics import R2Score
@@ -194,7 +195,9 @@ def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
         return [pert_score] + cov_scores
 
 
-def evaluate_r2(autoencoder, dataset, genes_control):
+def evaluate_r2(
+    autoencoder: ComPert, dataset: compert.data.SubDataset, genes_control: torch.Tensor
+):
     """
     Measures different quality metrics about an ComPert `autoencoder`, when
     tasked to translate some `genes_control` into each of the drug/covariates
@@ -205,33 +208,43 @@ def evaluate_r2(autoencoder, dataset, genes_control):
     (_de) genes.
     """
     mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
-    num, dim = genes_control.size(0), genes_control.size(1)
+    n_rows = genes_control.size(0)
+    genes_control = genes_control.to(autoencoder.device)
 
-    for pert_category in np.unique(dataset.pert_categories):
+    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+    for cell_drug_dose_comb, category_count in zip(
+        *np.unique(dataset.pert_categories, return_counts=True)
+    ):
         if dataset.perturbation_key is None:
             break
-        # pert_category category contains: 'celltype_perturbation_dose' info
-        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[pert_category]))
+
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
+
+        # dataset.var_names is the list of gene names
+        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
+        # genes for every cell_drug_dose combination.
+        bool_de = dataset.var_names.isin(
+            np.array(dataset.de_genes[cell_drug_dose_comb])
+        )
         idx_de = bool2idx(bool_de)
 
         # spending a lot of time here, could this be precomputed?
-        bool_category = dataset.pert_categories == pert_category
+        bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
         idx_all = bool2idx(bool_category)
-        idx, n_idx = idx_all[0], len(idx_all)
+        idx = idx_all[0]
 
-        # estimate metrics only for reasonably-sized drug/cell-type combos
-        if n_idx <= 5:
-            continue
-
-        emb_covs = [repeat_n(cov[idx], num) for cov in dataset.covariates]
+        emb_covs = [repeat_n(cov[idx], n_rows) for cov in dataset.covariates]
         if dataset.use_drugs_idx:
             # spending a lot of time here. Why?
             emb_drugs = (
-                repeat_n(dataset.drugs_idx[idx], num).squeeze(),
-                repeat_n(dataset.dosages[idx], num).squeeze(),
+                repeat_n(dataset.drugs_idx[idx], n_rows).squeeze(),
+                repeat_n(dataset.dosages[idx], n_rows).squeeze(),
             )
         else:
-            emb_drugs = repeat_n(dataset.drugs[idx], num)
+            emb_drugs = repeat_n(dataset.drugs[idx], n_rows)
         mean_pred, var_pred = compute_prediction(
             autoencoder,
             genes_control,

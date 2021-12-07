@@ -157,7 +157,7 @@ class ExperimentWrapper:
         num_epochs: int,
         max_minutes: int,
         checkpoint_freq: int,
-        ignore_evaluation: bool,
+        run_eval: bool,
         run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
@@ -199,6 +199,7 @@ class ExperimentWrapper:
                     epoch_training_stats[key] += val
 
             for key, val in epoch_training_stats.items():
+                # TODO this is not a proper average if the batchsizes are unequal (eg last batch is smaller)
                 epoch_training_stats[key] = val / len(self.datasets["loader_tr"])
                 if not (key in self.autoencoder.history.keys()):
                     self.autoencoder.history[key] = []
@@ -207,44 +208,47 @@ class ExperimentWrapper:
 
             # print some stats for each epoch
             pjson({"epoch": epoch, "training_stats": epoch_training_stats})
-            training_nans = math.isnan(epoch_training_stats["loss_reconstruction"])
+            loss_is_nan = math.isnan(epoch_training_stats["loss_reconstruction"])
 
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes
 
             # decay learning rate if necessary
             # also check stopping condition: patience ran out OR
-            # time ran out OR max epochs achieved
+            # time ran out OR max epochs achieved OR we've reached a missing value
             stop = (
                 ellapsed_minutes > max_minutes
                 or (epoch == num_epochs - 1)
-                or training_nans
+                or loss_is_nan
             )
-            if training_nans:
+            if loss_is_nan:
                 logging.warning("Stopping early due to NaNs")
 
+            # we always run the evaluation when training has stopped
             if ((epoch % checkpoint_freq) == 0 and epoch > 0) or stop:
                 evaluation_stats = {}
-                evaluation_stats["test"] = evaluate_r2(
-                    self.autoencoder,
-                    self.datasets["test_treated"],
-                    self.datasets["test_control"].genes,
-                )
+                # todo make sure we're not running this twice
+                with torch.no_grad():
+                    self.autoencoder.eval()
+                    evaluation_stats["test"] = evaluate_r2(
+                        self.autoencoder,
+                        self.datasets["test_treated"],
+                        self.datasets["test_control"].genes,
+                    )
+                    self.autoencoder.train()
                 score = np.mean(evaluation_stats["test"])
                 stop = stop or self.autoencoder.early_stopping(score)
-                if not ignore_evaluation or stop:
-                    if not stop:
-                        evaluation_stats = evaluate(self.autoencoder, self.datasets)
-                    else:
-                        evaluation_stats = evaluate(
-                            self.autoencoder,
-                            self.datasets,
-                            disentangle=run_eval_disentangle,
-                        )
+                if (run_eval or stop) and not loss_is_nan:
+                    evaluation_stats = evaluate(
+                        self.autoencoder,
+                        self.datasets,
+                        disentangle=run_eval_disentangle,
+                    )
                     for key, val in evaluation_stats.items():
-                        if not (key in self.autoencoder.history.keys()):
+                        if key in self.autoencoder.history:
+                            self.autoencoder.history[key].append(val)
+                        else:
                             self.autoencoder.history[key] = []
-                        self.autoencoder.history[key].append(val)
                     self.autoencoder.history["stats_epoch"].append(epoch)
 
                 pjson(
@@ -258,10 +262,6 @@ class ExperimentWrapper:
 
                 improved_model = self.autoencoder.best_score <= score
                 if save_checkpoints and improved_model:
-                    if save_dir is None or not os.path.exists(save_dir):
-                        raise ValueError(
-                            "Please provide a valid directory for 'save_dir'."
-                        )
                     file_name = f"{ex.observers[0].run_entry['config_hash']}_{ex.current_run.start_time.strftime('%Y-%m-%d_%H-%M-%S-%f')}.pt"
                     torch.save(
                         (
