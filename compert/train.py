@@ -215,7 +215,8 @@ def evaluate_r2(autoencoder, dataset, genes_control):
         idx_de = bool2idx(bool_de)
 
         # spending a lot of time here, could this be precomputed?
-        idx_all = bool2idx(dataset.pert_categories == pert_category)
+        bool_category = dataset.pert_categories == pert_category
+        idx_all = bool2idx(bool_category)
         idx, n_idx = idx_all[0], len(idx_all)
 
         # estimate metrics only for reasonably-sized drug/cell-type combos
