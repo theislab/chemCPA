@@ -282,10 +282,12 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
     return [mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]]
 
 
-def evaluate(autoencoder, datasets, disentangle=False):
+def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
     """
     Measure quality metrics using `evaluate()` on the training, test, and
     out-of-distributiion (ood) splits.
+
+    eval_stats is the default evaluation dictionary that is updated with the missing scores
     """
     start_time = time.time()
     autoencoder.eval()
@@ -304,7 +306,9 @@ def evaluate(autoencoder, datasets, disentangle=False):
                 datasets["training_treated"],
                 datasets["training_control"].genes,
             ),
-            "test": evaluate_r2(
+            "test": eval_stats["test"]
+            if "test" in eval_stats
+            else evaluate_r2(
                 autoencoder, datasets["test_treated"], datasets["test_control"].genes
             ),
             "ood": evaluate_r2(

@@ -227,7 +227,6 @@ class ExperimentWrapper:
             # we always run the evaluation when training has stopped
             if ((epoch % checkpoint_freq) == 0 and epoch > 0) or stop:
                 evaluation_stats = {}
-                # todo make sure we're not running this twice
                 with torch.no_grad():
                     self.autoencoder.eval()
                     evaluation_stats["test"] = evaluate_r2(
@@ -242,6 +241,7 @@ class ExperimentWrapper:
                     evaluation_stats = evaluate(
                         self.autoencoder,
                         self.datasets,
+                        eval_stats=evaluation_stats,
                         disentangle=run_eval_disentangle,
                     )
                     for key, val in evaluation_stats.items():
