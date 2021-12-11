@@ -8,6 +8,7 @@ from torch import nn
 from torchmetrics import R2Score
 
 import compert.data
+from compert.data import SubDataset
 from compert.model import ComPert, LogisticRegression
 
 
@@ -70,22 +71,30 @@ def compute_r2(y_true, y_pred):
     return r2
 
 
-def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
+def evaluate_logfold_r2(
+    autoencoder: ComPert, ds_treated: SubDataset, ds_ctrl: SubDataset
+):
     logfold_score = []
     # assumes that `pert_categories` where constructed with first covariate type
     cov_type = ds_treated.covariate_keys[0]
-    for pert_category in np.unique(ds_treated.pert_categories):
-        covariate = pert_category.split("_")[0]
-        # the next line is where it is spending all it's time. Why?
-        idx_treated_all = bool2idx(ds_treated.pert_categories == pert_category)
-        idx_treated, n_idx_treated = idx_treated_all[0], len(idx_treated_all)
+    treated_pert_cat_index = pd.Index(ds_treated.pert_categories, dtype="category")
+    ctrl_cov_cat_index = pd.Index(ds_ctrl.covariate_names[cov_type], dtype="category")
+    for cell_drug_dose_comb, category_count in zip(
+        *np.unique(ds_treated.pert_categories, return_counts=True)
+    ):
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
 
-        bool_ctrl_all = ds_ctrl.covariate_names[cov_type] == covariate
+        covariate = cell_drug_dose_comb.split("_")[0]
+
+        bool_pert_categoy = treated_pert_cat_index.get_loc(cell_drug_dose_comb)
+        idx_treated_all = bool2idx(bool_pert_categoy)
+        idx_treated = idx_treated_all[0]
+
+        bool_ctrl_all = ctrl_cov_cat_index.get_loc(covariate)
         idx_ctrl_all = bool2idx(bool_ctrl_all)
         n_idx_ctrl = len(idx_ctrl_all)
-        # estimate metrics only for reasonably-sized drug/cell-type combos
-        if n_idx_treated <= 5:
-            continue
 
         emb_covs = [
             repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
@@ -195,9 +204,7 @@ def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
         return [pert_score] + cov_scores
 
 
-def evaluate_r2(
-    autoencoder: ComPert, dataset: compert.data.SubDataset, genes_control: torch.Tensor
-):
+def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.Tensor):
     """
     Measures different quality metrics about an ComPert `autoencoder`, when
     tasked to translate some `genes_control` into each of the drug/covariates
