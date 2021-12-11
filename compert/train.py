@@ -67,6 +67,7 @@ def compute_r2(y_true, y_pred):
     y_pred = torch.clamp(y_pred, -3e12, 3e12)
     metric = R2Score().to(y_true.device)
     metric.update(y_pred, y_true)  # same as sklearn.r2_score(y_true, y_pred)
+    # Todo this is probably where the 0.0s come from, and it should be removed.
     r2 = 0 if torch.isnan(y_pred).any() else max(metric.compute().item(), 0)
     return r2
 
@@ -92,7 +93,10 @@ def evaluate_logfold_r2(
         idx_treated_all = bool2idx(bool_pert_categoy)
         idx_treated = idx_treated_all[0]
 
-        bool_ctrl_all = ctrl_cov_cat_index.get_loc(covariate)
+        # this doesn't work on LINCS. Often `covariate` will not exist at all in the `ds_ctrl` (example: ASC.C)
+        # this means we get `n_idx_ctrl == 0`, which results in all kinds of NaNs later on.
+        # Once we figured out how to deal with this we can replace this `==` matching with an index lookup.
+        bool_ctrl_all = ds_ctrl.covariate_names[cov_type] == covariate
         idx_ctrl_all = bool2idx(bool_ctrl_all)
         n_idx_ctrl = len(idx_ctrl_all)
 
@@ -107,6 +111,7 @@ def evaluate_logfold_r2(
         else:
             emb_drugs = repeat_n(ds_treated.drugs[idx_treated], n_idx_ctrl)
 
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         genes_ctrl = ds_ctrl.genes[idx_ctrl_all].to(device="cuda")
 
         genes_pred, _ = compute_prediction(
@@ -115,6 +120,7 @@ def evaluate_logfold_r2(
             emb_drugs,
             emb_covs,
         )
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         genes_true = ds_treated.genes[idx_treated_all, :].to(device="cuda")
 
         y_ctrl = genes_ctrl.mean(0)
@@ -260,6 +266,7 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         )
 
         # copies just the needed genes to GPU
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         y_true = dataset.genes[idx_all, :].to(device="cuda")
 
         # true means and variances
