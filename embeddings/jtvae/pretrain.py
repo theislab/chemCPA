@@ -104,7 +104,7 @@ def main(args):
                 print(
                     "Epoch {:d}/{:d} | Iter {:d}/{:d} | KL: {:.1f}, Word: {:.2f}, "
                     "Topo: {:.2f}, Assm: {:.2f}, Steo: {:.2f} | "
-                    "Estimated time per epoch: {:.4f}".format(
+                    "Estimated time per epoch: {:.4f}s".format(
                         epoch + 1,
                         args.max_epoch,
                         it + 1,
@@ -189,4 +189,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # If `RuntimeError: received 0 items of ancdata` appears:
+    # Either run `ulimit -n 2048` or uncomment this line:
+    # torch.multiprocessing.set_sharing_strategy('file_system')
     main(args)

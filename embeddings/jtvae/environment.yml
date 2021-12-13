@@ -11,5 +11,3 @@ dependencies:
   - tqdm
   - dglteam::dgl-cuda10.2
   - pip
-  - pip:
-      - dgllife
