@@ -6,6 +6,7 @@ import pretrain
 import seml
 import torch
 from sacred import Experiment
+from seml.utils import make_hash
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -55,7 +56,11 @@ class ExperimentWrapper:
         resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 
         # Construct the training file. If requested, also add all SMILES from ZINC
-        outpath = Path().cwd() / "data" / "train.txt"
+        outpath = (
+            Path().cwd()
+            / "data"
+            / f"train{seml.utils.make_hash(ex.current_run.config)}.txt"
+        )
         if incl_zinc:
             zinc_f = Path().home() / ".dgl" / "jtvae" / "train.txt"
             assert zinc_f.exists()
