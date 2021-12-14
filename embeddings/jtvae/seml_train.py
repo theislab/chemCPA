@@ -1,4 +1,5 @@
 import argparse
+import resource
 from pathlib import Path
 
 import pretrain
@@ -47,6 +48,10 @@ class ExperimentWrapper:
     ):
         if multip_share_strategy:
             torch.multiprocessing.set_sharing_strategy(multip_share_strategy)
+
+        # allow for more file descriptors open in parallel
+        rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 
         if training_path:
             assert Path(training_path).exists(), training_path
