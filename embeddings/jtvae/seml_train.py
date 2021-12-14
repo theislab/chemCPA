@@ -1,11 +1,10 @@
 import argparse
 from pathlib import Path
 
+import pretrain
 import seml
 import torch
 from sacred import Experiment
-
-import embeddings.jtvae.pretrain
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -42,13 +41,15 @@ class ExperimentWrapper:
         lr,
         gamma,
         max_epoch,
-        n_workers,
+        num_workers,
         print_iter,
         multip_share_strategy=None,
     ):
         if multip_share_strategy:
             torch.multiprocessing.set_sharing_strategy(multip_share_strategy)
-        assert Path(training_path).exists(), training_path
+
+        if training_path:
+            assert Path(training_path).exists(), training_path
         args = argparse.Namespace(
             **{
                 "train_path": training_path,
@@ -60,12 +61,12 @@ class ExperimentWrapper:
                 "lr": lr,
                 "gamma": gamma,
                 "max_epoch": max_epoch,
-                "num_workers": n_workers,
+                "num_workers": num_workers,
                 "print_iter": print_iter,
                 "use_cpu": False,
             }
         )
-        results = embeddings.jtvae.pretrain.main(args)
+        results = pretrain.main(args)
         return results
 
 
