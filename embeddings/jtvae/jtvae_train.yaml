@@ -28,10 +28,12 @@ fixed:
   training.max_epoch: 3
   training.num_workers: 6
   training.print_iter: 20
+  training.incl_zinc: True
 
 grid:
   training.training_path:
     type: choice
     options:
-      - null
-
+      - "../lincs_trapnell.smiles"
+      - "../lincs_trapnell_leq_120.smiles"
+      - "../lincs_trapnell_leq_200.smiles"

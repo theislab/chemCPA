@@ -34,6 +34,7 @@ class ExperimentWrapper:
     def train(
         self,
         training_path,
+        incl_zinc,
         save_path,
         batch_size,
         hidden_size,
@@ -53,11 +54,30 @@ class ExperimentWrapper:
         rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
         resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 
+        # Construct the training file. If requested, also add all SMILES from ZINC
+        outpath = Path().cwd() / "data" / "train.txt"
+        if incl_zinc:
+            zinc_f = Path().home() / ".dgl" / "jtvae" / "train.txt"
+            assert zinc_f.exists()
+            infiles = (training_path, zinc_f)
+        else:
+            infiles = (training_path,)
+
+        # truncates the outfile if it already exists
+        with open(outpath, "w") as outfile:
+            for filep in infiles:
+                with open(filep) as infile:
+                    for line in infile:
+                        line = line.strip()
+                        # skip the header
+                        if line != "smiles":
+                            outfile.write(line + "\n")
+
         if training_path:
             assert Path(training_path).exists(), training_path
         args = argparse.Namespace(
             **{
-                "train_path": training_path,
+                "train_path": str(outpath),
                 "save_path": save_path,
                 "batch_size": batch_size,
                 "hidden_size": hidden_size,
