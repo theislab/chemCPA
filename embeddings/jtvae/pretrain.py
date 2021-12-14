@@ -122,8 +122,15 @@ def main(args):
                 t0 = time.time()
 
         scheduler.step()
-        print("learning rate: {:.6f}".format(scheduler.get_lr()[0]))
+        print("learning rate: {:.6f}".format(scheduler.get_last_lr()[0]))
         torch.save(model.state_dict(), args.save_path + "/model.iter-" + str(epoch))
+        return {
+            "KL": kl_div,
+            "Word": word_acc,
+            "Topo": topo_acc,
+            "Assm": assm_acc,
+            "Steo": steo_acc,
+        }
 
 
 if __name__ == "__main__":
@@ -190,6 +197,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # If `RuntimeError: received 0 items of ancdata` appears:
-    # Either run `ulimit -n 2048` or uncomment this line:
+    # Either run `ulimit -n 2048` (increase number of filedescriptors) or uncomment this line (to not use FDs at all):
     # torch.multiprocessing.set_sharing_strategy('file_system')
     main(args)

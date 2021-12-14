@@ -1,0 +1,37 @@
+# Config for hyperparameter-tuning CPA on SciPlex 3 with pretrained (and frozen) HierVAE drug embeddings.
+seml:
+  executable: seml_train.py
+  name: jtvae_train
+  output_dir: sweeps/logs
+  conda_environment: jtvae_dgl
+  project_root_dir: .
+
+slurm:
+  max_simultaneous_jobs: 4
+  experiments_per_job: 1
+  sbatch_options_template: GPU
+  sbatch_options:
+    gres: gpu:1       # num GPUs
+    mem: 32G          # memory
+    cpus-per-task: 8  # num cores
+    time: 0-03:01     # max time, D-HH:MM
+###### BEGIN PARAMETER CONFIGURATION ######
+
+fixed:
+  training.save_path: "pre_model"
+  training.batch_size: 40
+  training.hidden_size: 450
+  training.latent_size: 56
+  training.depth: 3
+  training.lr: 0.001
+  training.gamma: 0.9
+  training.max_epoch: 3
+  training.num_workers: 8
+  training.print_iter: 20
+
+grid:
+  training.training_path:
+    type: choice
+    options:
+      - "../lincs_trapnell.smiles.mini"
+
