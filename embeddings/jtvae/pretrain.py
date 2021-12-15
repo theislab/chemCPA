@@ -6,7 +6,7 @@
 # pylint: disable= no-member, arguments-differ, invalid-name
 #
 # Pre-trained an AE
-
+import logging
 import sys
 import time
 
@@ -19,10 +19,11 @@ from dgllife.data import JTVAEZINC, JTVAECollator, JTVAEDataset
 from dgllife.model import JTNNVAE
 from dgllife.utils import JTVAEVocab
 from torch.utils.data import DataLoader
-from utils import mkdir_p
+from utils import get_timestamp, mkdir_p
 
 
 def main(args):
+    print(f"{get_timestamp()}: {args}")
     mkdir_p(args.save_path)
 
     lg = rdkit.RDLogger.logger()
@@ -102,6 +103,7 @@ def main(args):
                 steo_acc = steo_acc / args.print_iter * 100
 
                 print(
+                    get_timestamp(),
                     "Epoch {:d}/{:d} | Iter {:d}/{:d} | KL: {:.1f}, Word: {:.2f}, "
                     "Topo: {:.2f}, Assm: {:.2f}, Steo: {:.2f} | "
                     "Estimated time per epoch: {:.4f}s".format(
@@ -115,7 +117,7 @@ def main(args):
                         assm_acc,
                         steo_acc,
                         np.mean(dur) / args.print_iter * len(dataloader),
-                    )
+                    ),
                 )
                 word_acc, topo_acc, assm_acc, steo_acc = 0, 0, 0, 0
                 sys.stdout.flush()

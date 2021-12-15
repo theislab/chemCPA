@@ -6,9 +6,13 @@
 # pylint: disable= no-member, arguments-differ, invalid-name
 #
 # Utils for JTVAE
-
+import datetime
 import errno
 import os
+
+
+def get_timestamp():
+    return datetime.datetime.now().strftime("%d-%b-%Y-%H:%M:%S")
 
 
 def mkdir_p(path):
