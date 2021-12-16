@@ -14,10 +14,11 @@ slurm:
     gres: gpu:1       # num GPUs
     mem: 32G          # memory
     cpus-per-task: 6  # num cores
-    time: 0-03:01     # max time, D-HH:MM
+    time: 2-00:00     # max time, D-HH:MM
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
+  # Configured to take ~2 days to train.
   training.save_path: "pre_model"
   training.batch_size: 40
   training.hidden_size: 450
@@ -25,16 +26,9 @@ fixed:
   training.depth: 3
   training.lr: 0.001
   training.gamma: 0.9
-  training.max_epoch: 3
-  training.num_workers: 6
+  training.max_epoch: 2
   training.print_iter: 20
   training.incl_zinc: True
   training.subsample_zinc_percent: 0.5
-
-grid:
-  training.training_path:
-    type: choice
-    options:
-      - "../lincs_trapnell.smiles"
-      - "../lincs_trapnell_leq_120.smiles"
-      - "../lincs_trapnell_leq_200.smiles"
+  training.training_path: "../lincs_trapnell.smiles"
+  training.num_workers: 4
