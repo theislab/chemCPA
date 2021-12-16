@@ -29,6 +29,7 @@ fixed:
   training.num_workers: 6
   training.print_iter: 20
   training.incl_zinc: True
+  training.subsample_zinc_percent: 0.5
 
 grid:
   training.training_path:

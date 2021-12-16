@@ -46,6 +46,7 @@ class ExperimentWrapper:
         max_epoch,
         num_workers,
         print_iter,
+        subsample_zinc_percent,
         multip_share_strategy=None,
     ):
         if multip_share_strategy:
@@ -61,22 +62,31 @@ class ExperimentWrapper:
             / "data"
             / f"train{seml.utils.make_hash(ex.current_run.config)}.txt"
         )
-        if incl_zinc:
-            zinc_f = Path().home() / ".dgl" / "jtvae" / "train.txt"
-            assert zinc_f.exists()
-            infiles = (training_path, zinc_f)
-        else:
-            infiles = (training_path,)
+        zinc_f = Path().home() / ".dgl" / "jtvae" / "train.txt"
+        assert zinc_f.exists()
 
         # truncates the outfile if it already exists
         with open(outpath, "w") as outfile:
-            for filep in infiles:
-                with open(filep) as infile:
-                    for line in infile:
-                        line = line.strip()
-                        # skip the header
-                        if line != "smiles":
-                            outfile.write(line + "\n")
+            n_total_smiles = 0
+            with open(zinc_f) as infile:
+                for i, line in enumerate(infile):
+                    # subsampling the file
+                    if i >= int(subsample_zinc_percent * 220011):
+                        break
+                    line = line.strip()
+                    # skip the header
+                    if line != "smiles":
+                        n_total_smiles += 1
+                        outfile.write(line + "\n")
+
+            with open(training_path) as infile:
+                for line in infile:
+                    line = line.strip()
+                    # skip the header
+                    if line != "smiles":
+                        n_total_smiles += 1
+                        outfile.write(line + "\n")
+        print(f"Total SMILES: {n_total_smiles}")
 
         if training_path:
             assert Path(training_path).exists(), training_path
