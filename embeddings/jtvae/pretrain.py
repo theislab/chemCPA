@@ -122,10 +122,14 @@ def main(args):
                 word_acc, topo_acc, assm_acc, steo_acc = 0, 0, 0, 0
                 sys.stdout.flush()
                 t0 = time.time()
+            if (it + 1) % args.save_iter == 0:
+                save_path = args.save_path + f"/model.epoch-{epoch}-iter-{it}"
+                print(get_timestamp(), f"Saving checkpoint at {save_path}")
+                torch.save(model.state_dict(), save_path)
 
         scheduler.step()
         print("learning rate: {:.6f}".format(scheduler.get_last_lr()[0]))
-        torch.save(model.state_dict(), args.save_path + "/model.iter-" + str(epoch))
+        torch.save(model.state_dict(), args.save_path + "/model.epoch-" + str(epoch))
         return {
             "KL": kl_div,
             "Word": word_acc,

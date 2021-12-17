@@ -46,6 +46,7 @@ class ExperimentWrapper:
         max_epoch,
         num_workers,
         print_iter,
+        save_iter,
         subsample_zinc_percent,
         multip_share_strategy=None,
     ):
@@ -103,6 +104,7 @@ class ExperimentWrapper:
                 "max_epoch": max_epoch,
                 "num_workers": num_workers,
                 "print_iter": print_iter,
+                "save_iter": save_iter,
                 "use_cpu": False,
             }
         )
