@@ -61,7 +61,7 @@ class ExperimentWrapper:
         outpath = (
             Path().cwd()
             / "data"
-            / f"train{seml.utils.make_hash(ex.current_run.config)}.txt"
+            / f"train_{seml.utils.make_hash(ex.current_run.config)}.txt"
         )
         zinc_f = Path().home() / ".dgl" / "jtvae" / "train.txt"
         assert zinc_f.exists()
@@ -87,7 +87,7 @@ class ExperimentWrapper:
                     if line != "smiles":
                         n_total_smiles += 1
                         outfile.write(line + "\n")
-        print(f"Total SMILES: {n_total_smiles}")
+        print(f"Total SMILES: {n_total_smiles}, stored at {outpath.resolve()}")
 
         if training_path:
             assert Path(training_path).exists(), training_path
