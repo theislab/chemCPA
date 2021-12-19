@@ -76,16 +76,16 @@ class ExperimentWrapper:
                         if i >= int(subsample_zinc_percent * 220011):
                             break
                         line = line.strip()
-                        # skip the header
-                        if line != "smiles":
+                        # skip the header and some weird 'Cl.[Li]' drug
+                        if line != "smiles" and "Li" not in line:
                             n_total_smiles += 1
                             outfile.write(line + "\n")
 
             with open(training_path) as infile:
                 for line in infile:
                     line = line.strip()
-                    # skip the header
-                    if line != "smiles":
+                    # skip the header and some weird 'Cl.[Li]' drug
+                    if line != "smiles" and "Li" not in line:
                         n_total_smiles += 1
                         outfile.write(line + "\n")
         print(f"Total SMILES: {n_total_smiles}, stored at {outpath.resolve()}")
@@ -107,6 +107,7 @@ class ExperimentWrapper:
                 "print_iter": print_iter,
                 "save_iter": save_iter,
                 "use_cpu": False,
+                "hash": seml.utils.make_hash(ex.current_run.config),
             }
         )
         results = pretrain.main(args)

@@ -7,8 +7,10 @@
 #
 # Pre-trained an AE
 import logging
+import pickle
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 import rdkit
@@ -35,6 +37,9 @@ def main(args):
         device = torch.device("cuda:0")
 
     vocab = JTVAEVocab(file_path=args.train_path)
+    save_path = Path(args.save_path) / f"vocab_{args.hash}.pkl"
+    with open(save_path, "wb") as f:
+        pickle.dump(vocab, f)
     if args.train_path is None:
         dataset = JTVAEZINC("train", vocab)
     else:
