@@ -69,16 +69,17 @@ class ExperimentWrapper:
         # truncates the outfile if it already exists
         with open(outpath, "w") as outfile:
             n_total_smiles = 0
-            with open(zinc_f) as infile:
-                for i, line in enumerate(infile):
-                    # subsampling the file
-                    if i >= int(subsample_zinc_percent * 220011):
-                        break
-                    line = line.strip()
-                    # skip the header
-                    if line != "smiles":
-                        n_total_smiles += 1
-                        outfile.write(line + "\n")
+            if incl_zinc:
+                with open(zinc_f) as infile:
+                    for i, line in enumerate(infile):
+                        # subsampling the file
+                        if i >= int(subsample_zinc_percent * 220011):
+                            break
+                        line = line.strip()
+                        # skip the header
+                        if line != "smiles":
+                            n_total_smiles += 1
+                            outfile.write(line + "\n")
 
             with open(training_path) as infile:
                 for line in infile:

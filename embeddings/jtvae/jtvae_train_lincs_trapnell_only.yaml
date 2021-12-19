@@ -26,9 +26,10 @@ fixed:
   training.depth: 3
   training.lr: 0.001
   training.gamma: 0.9
-  training.max_epoch: 2
+  training.max_epoch: 1
   training.print_iter: 20
   training.save_iter: 100
   training.incl_zinc: False
+  training.subsample_zinc_percent: 0.4
   training.training_path: "../lincs_trapnell.smiles"
   training.num_workers: 4
