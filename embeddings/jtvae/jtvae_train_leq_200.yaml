@@ -1,7 +1,7 @@
 # Config for hyperparameter-tuning CPA on SciPlex 3 with pretrained (and frozen) HierVAE drug embeddings.
 seml:
   executable: seml_train.py
-  name: jtvae_train_all
+  name: jtvae_leq_200
   output_dir: sweeps/logs
   conda_environment: jtvae_dgl
   project_root_dir: .
@@ -31,5 +31,5 @@ fixed:
   training.save_iter: 100
   training.incl_zinc: True
   training.subsample_zinc_percent: 0.4
-  training.training_path: "../lincs_trapnell.smiles"
-  training.num_workers: 3
+  training.training_path: "../lincs_trapnell_leq_200.smiles"
+  training.num_workers: 4
