@@ -579,14 +579,12 @@ class ComPert(torch.nn.Module):
 
     def early_stopping(self, score):
         """
-        Decays the learning rate, and possibly early-stops training.
+        Possibly early-stops training.
         """
-        self.scheduler_autoencoder.step()
-        self.scheduler_adversary.step()
-        if self.num_drugs > 0:
-            self.scheduler_dosers.step()
-
-        if score > self.best_score:
+        if score is None:
+            # TODO don't really know what to do here
+            logging.warning("Early stopping score was None!")
+        elif score > self.best_score:
             self.best_score = score
             self.patience_trials = 0
         else:

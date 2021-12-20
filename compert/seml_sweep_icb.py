@@ -199,7 +199,6 @@ class ExperimentWrapper:
                     epoch_training_stats[key] += val
 
             for key, val in epoch_training_stats.items():
-                # TODO this is not a proper average if the batchsizes are unequal (eg last batch is smaller)
                 epoch_training_stats[key] = val / len(self.datasets["loader_tr"])
                 if not (key in self.autoencoder.history.keys()):
                     self.autoencoder.history[key] = []
@@ -208,7 +207,9 @@ class ExperimentWrapper:
 
             # print some stats for each epoch
             pjson({"epoch": epoch, "training_stats": epoch_training_stats})
-            loss_is_nan = math.isnan(epoch_training_stats["loss_reconstruction"])
+            reconst_loss_is_nan = math.isnan(
+                epoch_training_stats["loss_reconstruction"]
+            )
 
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes
@@ -219,9 +220,9 @@ class ExperimentWrapper:
             stop = (
                 ellapsed_minutes > max_minutes
                 or (epoch == num_epochs - 1)
-                or loss_is_nan
+                or reconst_loss_is_nan
             )
-            if loss_is_nan:
+            if reconst_loss_is_nan:
                 logging.warning("Stopping early due to NaNs")
 
             # we always run the evaluation when training has stopped
@@ -235,9 +236,21 @@ class ExperimentWrapper:
                         self.datasets["test_control"].genes,
                     )
                     self.autoencoder.train()
-                score = np.mean(evaluation_stats["test"])
+                score = (
+                    np.mean(evaluation_stats["test"])
+                    if evaluation_stats["test"]
+                    else None
+                )
+                # TODO When do we want to do these learning rate steps?
+                self.autoencoder.scheduler_autoencoder.step()
+                self.autoencoder.scheduler_adversary.step()
+                if self.autoencoder.num_drugs > 0:
+                    self.autoencoder.scheduler_dosers.step()
+
                 stop = stop or self.autoencoder.early_stopping(score)
-                if (run_eval or stop) and not loss_is_nan:
+                # we don't do disentanglement if the loss was NaN
+                # run_eval determines whether we run the disentanglement also during training, or only at the end
+                if (run_eval or stop) and not reconst_loss_is_nan:
                     evaluation_stats = evaluate(
                         self.autoencoder,
                         self.datasets,
