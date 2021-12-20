@@ -1,10 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
 import json
+import logging
+import math
 from typing import Union
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 
 def _move_inputs(*inputs, device="cuda"):
@@ -103,6 +106,8 @@ class GaussianLoss(torch.nn.Module):
 class MLP(torch.nn.Module):
     """
     A multilayer perceptron with ReLU activations and optional BatchNorm.
+
+    Careful: if activation is set to ReLU, ReLU is only applied to the first half of NN outputs!
     """
 
     def __init__(self, sizes, batch_norm=True, last_layer_act="linear"):
@@ -208,7 +213,6 @@ class ComPert(torch.nn.Module):
         device="cpu",
         seed=0,
         patience=5,
-        loss_ae="gauss",
         doser_type="logsigm",
         decoder_activation="linear",
         hparams="",
@@ -222,7 +226,6 @@ class ComPert(torch.nn.Module):
         self.num_covariates = num_covariates
         self.device = device
         self.seed = seed
-        self.loss_ae = loss_ae
         # early-stopping
         self.patience = patience
         self.best_score = -1e3
@@ -242,7 +245,6 @@ class ComPert(torch.nn.Module):
             "num_covariates": num_covariates,
             "seed": seed,
             "patience": patience,
-            "loss_ae": loss_ae,
             "doser_type": doser_type,
             "decoder_activation": decoder_activation,
             "hparams": hparams,
@@ -347,11 +349,7 @@ class ComPert(torch.nn.Module):
                     torch.nn.Embedding(num_covariate, self.hparams["dim"])
                 )
 
-        # losses
-        if self.loss_ae == "nb":
-            self.loss_autoencoder = NBLoss()
-        else:
-            self.loss_autoencoder = GaussianLoss()
+        self.loss_autoencoder = torch.nn.GaussianNLLLoss()
 
         self.iteration = 0
 
@@ -559,18 +557,9 @@ class ComPert(torch.nn.Module):
 
         gene_reconstructions = self.decoder(latent_treated)
 
-        # convert variance estimates to a positive value in [1e-3, \infty)
+        # convert variance estimates to a positive value in [0, \infty)
         dim = gene_reconstructions.size(1) // 2
-        gene_reconstructions[:, dim:] = (
-            gene_reconstructions[:, dim:].exp().add(1).log().add(1e-3)
-        )
-
-        if self.loss_ae == "nb":
-            gene_reconstructions[:, :dim] = (
-                gene_reconstructions[:, :dim].exp().add(1).log().add(1e-4)
-            )
-            # gene_reconstructions[:, :dim] = torch.clamp(gene_reconstructions[:, :dim], min=1e-4, max=1e4)
-            # gene_reconstructions[:, dim:] = torch.clamp(gene_reconstructions[:, dim:], min=1e-6, max=1e6)
+        gene_reconstructions[:, dim:] = F.softplus(gene_reconstructions[:, dim:])
 
         if return_latent_basal:
             return gene_reconstructions, latent_basal
@@ -607,7 +596,10 @@ class ComPert(torch.nn.Module):
             covariates=covariates,
             return_latent_basal=True,
         )
-        reconstruction_loss = self.loss_autoencoder(gene_reconstructions, genes)
+        dim = gene_reconstructions.size(1) // 2
+        mean = gene_reconstructions[:, :dim]
+        var = gene_reconstructions[:, dim:]
+        reconstruction_loss = self.loss_autoencoder(input=mean, target=genes, var=var)
 
         adversary_drugs_loss = torch.tensor([0.0], device=self.device)
         if self.num_drugs > 0:
@@ -632,34 +624,34 @@ class ComPert(torch.nn.Module):
                 )
 
         # two place-holders for when adversary is not executed
-        adversary_drugs_penalty = torch.tensor([0.0], device=self.device)
-        adversary_covariates_penalty = torch.tensor([0.0], device=self.device)
+        adv_drugs_grad_penalty = torch.tensor([0.0], device=self.device)
+        adv_covs_grad_penalty = torch.tensor([0.0], device=self.device)
 
-        if self.iteration % self.hparams["adversary_steps"]:
+        if (self.iteration % self.hparams["adversary_steps"]) == 0:
 
-            def compute_gradients(output, input):
+            def compute_gradient_penalty(output, input):
                 grads = torch.autograd.grad(output, input, create_graph=True)
                 grads = grads[0].pow(2).mean()
                 return grads
 
             if self.num_drugs > 0:
-                adversary_drugs_penalty = compute_gradients(
+                adv_drugs_grad_penalty = compute_gradient_penalty(
                     adversary_drugs_predictions.sum(), latent_basal
                 )
 
             if self.num_covariates[0] > 0:
-                adversary_covariates_penalty = torch.tensor([0.0], device=self.device)
+                adv_covs_grad_penalty = torch.tensor([0.0], device=self.device)
                 for pred in adversary_covariate_predictions:
-                    adversary_covariates_penalty += compute_gradients(
+                    adv_covs_grad_penalty += compute_gradient_penalty(
                         pred.sum(), latent_basal
-                    )  # TODO: Adding up tensor sum, is that right?
+                    )
 
             self.optimizer_adversaries.zero_grad()
             (
                 adversary_drugs_loss
-                + self.hparams["penalty_adversary"] * adversary_drugs_penalty
+                + self.hparams["penalty_adversary"] * adv_drugs_grad_penalty
                 + adversary_covariates_loss
-                + self.hparams["penalty_adversary"] * adversary_covariates_penalty
+                + self.hparams["penalty_adversary"] * adv_covs_grad_penalty
             ).backward()
             self.optimizer_adversaries.step()
         else:
@@ -680,8 +672,8 @@ class ComPert(torch.nn.Module):
             "loss_reconstruction": reconstruction_loss.item(),
             "loss_adv_drugs": adversary_drugs_loss.item(),
             "loss_adv_covariates": adversary_covariates_loss.item(),
-            "penalty_adv_drugs": adversary_drugs_penalty.item(),
-            "penalty_adv_covariates": adversary_covariates_penalty.item(),
+            "penalty_adv_drugs": adv_drugs_grad_penalty.item(),
+            "penalty_adv_covariates": adv_covs_grad_penalty.item(),
         }
 
     @classmethod

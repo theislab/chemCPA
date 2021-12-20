@@ -247,10 +247,17 @@ class ExperimentWrapper:
                 if self.autoencoder.num_drugs > 0:
                     self.autoencoder.scheduler_dosers.step()
 
-                stop = stop or self.autoencoder.early_stopping(score)
+                test_score_is_nan = score is not None and math.isnan(score)
+                autoenc_early_stop = self.autoencoder.early_stopping(score)
+                stop = stop or autoenc_early_stop or test_score_is_nan
                 # we don't do disentanglement if the loss was NaN
                 # run_eval determines whether we run the disentanglement also during training, or only at the end
-                if (run_eval or stop) and not reconst_loss_is_nan:
+                if (
+                    (run_eval or stop)
+                    and not reconst_loss_is_nan
+                    and not test_score_is_nan
+                ):
+                    logging.info(f"Running the evaluation (Epoch:{epoch})")
                     evaluation_stats = evaluate(
                         self.autoencoder,
                         self.datasets,
@@ -273,9 +280,12 @@ class ExperimentWrapper:
                     }
                 )
 
-                improved_model = self.autoencoder.best_score <= score
+                # we improved the model if the current score is larger than or equal to
+                # the previous best score
+                improved_model = self.autoencoder.best_score == score
                 if save_checkpoints and improved_model:
-                    file_name = f"{ex.observers[0].run_entry['config_hash']}_{ex.current_run.start_time.strftime('%Y-%m-%d_%H-%M-%S-%f')}.pt"
+                    logging.info(f"Updating checkpoint at epoch {epoch}")
+                    file_name = f"{ex.observers[0].run_entry['config_hash']}.pt"
                     torch.save(
                         (
                             self.autoencoder.state_dict(),
@@ -289,7 +299,15 @@ class ExperimentWrapper:
                 if stop:
                     pjson({"early_stop": epoch})
                     break
-
+        pjson(
+            {
+                "test_score_is_nan": test_score_is_nan,
+                "reconst_loss_is_nan": reconst_loss_is_nan,
+                "autoenc_early_stop": autoenc_early_stop,
+                "max_minutes_reached": ellapsed_minutes > max_minutes,
+                "max_epochs_reached": epoch == num_epochs - 1,
+            }
+        )
         results = self.autoencoder.history
         # results = pd.DataFrame.from_dict(results) # not same length!
         results["total_epochs"] = epoch
