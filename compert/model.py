@@ -241,7 +241,7 @@ class ComPert(torch.nn.Module):
             "num_drugs": num_drugs,
             "num_covariates": num_covariates,
             "seed": seed,
-            "patients": patience,
+            "patience": patience,
             "loss_ae": loss_ae,
             "doser_type": doser_type,
             "decoder_activation": decoder_activation,

@@ -85,8 +85,8 @@ class Dataset:
             Combinations of perturbations are separated with `+`.
         :param dose_key: Name of obs column which stores perturbation dose.
             Combinations of perturbations are separated with `+`.
-        :param pert_category: Name of obs column with stores covariate + perturbation + dose.
-            Example: cell type + drug name + drug dose. This seems unused?
+        :param pert_category: Name of obs column with stores covariate + perturbation + dose as one string.
+            Example: cell type + drug name + drug dose. This is used during evaluation.
         :param use_drugs_idx: Whether or not to encode drugs via their index, instead of via a OneHot encoding
         """
         logging.info(f"Starting to read in data: {fname}\n...")

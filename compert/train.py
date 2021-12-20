@@ -2,11 +2,13 @@
 import time
 
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 from torchmetrics import R2Score
 
 import compert.data
+from compert.data import SubDataset
 from compert.model import ComPert, LogisticRegression
 
 
@@ -65,26 +67,38 @@ def compute_r2(y_true, y_pred):
     y_pred = torch.clamp(y_pred, -3e12, 3e12)
     metric = R2Score().to(y_true.device)
     metric.update(y_pred, y_true)  # same as sklearn.r2_score(y_true, y_pred)
+    # Todo this is probably where the 0.0s come from, and it should be removed.
     r2 = 0 if torch.isnan(y_pred).any() else max(metric.compute().item(), 0)
     return r2
 
 
-def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
+def evaluate_logfold_r2(
+    autoencoder: ComPert, ds_treated: SubDataset, ds_ctrl: SubDataset
+):
     logfold_score = []
     # assumes that `pert_categories` where constructed with first covariate type
     cov_type = ds_treated.covariate_keys[0]
-    for pert_category in np.unique(ds_treated.pert_categories):
-        covariate = pert_category.split("_")[0]
-        # the next line is where it is spending all it's time. Why?
-        idx_treated_all = bool2idx(ds_treated.pert_categories == pert_category)
-        idx_treated, n_idx_treated = idx_treated_all[0], len(idx_treated_all)
+    treated_pert_cat_index = pd.Index(ds_treated.pert_categories, dtype="category")
+    ctrl_cov_cat_index = pd.Index(ds_ctrl.covariate_names[cov_type], dtype="category")
+    for cell_drug_dose_comb, category_count in zip(
+        *np.unique(ds_treated.pert_categories, return_counts=True)
+    ):
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
 
+        covariate = cell_drug_dose_comb.split("_")[0]
+
+        bool_pert_categoy = treated_pert_cat_index.get_loc(cell_drug_dose_comb)
+        idx_treated_all = bool2idx(bool_pert_categoy)
+        idx_treated = idx_treated_all[0]
+
+        # this doesn't work on LINCS. Often `covariate` will not exist at all in the `ds_ctrl` (example: ASC.C)
+        # this means we get `n_idx_ctrl == 0`, which results in all kinds of NaNs later on.
+        # Once we figured out how to deal with this we can replace this `==` matching with an index lookup.
         bool_ctrl_all = ds_ctrl.covariate_names[cov_type] == covariate
         idx_ctrl_all = bool2idx(bool_ctrl_all)
         n_idx_ctrl = len(idx_ctrl_all)
-        # estimate metrics only for reasonably-sized drug/cell-type combos
-        if n_idx_treated <= 5:
-            continue
 
         emb_covs = [
             repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
@@ -97,6 +111,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
         else:
             emb_drugs = repeat_n(ds_treated.drugs[idx_treated], n_idx_ctrl)
 
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         genes_ctrl = ds_ctrl.genes[idx_ctrl_all].to(device="cuda")
 
         genes_pred, _ = compute_prediction(
@@ -105,6 +120,7 @@ def evaluate_logfold_r2(autoencoder, ds_treated, ds_ctrl):
             emb_drugs,
             emb_covs,
         )
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         genes_true = ds_treated.genes[idx_treated_all, :].to(device="cuda")
 
         y_ctrl = genes_ctrl.mean(0)
@@ -194,7 +210,7 @@ def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
         return [pert_score] + cov_scores
 
 
-def evaluate_r2(autoencoder, dataset, genes_control):
+def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.Tensor):
     """
     Measures different quality metrics about an ComPert `autoencoder`, when
     tasked to translate some `genes_control` into each of the drug/covariates
@@ -205,32 +221,43 @@ def evaluate_r2(autoencoder, dataset, genes_control):
     (_de) genes.
     """
     mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
-    num, dim = genes_control.size(0), genes_control.size(1)
+    n_rows = genes_control.size(0)
+    genes_control = genes_control.to(autoencoder.device)
 
-    for pert_category in np.unique(dataset.pert_categories):
+    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+    for cell_drug_dose_comb, category_count in zip(
+        *np.unique(dataset.pert_categories, return_counts=True)
+    ):
         if dataset.perturbation_key is None:
             break
-        # pert_category category contains: 'celltype_perturbation_dose' info
-        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[pert_category]))
+
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
+
+        # dataset.var_names is the list of gene names
+        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
+        # genes for every cell_drug_dose combination.
+        bool_de = dataset.var_names.isin(
+            np.array(dataset.de_genes[cell_drug_dose_comb])
+        )
         idx_de = bool2idx(bool_de)
 
         # spending a lot of time here, could this be precomputed?
-        idx_all = bool2idx(dataset.pert_categories == pert_category)
-        idx, n_idx = idx_all[0], len(idx_all)
+        bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
+        idx_all = bool2idx(bool_category)
+        idx = idx_all[0]
 
-        # estimate metrics only for reasonably-sized drug/cell-type combos
-        if n_idx <= 5:
-            continue
-
-        emb_covs = [repeat_n(cov[idx], num) for cov in dataset.covariates]
+        emb_covs = [repeat_n(cov[idx], n_rows) for cov in dataset.covariates]
         if dataset.use_drugs_idx:
             # spending a lot of time here. Why?
             emb_drugs = (
-                repeat_n(dataset.drugs_idx[idx], num).squeeze(),
-                repeat_n(dataset.dosages[idx], num).squeeze(),
+                repeat_n(dataset.drugs_idx[idx], n_rows).squeeze(),
+                repeat_n(dataset.dosages[idx], n_rows).squeeze(),
             )
         else:
-            emb_drugs = repeat_n(dataset.drugs[idx], num)
+            emb_drugs = repeat_n(dataset.drugs[idx], n_rows)
         mean_pred, var_pred = compute_prediction(
             autoencoder,
             genes_control,
@@ -239,6 +266,7 @@ def evaluate_r2(autoencoder, dataset, genes_control):
         )
 
         # copies just the needed genes to GPU
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         y_true = dataset.genes[idx_all, :].to(device="cuda")
 
         # true means and variances
@@ -261,10 +289,12 @@ def evaluate_r2(autoencoder, dataset, genes_control):
     return [mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]]
 
 
-def evaluate(autoencoder, datasets, disentangle=False):
+def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
     """
     Measure quality metrics using `evaluate()` on the training, test, and
     out-of-distributiion (ood) splits.
+
+    eval_stats is the default evaluation dictionary that is updated with the missing scores
     """
     start_time = time.time()
     autoencoder.eval()
@@ -283,7 +313,9 @@ def evaluate(autoencoder, datasets, disentangle=False):
                 datasets["training_treated"],
                 datasets["training_control"].genes,
             ),
-            "test": evaluate_r2(
+            "test": eval_stats["test"]
+            if "test" in eval_stats
+            else evaluate_r2(
                 autoencoder, datasets["test_treated"], datasets["test_control"].genes
             ),
             "ood": evaluate_r2(
