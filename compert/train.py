@@ -322,15 +322,15 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
             ),
-            "training_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["training_treated"], datasets["training_control"]
-            ),
-            "test_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["test_treated"], datasets["test_control"]
-            ),
-            "ood_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["ood"], datasets["test_control"]
-            ),
+            # "training_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["training_treated"], datasets["training_control"]
+            # ),
+            # "test_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["test_treated"], datasets["test_control"]
+            # ),
+            # "ood_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["ood"], datasets["test_control"]
+            # ),
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": 1 / datasets["test"].num_drugs
             if datasets["test"].num_drugs > 0
