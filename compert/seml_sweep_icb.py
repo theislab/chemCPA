@@ -280,8 +280,7 @@ class ExperimentWrapper:
                     }
                 )
 
-                # we improved the model if the current score is larger than or equal to
-                # the previous best score
+                # Cmp using == is fine, since if we improve we'll have updated this in `early_stopping`
                 improved_model = self.autoencoder.best_score == score
                 if save_checkpoints and improved_model:
                     logging.info(f"Updating checkpoint at epoch {epoch}")
