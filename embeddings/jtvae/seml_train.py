@@ -5,6 +5,7 @@ from pathlib import Path
 import pretrain
 import seml
 import torch
+import vaetrain
 from sacred import Experiment
 from seml.utils import make_hash
 
@@ -48,7 +49,11 @@ class ExperimentWrapper:
         print_iter,
         save_iter,
         subsample_zinc_percent,
+        pretrain_only=True,
         multip_share_strategy=None,
+        model_path=None,
+        beta=0.0,
+        vocab_path=None,
     ):
         if multip_share_strategy:
             torch.multiprocessing.set_sharing_strategy(multip_share_strategy)
@@ -92,25 +97,50 @@ class ExperimentWrapper:
 
         if training_path:
             assert Path(training_path).exists(), training_path
-        args = argparse.Namespace(
-            **{
-                "train_path": str(outpath),
-                "save_path": save_path,
-                "batch_size": batch_size,
-                "hidden_size": hidden_size,
-                "latent_size": latent_size,
-                "depth": depth,
-                "lr": lr,
-                "gamma": gamma,
-                "max_epoch": max_epoch,
-                "num_workers": num_workers,
-                "print_iter": print_iter,
-                "save_iter": save_iter,
-                "use_cpu": False,
-                "hash": seml.utils.make_hash(ex.current_run.config),
-            }
-        )
-        results = pretrain.main(args)
+
+        if pretrain_only:
+            args = argparse.Namespace(
+                **{
+                    "train_path": str(outpath),
+                    "save_path": save_path,
+                    "batch_size": batch_size,
+                    "hidden_size": hidden_size,
+                    "latent_size": latent_size,
+                    "depth": depth,
+                    "lr": lr,
+                    "gamma": gamma,
+                    "max_epoch": max_epoch,
+                    "num_workers": num_workers,
+                    "print_iter": print_iter,
+                    "save_iter": save_iter,
+                    "use_cpu": False,
+                    "hash": seml.utils.make_hash(ex.current_run.config),
+                }
+            )
+            results = pretrain.main(args)
+        else:
+            args = argparse.Namespace(
+                **{
+                    "train_path": str(outpath),
+                    "save_path": save_path,
+                    "vocab_path": vocab_path,
+                    "model_path": model_path,
+                    "batch_size": batch_size,
+                    "hidden_size": hidden_size,
+                    "latent_size": latent_size,
+                    "depth": depth,
+                    "lr": lr,
+                    "gamma": gamma,
+                    "max_epoch": max_epoch,
+                    "num_workers": num_workers,
+                    "print_iter": print_iter,
+                    "save_iter": save_iter,
+                    "use_cpu": False,
+                    "hash": seml.utils.make_hash(ex.current_run.config),
+                    "beta": beta,
+                }
+            )
+            results = vaetrain.main(args)
         return results
 
 

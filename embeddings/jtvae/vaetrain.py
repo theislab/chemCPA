@@ -1,3 +1,4 @@
+import pickle
 import sys
 import time
 
@@ -8,12 +9,12 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 from dgllife.data import JTVAEZINC, JTVAECollator, JTVAEDataset
 from dgllife.model import JTNNVAE
-from dgllife.utils import JTVAEVocab
 from torch.utils.data import DataLoader
-from utils import mkdir_p
+from utils import get_timestamp, mkdir_p
 
 
 def main(args):
+    print(f"{get_timestamp()}: {args}")
     mkdir_p(args.save_path)
 
     lg = rdkit.RDLogger.logger()
@@ -24,7 +25,8 @@ def main(args):
     else:
         device = torch.device("cuda:0")
 
-    vocab = JTVAEVocab(file_path=args.train_path)
+    with open(args.vocab_path, "rb") as f:
+        vocab = pickle.load(f)
     if args.train_path is None:
         dataset = JTVAEZINC("train", vocab)
     else:
@@ -40,6 +42,7 @@ def main(args):
 
     model = JTNNVAE(vocab, args.hidden_size, args.latent_size, args.depth)
     if args.model_path is not None:
+        print(f"Loading model at {args.model_path}")
         model.load_state_dict(torch.load(args.model_path, map_location="cpu"))
     else:
         model.reset_parameters()
@@ -96,9 +99,10 @@ def main(args):
                 steo_acc = steo_acc / args.print_iter * 100
 
                 print(
+                    get_timestamp(),
                     "Epoch {:d}/{:d} | Iter {:d}/{:d} | KL: {:.1f}, Word: {:.2f}, "
                     "Topo: {:.2f}, Assm: {:.2f}, Steo: {:.2f} | "
-                    "Estimated time per epoch: {:.4f}".format(
+                    "Estimated time per epoch: {:.4f}s".format(
                         epoch + 1,
                         args.max_epoch,
                         it + 1,
@@ -109,7 +113,7 @@ def main(args):
                         assm_acc,
                         steo_acc,
                         np.mean(dur) / args.print_iter * len(dataloader),
-                    )
+                    ),
                 )
                 word_acc, topo_acc, assm_acc, steo_acc = 0, 0, 0, 0
                 sys.stdout.flush()
@@ -118,14 +122,21 @@ def main(args):
             if (it + 1) % 15000 == 0:
                 scheduler.step()
 
-            if (it + 1) % 1000 == 0:
-                torch.save(
-                    model.state_dict(),
-                    args.save_path + "/model.iter-{:d}-{:d}".format(epoch, it + 1),
-                )
+            if (it + 1) % args.save_iter == 0:
+                save_path = args.save_path + f"/model.epoch-{epoch}-iter-{it}"
+                print(get_timestamp(), f"Saving checkpoint at {save_path}")
+                torch.save(model.state_dict(), save_path)
 
         scheduler.step()
         torch.save(model.state_dict(), args.save_path + "/model.iter-" + str(epoch))
+
+    return {
+        "KL": kl_div,
+        "Word": word_acc,
+        "Topo": topo_acc,
+        "Assm": assm_acc,
+        "Steo": steo_acc,
+    }
 
 
 if __name__ == "__main__":

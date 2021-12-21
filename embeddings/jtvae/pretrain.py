@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# pylint: disable= no-member, arguments-differ, invalid-name
-#
-# Pre-trained an AE
 import logging
 import pickle
 import sys
@@ -135,13 +127,14 @@ def main(args):
         scheduler.step()
         print("learning rate: {:.6f}".format(scheduler.get_last_lr()[0]))
         torch.save(model.state_dict(), args.save_path + "/model.epoch-" + str(epoch))
-        return {
-            "KL": kl_div,
-            "Word": word_acc,
-            "Topo": topo_acc,
-            "Assm": assm_acc,
-            "Steo": steo_acc,
-        }
+
+    return {
+        "KL": kl_div,
+        "Word": word_acc,
+        "Topo": topo_acc,
+        "Assm": assm_acc,
+        "Steo": steo_acc,
+    }
 
 
 if __name__ == "__main__":
