@@ -157,7 +157,7 @@ class ExperimentWrapper:
         num_epochs: int,
         max_minutes: int,
         checkpoint_freq: int,
-        run_eval: bool,
+        run_full_eval: bool,
         run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
@@ -246,13 +246,13 @@ class ExperimentWrapper:
                 autoenc_early_stop = self.autoencoder.early_stopping(test_score)
                 stop = stop or autoenc_early_stop or test_score_is_nan
                 # we don't do disentanglement if the loss was NaN
-                # run_eval determines whether we run the disentanglement also during training, or only at the end
+                # run_full_eval determines whether we run the full evaluate also during training, or only at the end
                 if (
-                    (run_eval or stop)
+                    (run_full_eval or stop)
                     and not reconst_loss_is_nan
                     and not test_score_is_nan
                 ):
-                    logging.info(f"Running the evaluation (Epoch:{epoch})")
+                    logging.info(f"Running the full evaluation (Epoch:{epoch})")
                     evaluation_stats = evaluate(
                         self.autoencoder,
                         self.datasets,

@@ -559,12 +559,14 @@ class ComPert(torch.nn.Module):
 
         # convert variance estimates to a positive value in [0, \infty)
         dim = gene_reconstructions.size(1) // 2
-        gene_reconstructions[:, dim:] = F.softplus(gene_reconstructions[:, dim:])
+        mean = gene_reconstructions[:, :dim]
+        var = F.softplus(gene_reconstructions[:, dim:])
+        normalized_reconstructions = torch.concat([mean, var], dim=1)
 
         if return_latent_basal:
-            return gene_reconstructions, latent_basal
+            return normalized_reconstructions, latent_basal
 
-        return gene_reconstructions
+        return normalized_reconstructions
 
     def early_stopping(self, score):
         """
