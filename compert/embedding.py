@@ -26,7 +26,8 @@ def get_chemical_representation(
         "AttentiveFP",
         "GCN",
         "seq2seq",
-        "rdkit"
+        "rdkit",
+        "jtvae",
     )
 
     if data_dir is None:
@@ -81,6 +82,8 @@ def get_chemical_representation(
             / "embeddings"
             / "rdkit2D_embedding_lincs_trapnell.parquet"
         )
+    elif embedding_model == "jtvae":
+        df = pd.read_parquet(data_dir / "jtvae" / "data" / "jtvae_dgl.parquet")
 
     emb = torch.tensor(df.loc[smiles].values, dtype=torch.float32, device=device)
     assert emb.shape[0] == len(smiles)

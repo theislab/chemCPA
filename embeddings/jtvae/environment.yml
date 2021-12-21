@@ -1,0 +1,14 @@
+name: jtvae_dgl
+channels:
+  - conda-forge
+dependencies:
+  - pytorch::pytorch
+  - cudatoolkit=10.2
+  - python
+  - rdkit=2018.09.3
+  - jupyter
+  - pyarrow
+  - tqdm
+  - dglteam::dgl-cuda10.2
+  - pip
+  - seml
