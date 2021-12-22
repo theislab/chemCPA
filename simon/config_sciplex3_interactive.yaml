@@ -21,15 +21,14 @@ fixed:
   profiling.outdir: "./"
 
   training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
-  training.num_epochs: 2 # maximum epochs for training
+  training.num_epochs: 10 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
-  training.run_eval: True
+  training.full_eval_during_train: False
   training.run_eval_disentangle: False
   training.save_checkpoints: False
   training.save_dir: sweeps/checkpoints
   
   model.additional_params.seed: 0 # random seed
-  model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: sigm # non-linearity for doser function
@@ -58,7 +57,7 @@ fixed:
   model.hparams.adversary_depth: 2
   model.hparams.adversary_lr: 1e-3
   model.hparams.adversary_wd: 1e-6
-  model.hparams.adversary_steps: 1
+  model.hparams.adversary_steps: 2
   model.hparams.reg_adversary: 1e-2
   model.hparams.penalty_adversary: 1e-2
   model.hparams.batch_size: 128

@@ -157,7 +157,7 @@ class ExperimentWrapper:
         num_epochs: int,
         max_minutes: int,
         checkpoint_freq: int,
-        run_eval: bool,
+        full_eval_during_train: bool,
         run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
@@ -171,6 +171,7 @@ class ExperimentWrapper:
 
         start_time = time.time()
         for epoch in range(num_epochs):
+            # all items are initialized to 0.0
             epoch_training_stats = defaultdict(float)
 
             for data in self.datasets["loader_tr"]:
@@ -198,31 +199,31 @@ class ExperimentWrapper:
                 for key, val in training_stats.items():
                     epoch_training_stats[key] += val
 
+            self.autoencoder.scheduler_autoencoder.step()
+            self.autoencoder.scheduler_adversary.step()
+            if self.autoencoder.num_drugs > 0:
+                self.autoencoder.scheduler_dosers.step()
+
             for key, val in epoch_training_stats.items():
-                # TODO this is not a proper average if the batchsizes are unequal (eg last batch is smaller)
                 epoch_training_stats[key] = val / len(self.datasets["loader_tr"])
-                if not (key in self.autoencoder.history.keys()):
+                if key not in self.autoencoder.history.keys():
                     self.autoencoder.history[key] = []
                 self.autoencoder.history[key].append(val)
             self.autoencoder.history["epoch"].append(epoch)
 
             # print some stats for each epoch
             pjson({"epoch": epoch, "training_stats": epoch_training_stats})
-            loss_is_nan = math.isnan(epoch_training_stats["loss_reconstruction"])
-
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes
+            reconst_loss_is_nan = math.isnan(
+                epoch_training_stats["loss_reconstruction"]
+            )
 
-            # decay learning rate if necessary
-            # also check stopping condition: patience ran out OR
-            # time ran out OR max epochs achieved OR we've reached a missing value
             stop = (
                 ellapsed_minutes > max_minutes
                 or (epoch == num_epochs - 1)
-                or loss_is_nan
+                or reconst_loss_is_nan
             )
-            if loss_is_nan:
-                logging.warning("Stopping early due to NaNs")
 
             # we always run the evaluation when training has stopped
             if ((epoch % checkpoint_freq) == 0 and epoch > 0) or stop:
@@ -235,9 +236,23 @@ class ExperimentWrapper:
                         self.datasets["test_control"].genes,
                     )
                     self.autoencoder.train()
-                score = np.mean(evaluation_stats["test"])
-                stop = stop or self.autoencoder.early_stopping(score)
-                if (run_eval or stop) and not loss_is_nan:
+                test_score = (
+                    np.mean(evaluation_stats["test"])
+                    if evaluation_stats["test"]
+                    else None
+                )
+
+                test_score_is_nan = test_score is not None and math.isnan(test_score)
+                autoenc_early_stop = self.autoencoder.early_stopping(test_score)
+                stop = stop or autoenc_early_stop or test_score_is_nan
+                # we don't do disentanglement if the loss was NaN
+                # run_full_eval determines whether we run the full evaluate also during training, or only at the end
+                if (
+                    (full_eval_during_train or stop)
+                    and not reconst_loss_is_nan
+                    and not test_score_is_nan
+                ):
+                    logging.info(f"Running the full evaluation (Epoch:{epoch})")
                     evaluation_stats = evaluate(
                         self.autoencoder,
                         self.datasets,
@@ -245,24 +260,30 @@ class ExperimentWrapper:
                         disentangle=run_eval_disentangle,
                     )
                     for key, val in evaluation_stats.items():
-                        if key in self.autoencoder.history:
-                            self.autoencoder.history[key].append(val)
-                        else:
+                        if key not in self.autoencoder.history:
                             self.autoencoder.history[key] = []
+                        self.autoencoder.history[key].append(val)
                     self.autoencoder.history["stats_epoch"].append(epoch)
 
+                # print some stats for the evaluation
                 pjson(
                     {
                         "epoch": epoch,
-                        "training_stats": epoch_training_stats,
                         "evaluation_stats": evaluation_stats,
                         "ellapsed_minutes": ellapsed_minutes,
+                        "test_score_is_nan": test_score_is_nan,
+                        "reconst_loss_is_nan": reconst_loss_is_nan,
+                        "autoenc_early_stop": autoenc_early_stop,
+                        "max_minutes_reached": ellapsed_minutes > max_minutes,
+                        "max_epochs_reached": epoch == num_epochs - 1,
                     }
                 )
 
-                improved_model = self.autoencoder.best_score <= score
+                # Cmp using == is fine, since if we improve we'll have updated this in `early_stopping`
+                improved_model = self.autoencoder.best_score == test_score
                 if save_checkpoints and improved_model:
-                    file_name = f"{ex.observers[0].run_entry['config_hash']}_{ex.current_run.start_time.strftime('%Y-%m-%d_%H-%M-%S-%f')}.pt"
+                    logging.info(f"Updating checkpoint at epoch {epoch}")
+                    file_name = f"{ex.observers[0].run_entry['config_hash']}.pt"
                     torch.save(
                         (
                             self.autoencoder.state_dict(),
@@ -278,7 +299,6 @@ class ExperimentWrapper:
                     break
 
         results = self.autoencoder.history
-        # results = pd.DataFrame.from_dict(results) # not same length!
         results["total_epochs"] = epoch
         return results
 

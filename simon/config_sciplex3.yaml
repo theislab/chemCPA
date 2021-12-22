@@ -25,13 +25,12 @@ fixed:
   training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
   training.num_epochs: 500 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
-  training.ignore_evaluation: False
+  training.full_eval_during_train: False
   training.run_eval_disentangle: True
   training.save_checkpoints: True
   training.save_dir: sweeps/checkpoints/trapnell_logsigm_grover
   
   model.additional_params.seed: 40 # random seed
-  model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: logsigm # non-linearity for doser function

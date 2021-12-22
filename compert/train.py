@@ -67,9 +67,7 @@ def compute_r2(y_true, y_pred):
     y_pred = torch.clamp(y_pred, -3e12, 3e12)
     metric = R2Score().to(y_true.device)
     metric.update(y_pred, y_true)  # same as sklearn.r2_score(y_true, y_pred)
-    # Todo this is probably where the 0.0s come from, and it should be removed.
-    r2 = 0 if torch.isnan(y_pred).any() else max(metric.compute().item(), 0)
-    return r2
+    return metric.compute().item()
 
 
 def evaluate_logfold_r2(
@@ -244,14 +242,12 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         )
         idx_de = bool2idx(bool_de)
 
-        # spending a lot of time here, could this be precomputed?
         bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
         idx_all = bool2idx(bool_category)
         idx = idx_all[0]
 
         emb_covs = [repeat_n(cov[idx], n_rows) for cov in dataset.covariates]
         if dataset.use_drugs_idx:
-            # spending a lot of time here. Why?
             emb_drugs = (
                 repeat_n(dataset.drugs_idx[idx], n_rows).squeeze(),
                 repeat_n(dataset.dosages[idx], n_rows).squeeze(),
@@ -286,7 +282,12 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         mean_score_de.append(r2_m_de)
         var_score_de.append(r2_v_de)
     print(f"Number of different r2 computations: {len(mean_score)}")
-    return [mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]]
+    if len(mean_score) > 0:
+        return [
+            np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]
+        ]
+    else:
+        return []
 
 
 def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
@@ -321,15 +322,15 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
             ),
-            "training_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["training_treated"], datasets["training_control"]
-            ),
-            "test_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["test_treated"], datasets["test_control"]
-            ),
-            "ood_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["ood"], datasets["test_control"]
-            ),
+            # "training_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["training_treated"], datasets["training_control"]
+            # ),
+            # "test_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["test_treated"], datasets["test_control"]
+            # ),
+            # "ood_logfold": evaluate_logfold_r2(
+            #     autoencoder, datasets["ood"], datasets["test_control"]
+            # ),
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": 1 / datasets["test"].num_drugs
             if datasets["test"].num_drugs > 0

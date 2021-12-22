@@ -29,7 +29,6 @@ fixed:
   training.run_eval_disentangle: True
   training.save_dir: sweeps/checkpoints/lincs_logsigm_grover
   
-  model.additional_params.loss_ae: gauss # loss (currently only gaussian loss is supported)
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: logsigm # non-linearity for doser function
