@@ -26,7 +26,7 @@ fixed:
   training.max_minutes: 300 # maximum computation time
   training.save_checkpoints: False
   training.run_eval_disentangle: True
-  training.run_eval: True
+  training.full_eval_during_train: False
   training.save_dir: sweeps/checkpoints
   
   model.additional_params.patience: 20 # patience for early stopping

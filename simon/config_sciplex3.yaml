@@ -25,7 +25,7 @@ fixed:
   training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
   training.num_epochs: 500 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
-  training.ignore_evaluation: False
+  training.full_eval_during_train: False
   training.run_eval_disentangle: True
   training.save_checkpoints: True
   training.save_dir: sweeps/checkpoints/trapnell_logsigm_grover
