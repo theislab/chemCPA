@@ -271,10 +271,8 @@ class ComPert(torch.nn.Module):
                 + [self.num_drugs]
             )
             if drug_embeddings is None:
-                self.drug_embeddings = (
-                    torch.nn.Embedding(  # TODO: Check to merge on gnn model
-                        self.num_drugs, self.hparams["dim"]
-                    )
+                self.drug_embeddings = torch.nn.Embedding(
+                    self.num_drugs, self.hparams["dim"]
                 )
                 embedding_requires_grad = True
             else:

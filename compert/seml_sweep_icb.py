@@ -157,7 +157,7 @@ class ExperimentWrapper:
         num_epochs: int,
         max_minutes: int,
         checkpoint_freq: int,
-        run_full_eval: bool,
+        full_eval_during_train: bool,
         run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
@@ -248,7 +248,7 @@ class ExperimentWrapper:
                 # we don't do disentanglement if the loss was NaN
                 # run_full_eval determines whether we run the full evaluate also during training, or only at the end
                 if (
-                    (run_full_eval or stop)
+                    (full_eval_during_train or stop)
                     and not reconst_loss_is_nan
                     and not test_score_is_nan
                 ):

@@ -23,7 +23,7 @@ fixed:
   training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
   training.num_epochs: 10 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
-  training.run_full_eval: True
+  training.full_eval_during_train: False
   training.run_eval_disentangle: False
   training.save_checkpoints: False
   training.save_dir: sweeps/checkpoints
