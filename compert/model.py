@@ -391,16 +391,22 @@ class ComPert(torch.nn.Module):
 
         # learning rate schedulers
         self.scheduler_autoencoder = torch.optim.lr_scheduler.StepLR(
-            self.optimizer_autoencoder, step_size=self.hparams["step_size_lr"]
+            self.optimizer_autoencoder,
+            step_size=self.hparams["step_size_lr"],
+            gamma=0.5,
         )
 
         self.scheduler_adversary = torch.optim.lr_scheduler.StepLR(
-            self.optimizer_adversaries, step_size=self.hparams["step_size_lr"]
+            self.optimizer_adversaries,
+            step_size=self.hparams["step_size_lr"],
+            gamma=0.5,
         )
 
         if has_drugs:
             self.scheduler_dosers = torch.optim.lr_scheduler.StepLR(
-                self.optimizer_dosers, step_size=self.hparams["step_size_lr"]
+                self.optimizer_dosers,
+                step_size=self.hparams["step_size_lr"],
+                gamma=0.5,
             )
 
         self.history = {"epoch": [], "stats_epoch": []}

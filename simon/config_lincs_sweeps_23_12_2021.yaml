@@ -1,0 +1,177 @@
+# Config for hyperparameter-tuning CPA on LINCS
+seml:
+  executable: compert/seml_sweep_icb.py
+  name: chemical_CPA_lincs
+  output_dir: sweeps/logs
+  conda_environment: chemical_CPA
+  project_root_dir: ..
+
+slurm:
+  max_simultaneous_jobs: 10
+  experiments_per_job: 1
+  sbatch_options_template: GPU
+  sbatch_options:
+    gres: gpu:1       # num GPUs
+    mem: 32G          # memory
+    cpus-per-task: 6  # num cores
+    # actual time taken is ~13h
+    time: 1-00:01     # max time, D-HH:MM
+###### BEGIN PARAMETER CONFIGURATION ######
+
+fixed:
+  profiling.run_profiler: False
+  profiling.outdir: "./"
+
+  training.checkpoint_freq: 30 # checkpoint frequency to save intermediate results
+  training.num_epochs: 400 # maximum epochs for training
+  training.max_minutes: 600 # maximum computation time
+  training.full_eval_during_train: False
+  training.run_eval_disentangle: True
+  training.save_checkpoints: True
+  training.save_dir: sweeps/checkpoints/lincs_test_sweeps
+  
+  dataset.dataset_type: lincs
+  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/lincs_full_smiles.h5ad # full path to the anndata dataset
+  dataset.data_params.perturbation_key: pert_id # stores name of the drug
+  dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
+  dataset.data_params.dose_key: pert_dose # stores drug dose as a float
+  dataset.data_params.covariate_keys: cell_id # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+  dataset.data_params.smiles_key: canonical_smiles
+  dataset.data_params.split_key: random_split # necessary field for train, test, ood splits.
+  dataset.data_params.use_drugs_idx: True
+
+  model.additional_params.patience: 2 # patience for early stopping
+  model.additional_params.decoder_activation: linear # last layer of the decoder
+  model.additional_params.doser_type: amortized # non-linearity for doser function
+  model.embedding.directory: null # null will load the path from paths.py
+
+grid:
+  model.additional_params.seed:
+    type: choice
+    options:
+      - 1337
+  model.embedding.model:
+    type: choice
+    options:
+      - grover_base
+      - MPNN
+      - rdkit
+      - weave
+#      - GCN
+
+random:
+  samples: 20
+  seed: 42
+  model.hparams.dropout:
+    type: uniform
+    min: 0.0
+    max: 0.5
+  model.hparams.dim:
+    type: choice
+    options:
+      - 64
+      - 128
+      - 256
+#      - 512
+  model.hparams.dosers_width:
+    type: choice
+    options:
+      - 64
+      - 128
+      - 256
+      - 512
+  model.hparams.dosers_depth:
+    type: choice
+    options:
+      - 1
+      - 2
+      - 3
+  model.hparams.dosers_lr:
+    type: loguniform
+    min: 1e-4
+    max: 1e-2
+  model.hparams.dosers_wd:
+    type: loguniform
+    min: 1e-8
+    max: 1e-5
+  model.hparams.autoencoder_width:
+    type: choice
+    options:
+      - 256
+      - 512
+      - 1024
+  model.hparams.autoencoder_depth:
+    type: choice
+    options:
+      - 3
+      - 4
+      - 5
+  model.hparams.autoencoder_lr:
+    type: loguniform
+    min: 1e-4
+    max: 1e-2
+  model.hparams.autoencoder_wd:
+    type: loguniform
+    min: 1e-8
+    max: 1e-5
+  model.hparams.adversary_width:
+    type: choice
+    options:
+      - 64
+      - 128
+      - 256
+  model.hparams.adversary_depth:
+    type: choice
+    options:
+      - 2
+      - 3
+      - 4
+  model.hparams.adversary_lr:
+    type: loguniform
+    min: 1e-5
+    max: 1e-3
+  model.hparams.adversary_wd:
+    type: loguniform
+    min: 1e-6
+    max: 1e-3
+  model.hparams.adversary_steps:
+    type: choice
+    options:
+      - 2
+      - 3
+      - 4
+      - 5
+  model.hparams.reg_adversary:
+    type: loguniform
+    min: 1e-2
+    max: 1e2
+  model.hparams.penalty_adversary:
+    type: loguniform
+    min: 1e-2
+    max: 1e1
+  model.hparams.batch_size:
+    type: choice
+    options:
+      - 64
+      - 128
+      - 256
+      - 512
+  model.hparams.step_size_lr:
+    type: choice
+    options:
+      - 50
+      - 100
+      - 200
+  model.hparams.embedding_encoder_width:
+    type: choice
+    options:
+      - 128
+      - 256
+      - 512
+  model.hparams.embedding_encoder_depth:
+    type: choice
+    options:
+      - 2
+      - 3
+      - 4
+      - 5
