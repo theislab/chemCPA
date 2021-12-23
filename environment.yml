@@ -17,7 +17,7 @@ dependencies:
   - pytorch::pytorch
   - torchmetrics
   - cudatoolkit=11.3
-  - dglteam::dgl
+  - dglteam::dgl-cuda11.3
   - dglteam::dgllife
   - rdkit=2021.09.2
   - pytest
@@ -25,3 +25,5 @@ dependencies:
   - pre-commit
   - seml
   - py-spy
+  - pip:
+      - sfaira
