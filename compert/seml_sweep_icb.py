@@ -165,9 +165,11 @@ class ExperimentWrapper:
 
         print(f"CWD: {os.getcwd()}")
         print(f"Save dir: {save_dir}")
-        assert not save_checkpoints or (
-            save_dir is not None and os.path.exists(save_dir)
-        ), f"save_dir ({save_dir}) doesn't exist, create it first."
+        if save_checkpoints:
+            assert save_dir is not None
+            if not os.path.exists(save_dir):
+                Path(save_dir).mkdir()
+                print(f"Created savedir for checkpoints: {save_dir}")
 
         start_time = time.time()
         for epoch in range(num_epochs):
