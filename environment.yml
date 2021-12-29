@@ -19,6 +19,7 @@ dependencies:
   - cudatoolkit=11.3
   - dglteam::dgl-cuda11.3
   - dglteam::dgllife
+  - deepchem==2.5.0
   - rdkit=2021.09.2
   - pytest
   - pyarrow
@@ -28,3 +29,5 @@ dependencies:
   - pip
   - pip:
       - sfaira
+      - tensorflow-gpu
+      - 'git+git://github.com/siboehm/dgl-lifesci@jtvae#subdirectory=python'
