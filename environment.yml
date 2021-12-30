@@ -2,7 +2,7 @@ name: chemical_CPA
 channels:
   - conda-forge
 dependencies:
-  - python
+  - python=3.7
   - adjusttext
   - matplotlib
   - numpy
@@ -16,10 +16,10 @@ dependencies:
   - jupytext
   - pytorch::pytorch
   - torchmetrics
+  - h5py<3.2
   - cudatoolkit=11.3
   - dglteam::dgl-cuda11.3
-  - dglteam::dgllife
-  - deepchem==2.5.0
+  - deepchem
   - rdkit=2021.09.2
   - pytest
   - pyarrow
