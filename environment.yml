@@ -26,8 +26,15 @@ dependencies:
   - pre-commit
   - seml
   - py-spy
+  # UMAP
+  - umap-learn
+  - datashader
+  - bokeh
+  - holoviews
+  - colorcet
+  - scikit-image
   - pip
   - pip:
       - sfaira
-      - tensorflow-gpu
+      - tensorflow
       - 'git+git://github.com/siboehm/dgl-lifesci@jtvae#subdirectory=python'
