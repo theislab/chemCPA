@@ -234,6 +234,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         if category_count <= 5:
             continue
 
+        # doesn't make sense to evaluate DMSO (=control) as a perturbation
+        if "dmso" in cell_drug_dose_comb.lower():
+            continue
+
         # dataset.var_names is the list of gene names
         # dataset.de_genes is a dict, containing a list of all differentiably-expressed
         # genes for every cell_drug_dose combination.
