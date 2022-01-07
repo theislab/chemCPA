@@ -14,7 +14,7 @@ slurm:
     gres: gpu:1       # num GPUs
     mem: 32G          # memory
     cpus-per-task: 6  # num cores
-    # actual time taken is ~13h
+    # speeds is roughly 3 epochs / minute
     time: 1-00:01     # max time, D-HH:MM
 ###### BEGIN PARAMETER CONFIGURATION ######
 
@@ -22,13 +22,13 @@ fixed:
   profiling.run_profiler: False
   profiling.outdir: "./"
 
-  training.checkpoint_freq: 30 # checkpoint frequency to save intermediate results
-  training.num_epochs: 400 # maximum epochs for training
-  training.max_minutes: 600 # maximum computation time
+  training.checkpoint_freq: 25 # checkpoint frequency to run evaluate, and maybe save checkpoint
+  training.num_epochs: 1500 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
+  training.max_minutes: 1200 # maximum computation time
   training.full_eval_during_train: False
-  training.run_eval_disentangle: True
-  training.save_checkpoints: True
-  training.save_dir: sweeps/checkpoints/lincs_test_sweeps
+  training.run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
+  training.save_checkpoints: True # checkpoints tend to be ~250MB large for LINCS.
+  training.save_dir: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps
   
   dataset.dataset_type: lincs
   dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/lincs_full_smiles.h5ad # full path to the anndata dataset
@@ -38,9 +38,9 @@ fixed:
   dataset.data_params.covariate_keys: cell_id # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: canonical_smiles
   dataset.data_params.split_key: random_split # necessary field for train, test, ood splits.
-  dataset.data_params.use_drugs_idx: True
+  dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
 
-  model.additional_params.patience: 2 # patience for early stopping
+  model.additional_params.patience: 3 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: amortized # non-linearity for doser function
   model.embedding.directory: null # null will load the path from paths.py
@@ -134,13 +134,12 @@ random:
     type: loguniform
     min: 1e-6
     max: 1e-3
-  model.hparams.adversary_steps:
+  model.hparams.adversary_steps: # every X steps, update the adversary INSTEAD OF the autoencoder.
     type: choice
     options:
       - 2
       - 3
       - 4
-      - 5
   model.hparams.reg_adversary:
     type: loguniform
     min: 1e-2
@@ -148,7 +147,7 @@ random:
   model.hparams.penalty_adversary:
     type: loguniform
     min: 1e-2
-    max: 1e1
+    max: 10
   model.hparams.batch_size:
     type: choice
     options:
