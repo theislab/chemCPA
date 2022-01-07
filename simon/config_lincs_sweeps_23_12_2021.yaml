@@ -15,7 +15,7 @@ slurm:
     mem: 32G          # memory
     cpus-per-task: 6  # num cores
     # speeds is roughly 3 epochs / minute
-    time: 0-14:01     # max time, D-HH:MM
+    time: 1-00:01     # max time, D-HH:MM
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
@@ -24,7 +24,7 @@ fixed:
 
   training.checkpoint_freq: 25 # checkpoint frequency to run evaluate, and maybe save checkpoint
   training.num_epochs: 1500 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
-  training.max_minutes: 600 # maximum computation time
+  training.max_minutes: 1200 # maximum computation time
   training.full_eval_during_train: False
   training.run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
   training.save_checkpoints: True # checkpoints tend to be ~250MB large for LINCS.
