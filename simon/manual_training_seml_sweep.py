@@ -27,6 +27,8 @@ if __name__ == "__main__":
     exp.init_model(
         hparams=args["model"]["hparams"],
         additional_params=args["model"]["additional_params"],
+        load_pretrained=args["model"]["load_pretrained"],
+        pretrained_model_path=args["model"]["pretrained_model_path"],
     )
     # setup the torch DataLoader
     exp.update_datasets()

@@ -106,7 +106,13 @@ class ExperimentWrapper:
             self.drug_embeddings = None
 
     @ex.capture(prefix="model")
-    def init_model(self, hparams: dict, additional_params: dict):
+    def init_model(
+        self,
+        hparams: dict,
+        additional_params: dict,
+        load_pretrained: bool,
+        pretrained_model_path: str,
+    ):
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -120,6 +126,14 @@ class ExperimentWrapper:
             drug_embeddings=self.drug_embeddings,
             use_drugs_idx=self.dataset.use_drugs_idx,
         )
+
+        if load_pretrained:
+            state_dict, model_config, history = torch.load(pretrained_model_path)
+            # sanity check
+            assert model_config["num_genes"] == self.datasets["training"].num_genes
+            assert model_config["use_drugs_idx"]
+
+            self.autoencoder.load_state_dict(state_dict)
 
     def update_datasets(self):
         """

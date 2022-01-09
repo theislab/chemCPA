@@ -20,28 +20,30 @@ fixed:
   profiling.run_profiler: False
   profiling.outdir: "./"
 
-  training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
+  training.checkpoint_freq: 5 # checkpoint frequency to save intermediate results
   training.num_epochs: 10 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
   training.full_eval_during_train: False
   training.run_eval_disentangle: False
   training.save_checkpoints: False
   training.save_dir: sweeps/checkpoints
-  
+
+  model.load_pretrained: True
+  model.pretrained_model_path: /home/simon/Documents/ETH/Masters_thesis/chemical_CPA/sweeps/checkpoints/51b6522a7bb27c992425518989beddf5.pt
   model.additional_params.seed: 0 # random seed
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: sigm # non-linearity for doser function
 
   dataset.dataset_type: trapnell
-  dataset.data_params.dataset_path: datasets/trapnell_cpa_subset.h5ad # full path to the anndata dataset
+  dataset.data_params.dataset_path: datasets/trapnell_cpa_simon_splits_subset.h5ad # full path to the anndata dataset
   dataset.data_params.perturbation_key: condition # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
   dataset.data_params.dose_key: dose # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: SMILES
-  dataset.data_params.split_key: split # necessary field for train, test, ood splits.
-  dataset.data_params.use_drugs_idx: False
+  dataset.data_params.split_key: split_random_8_2 # necessary field for train, test, ood splits.
+  dataset.data_params.use_drugs_idx: True
 
   model.hparams.dropout: 0.1
   model.hparams.dim: 128

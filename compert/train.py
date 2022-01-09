@@ -281,6 +281,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         r2_m_de = compute_r2(yt_m[idx_de], yp_m[idx_de])
         r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
 
+        # to be investigated
+        if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
+            continue
+
         mean_score.append(r2_m)
         var_score.append(r2_v)
         mean_score_de.append(r2_m_de)
