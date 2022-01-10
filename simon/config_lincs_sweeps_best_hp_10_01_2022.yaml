@@ -40,6 +40,9 @@ fixed:
   dataset.data_params.split_key: random_split # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
 
+  model.load_pretrained: False
+  model.pretrained_model_path: null
+  model.pretrained_model_hashes: null
   model.additional_params.patience: 3 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: amortized # non-linearity for doser function
@@ -81,4 +84,4 @@ grid:
       - weave
       - jtvae
       - seq2seq
-#      - GCN
+      - null

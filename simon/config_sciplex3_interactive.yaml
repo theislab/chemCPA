@@ -28,12 +28,19 @@ fixed:
   training.save_checkpoints: False
   training.save_dir: sweeps/checkpoints
 
-  model.load_pretrained: True
-  model.pretrained_model_path: /home/simon/Documents/ETH/Masters_thesis/chemical_CPA/sweeps/checkpoints/51b6522a7bb27c992425518989beddf5.pt
+  model.load_pretrained: True # if False, will initialize all weights randomly
+  model.pretrained_model_path: /home/simon/Documents/ETH/Masters_thesis/chemical_CPA/sweeps/checkpoints
+  model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding
+    grover_base: adf3d3c9544814688dab8630028c3f79
+    MPNN: b29dced873a1a36e4564f4fed0e874f3
+    weave: e7842b1121ae09fa900c10f6ec68aafb
+    jtvae: dd4d811868bbfc4a928c1b002db12a24
+    seq2seq: 54518284f18143afbd5a2613e936075f
+    None: 4d1f8c1202f052a95bc3b8a6b1ff19b6
   model.additional_params.seed: 0 # random seed
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
-  model.additional_params.doser_type: sigm # non-linearity for doser function
+  model.additional_params.doser_type: amortized # non-linearity for doser function
 
   dataset.dataset_type: trapnell
   dataset.data_params.dataset_path: datasets/trapnell_cpa_simon_splits_subset.h5ad # full path to the anndata dataset
@@ -45,18 +52,23 @@ fixed:
   dataset.data_params.split_key: split_random_8_2 # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True
 
+  # fixed, bc we're transfer learning now
+  model.hparams.dim: 256
+  model.hparams.dosers_width: 256
+  model.hparams.dosers_depth: 2
+  model.hparams.autoencoder_width: 256
+  model.hparams.autoencoder_depth: 5
+  model.hparams.embedding_encoder_width: 512
+  model.hparams.embedding_encoder_depth: 3
+
+  # to be tuned
   model.hparams.dropout: 0.1
-  model.hparams.dim: 128
-  model.hparams.dosers_width: 32
-  model.hparams.dosers_depth: 1
   model.hparams.dosers_lr: 1e-2
   model.hparams.dosers_wd: 1e-8
-  model.hparams.autoencoder_width: 256
-  model.hparams.autoencoder_depth: 3
   model.hparams.autoencoder_lr: 1e-2
   model.hparams.autoencoder_wd: 1e-8
   model.hparams.adversary_width: 64
-  model.hparams.adversary_depth: 2
+  model.hparams.adversary_depth: 3
   model.hparams.adversary_lr: 1e-3
   model.hparams.adversary_wd: 1e-6
   model.hparams.adversary_steps: 2
@@ -64,8 +76,6 @@ fixed:
   model.hparams.penalty_adversary: 1e-2
   model.hparams.batch_size: 128
   model.hparams.step_size_lr: 15
-  model.hparams.embedding_encoder_width: 512
-  model.hparams.embedding_encoder_depth: 0  # just a single linear layer for now
 
   model.embedding.model: jtvae
   model.embedding.directory: embeddings

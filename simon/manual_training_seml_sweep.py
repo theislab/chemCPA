@@ -29,6 +29,7 @@ if __name__ == "__main__":
         additional_params=args["model"]["additional_params"],
         load_pretrained=args["model"]["load_pretrained"],
         pretrained_model_path=args["model"]["pretrained_model_path"],
+        pretrained_model_hashes=args["model"]["pretrained_model_hashes"],
     )
     # setup the torch DataLoader
     exp.update_datasets()

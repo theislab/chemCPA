@@ -1,7 +1,8 @@
-# Config for hyperparameter-tuning CPA on LINCS
+# Config for finetuning-tuning (on Trapnell) a CPA model that was petrained on LINCS
+# This doesn't yet contain the adjustments to the adversaries parameters.
 seml:
   executable: compert/seml_sweep_icb.py
-  name: chemical_CPA_lincs
+  name: chemCPA_ft
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
   project_root_dir: ..
@@ -30,19 +31,35 @@ fixed:
   training.save_checkpoints: True # checkpoints tend to be ~250MB large for LINCS.
   training.save_dir: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
   
-  dataset.dataset_type: lincs
-  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/lincs_full_smiles_sciplex_genes.h5ad # full path to the anndata dataset
-  dataset.data_params.perturbation_key: pert_id # stores name of the drug
+  dataset.dataset_type: trapnell
+  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa_lincs_genes.h5ad # full path to the anndata dataset
+  dataset.data_params.perturbation_key: condition # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
-  dataset.data_params.dose_key: pert_dose # stores drug dose as a float
-  dataset.data_params.covariate_keys: cell_id # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
-  dataset.data_params.smiles_key: canonical_smiles
-  dataset.data_params.split_key: random_split # necessary field for train, test, ood splits.
+  dataset.data_params.dose_key: dose # stores drug dose as a float
+  dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+  dataset.data_params.smiles_key: SMILES
+  dataset.data_params.split_key: split # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
 
-  model.load_pretrained: False
-  model.pretrained_model_path: null
-  model.pretrained_model_hashes: null
+  model.load_pretrained: True # if False, will initialize all weights randomly
+  model.pretrained_model_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
+  model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding. Used for loading model checkpoints.
+    grover_base: adf3d3c9544814688dab8630028c3f79
+    MPNN: b29dced873a1a36e4564f4fed0e874f3
+    weave: e7842b1121ae09fa900c10f6ec68aafb
+    jtvae: dd4d811868bbfc4a928c1b002db12a24
+    seq2seq: 54518284f18143afbd5a2613e936075f
+    None: 4d1f8c1202f052a95bc3b8a6b1ff19b6 # Vanilla CPA, new embedding will be trained.
+
+  # these cannot be changed, bc we're transfer learning now
+  model.hparams.dim: 256
+  model.hparams.dosers_width: 256
+  model.hparams.dosers_depth: 2
+  model.hparams.autoencoder_width: 256
+  model.hparams.autoencoder_depth: 5
+  model.hparams.embedding_encoder_width: 512
+  model.hparams.embedding_encoder_depth: 3
+
   model.additional_params.patience: 3 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: amortized # non-linearity for doser function
@@ -60,7 +77,9 @@ grid:
       - MPNN
       - rdkit
       - weave
-#      - GCN
+      - jtvae
+      - seq2seq
+      - null
 
 random:
   samples: 20
@@ -69,26 +88,6 @@ random:
     type: uniform
     min: 0.0
     max: 0.5
-  model.hparams.dim:
-    type: choice
-    options:
-      - 64
-      - 128
-      - 256
-#      - 512
-  model.hparams.dosers_width:
-    type: choice
-    options:
-      - 64
-      - 128
-      - 256
-      - 512
-  model.hparams.dosers_depth:
-    type: choice
-    options:
-      - 1
-      - 2
-      - 3
   model.hparams.dosers_lr:
     type: loguniform
     min: 1e-4
@@ -97,18 +96,6 @@ random:
     type: loguniform
     min: 1e-8
     max: 1e-5
-  model.hparams.autoencoder_width:
-    type: choice
-    options:
-      - 256
-      - 512
-      - 1024
-  model.hparams.autoencoder_depth:
-    type: choice
-    options:
-      - 3
-      - 4
-      - 5
   model.hparams.autoencoder_lr:
     type: loguniform
     min: 1e-4
@@ -131,24 +118,25 @@ random:
       - 4
   model.hparams.adversary_lr:
     type: loguniform
-    min: 5e-5
+    min: 1e-5
     max: 1e-3
   model.hparams.adversary_wd:
     type: loguniform
-    min: 1e-5
+    min: 1e-6
     max: 1e-3
   model.hparams.adversary_steps: # every X steps, update the adversary INSTEAD OF the autoencoder.
     type: choice
     options:
       - 2
       - 3
+      - 4
   model.hparams.reg_adversary:
     type: loguniform
-    min: 5
-    max: 100
+    min: 1e-2
+    max: 1e2
   model.hparams.penalty_adversary:
     type: loguniform
-    min: 1
+    min: 1e-2
     max: 10
   model.hparams.batch_size:
     type: choice
@@ -163,16 +151,3 @@ random:
       - 50
       - 100
       - 200
-  model.hparams.embedding_encoder_width:
-    type: choice
-    options:
-      - 128
-      - 256
-      - 512
-  model.hparams.embedding_encoder_depth:
-    type: choice
-    options:
-      - 2
-      - 3
-      - 4
-      - 5

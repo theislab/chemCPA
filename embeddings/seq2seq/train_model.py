@@ -81,7 +81,7 @@ def load_train_val(datasets_fpath="../../datasets"):
 
 
 def get_model(
-    train_smiles, model_dir="data/small_56", encoder_layers=2, decoder_layers=2
+    train_smiles, model_dir="data/big_256", encoder_layers=4, decoder_layers=4
 ):
     tokens = set()
     for s in train_smiles:
@@ -97,7 +97,7 @@ def get_model(
         MAX_LENGTH,
         encoder_layers=encoder_layers,
         decoder_layers=decoder_layers,
-        embedding_dimension=56,
+        embedding_dimension=256,
         model_dir=model_dir,
         batch_size=batch_size,
         learning_rate=ExponentialDecay(0.001, 0.9, batches_per_epoch),
