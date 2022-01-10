@@ -80,7 +80,9 @@ def load_train_val(datasets_fpath="../../datasets"):
     return train_smiles, val_smiles
 
 
-def get_model(train_smiles, model_dir="data", encoder_layers=2, decoder_layers=2):
+def get_model(
+    train_smiles, model_dir="data/small_56", encoder_layers=2, decoder_layers=2
+):
     tokens = set()
     for s in train_smiles:
         tokens = tokens.union(set(c for c in s))
@@ -95,7 +97,7 @@ def get_model(train_smiles, model_dir="data", encoder_layers=2, decoder_layers=2
         MAX_LENGTH,
         encoder_layers=encoder_layers,
         decoder_layers=decoder_layers,
-        embedding_dimension=256,
+        embedding_dimension=56,
         model_dir=model_dir,
         batch_size=batch_size,
         learning_rate=ExponentialDecay(0.001, 0.9, batches_per_epoch),
@@ -112,7 +114,7 @@ def train_model(model, train_smiles):
 
     # there are ~92K molecules, batchsize is 100 -> ~920 train steps per epoch
     model.fit_sequences(
-        generate_sequences(50),
+        generate_sequences(200),
     )
 
 
@@ -123,3 +125,13 @@ if __name__ == "__main__":
     train_smiles, val_smiles = load_train_val()
     model = get_model(train_smiles)
     train_model(model, train_smiles)
+
+    # load the most recent checkpoint
+    model.restore()
+    pred = model.predict_from_sequences(val_smiles)
+    n_restored_smiles = 0
+    for s_pred, s_real in zip(pred, val_smiles):
+        s_pred = "".join(s_pred)
+        if s_pred == s_real:
+            n_restored_smiles += 1
+    print(f"Acc: {n_restored_smiles / len(val_smiles)}")
