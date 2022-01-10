@@ -128,25 +128,24 @@ random:
       - 4
   model.hparams.adversary_lr:
     type: loguniform
-    min: 1e-5
+    min: 5e-5
     max: 1e-3
   model.hparams.adversary_wd:
     type: loguniform
-    min: 1e-6
+    min: 1e-5
     max: 1e-3
   model.hparams.adversary_steps: # every X steps, update the adversary INSTEAD OF the autoencoder.
     type: choice
     options:
       - 2
       - 3
-      - 4
   model.hparams.reg_adversary:
     type: loguniform
-    min: 1e-2
-    max: 1e2
+    min: 5
+    max: 100
   model.hparams.penalty_adversary:
     type: loguniform
-    min: 1e-2
+    min: 1
     max: 10
   model.hparams.batch_size:
     type: choice
