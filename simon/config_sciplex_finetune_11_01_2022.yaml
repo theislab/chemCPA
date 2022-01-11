@@ -9,11 +9,11 @@ seml:
 
 slurm:
   max_simultaneous_jobs: 10
-  experiments_per_job: 1
+  experiments_per_job: 2
   sbatch_options_template: GPU
   sbatch_options:
     gres: gpu:1       # num GPUs
-    mem: 32G          # memory
+    mem: 50G          # memory
     cpus-per-task: 6  # num cores
     # speeds is roughly 3 epochs / minute
     time: 1-00:01     # max time, D-HH:MM
@@ -41,7 +41,6 @@ fixed:
   dataset.data_params.split_key: split # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
 
-  model.load_pretrained: True # if False, will initialize all weights randomly
   model.pretrained_model_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
   model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding. Used for loading model checkpoints.
     grover_base: adf3d3c9544814688dab8630028c3f79
@@ -67,6 +66,11 @@ fixed:
   model.embedding.directory: null # null will load the path from paths.py
 
 grid:
+  model.load_pretrained:
+    type: choice
+    options:
+      - True
+      - False
   model.additional_params.seed:
     type: choice
     options:
@@ -75,15 +79,15 @@ grid:
     type: choice
     options:
       - grover_base
-      - MPNN
-      - rdkit
-      - weave
-      - jtvae
-      - seq2seq
-      - null
+#      - MPNN
+#      - rdkit
+#      - weave
+#      - jtvae
+#      - seq2seq
+#      - null
 
 random:
-  samples: 20
+  samples: 10
   seed: 42
   model.hparams.dropout:
     type: uniform
