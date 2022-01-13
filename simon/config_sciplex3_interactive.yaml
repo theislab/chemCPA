@@ -33,6 +33,7 @@ fixed:
   model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding
     grover_base: adf3d3c9544814688dab8630028c3f79
     MPNN: b29dced873a1a36e4564f4fed0e874f3
+    rdkit: ad76fb60433c2da0498f9afda4f8939c
     weave: e7842b1121ae09fa900c10f6ec68aafb
     jtvae: dd4d811868bbfc4a928c1b002db12a24
     seq2seq: 54518284f18143afbd5a2613e936075f
