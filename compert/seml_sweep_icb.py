@@ -94,7 +94,7 @@ class ExperimentWrapper:
     def init_drug_embedding(self, embedding: dict):
         self.embedding_model_type = embedding["model"]
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        if embedding["model"] is not None:
+        if embedding["model"] is not "vanilla":
             # ComPert will use the provided embedding, which is frozen during training
             self.drug_embeddings = get_chemical_representation(
                 smiles=self.dataset.canon_smiles_unique_sorted,
@@ -103,6 +103,7 @@ class ExperimentWrapper:
                 device=device,
             )
         else:
+            assert embedding["model"] == "vanilla"
             # ComPert will initialize a new embedding, which is updated during training
             self.drug_embeddings = None
 
@@ -130,8 +131,7 @@ class ExperimentWrapper:
         )
 
         if load_pretrained:
-            # str() is necessary to transform None into 'None'
-            filename = pretrained_model_hashes[str(self.embedding_model_type)] + ".pt"
+            filename = pretrained_model_hashes[self.embedding_model_type] + ".pt"
             filepath = Path(pretrained_model_path) / filename
             logging.info(
                 f"Loading pretrained {self.embedding_model_type} model from: {filepath}"
@@ -161,7 +161,7 @@ class ExperimentWrapper:
                 if key.startswith("adversary_drugs") or key == "drug_embeddings.weight":
                     state_dict.pop(key)
 
-            if self.drug_embeddings is None:
+            if self.embedding_model_type == "vanilla":
                 # for Vanilla CPA, we also train the amortized doser & drug_embedding_encoder anew
                 keys = list(state_dict.keys())
                 for key in keys:
