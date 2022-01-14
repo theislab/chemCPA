@@ -172,7 +172,9 @@ class ExperimentWrapper:
 
             # load the state dict
             incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
-            logging.info(f"INCOMP_KEYS: {incomp_keys}")
+            logging.info(
+                f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}"
+            )
 
     def update_datasets(self):
         """

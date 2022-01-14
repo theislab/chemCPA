@@ -246,6 +246,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         )
         idx_de = bool2idx(bool_de)
 
+        # need at least two genes to be able to calc r2 score
+        if len(idx_de) < 2:
+            continue
+
         bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
         idx_all = bool2idx(bool_category)
         idx = idx_all[0]
