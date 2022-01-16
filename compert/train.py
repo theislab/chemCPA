@@ -9,7 +9,7 @@ from torchmetrics import R2Score
 
 import compert.data
 from compert.data import SubDataset
-from compert.model import ComPert, LogisticRegression
+from compert.model import MLP, ComPert
 
 
 def bool2idx(x):
@@ -178,9 +178,14 @@ def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
         assert normalized_basal.size(0) == len(labels_tensor)
         dataset = torch.utils.data.TensorDataset(normalized_basal, labels_tensor)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
-        model = LogisticRegression(
-            normalized_basal.size(1), len(unique_labels), device="cuda"
-        )
+
+        # 2 non-linear layers of size <input_dimension>
+        # followed by a linear layer.
+        model = MLP(
+            [normalized_basal.size(1)]
+            + [normalized_basal.size(1) for _ in range(2)]
+            + [len(unique_labels)]
+        ).to(autoencoder.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
         for epoch in range(400):
@@ -313,7 +318,7 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
     autoencoder.eval()
     if disentangle:
         drug_names, drug_counts = np.unique(
-            datasets["test"].drug_names, return_counts=True
+            datasets["test"].drugs_names, return_counts=True
         )
         disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
         stats_disent_pert = disent_scores[0]

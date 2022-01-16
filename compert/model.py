@@ -2,7 +2,6 @@
 
 import json
 import logging
-import math
 from typing import Union
 
 import numpy as np
@@ -20,15 +19,6 @@ def _move_inputs(*inputs, device="cuda"):
             return [mv_input(y) for y in x]
 
     return [mv_input(x) for x in inputs]
-
-
-class LogisticRegression(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, device="cuda"):
-        super(LogisticRegression, self).__init__()
-        self.linear = torch.nn.Linear(input_dim, output_dim, device=device)
-
-    def forward(self, x):
-        return self.linear(x)
 
 
 class NBLoss(torch.nn.Module):
