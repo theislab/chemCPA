@@ -20,41 +20,58 @@ fixed:
   profiling.run_profiler: False
   profiling.outdir: "./"
 
-  training.checkpoint_freq: 50 # checkpoint frequency to save intermediate results
-  training.num_epochs: 10 # maximum epochs for training
+  training.checkpoint_freq: 2 # checkpoint frequency to save intermediate results
+  training.num_epochs: 4 # maximum epochs for training
   training.max_minutes: 300 # maximum computation time
   training.full_eval_during_train: False
-  training.run_eval_disentangle: False
+  training.run_eval_disentangle: True
   training.save_checkpoints: False
   training.save_dir: sweeps/checkpoints
-  
+
+  model.load_pretrained: True # if False, will initialize all weights randomly
+  model.pretrained_model_path: /home/simon/Documents/ETH/Masters_thesis/chemical_CPA/sweeps/checkpoints
+#  model.pretrained_model_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
+  model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding
+    grover_base: adf3d3c9544814688dab8630028c3f79
+    MPNN: b29dced873a1a36e4564f4fed0e874f3
+    rdkit: ad76fb60433c2da0498f9afda4f8939c
+    weave: e7842b1121ae09fa900c10f6ec68aafb
+    jtvae: dd4d811868bbfc4a928c1b002db12a24
+    seq2seq: 54518284f18143afbd5a2613e936075f
+    None: 4d1f8c1202f052a95bc3b8a6b1ff19b6
   model.additional_params.seed: 0 # random seed
   model.additional_params.patience: 20 # patience for early stopping
   model.additional_params.decoder_activation: linear # last layer of the decoder
-  model.additional_params.doser_type: sigm # non-linearity for doser function
+  model.additional_params.doser_type: amortized # non-linearity for doser function
 
   dataset.dataset_type: trapnell
-  dataset.data_params.dataset_path: datasets/trapnell_cpa_subset.h5ad # full path to the anndata dataset
+  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa_subset_lincs_genes.h5ad # full path to the anndata dataset
   dataset.data_params.perturbation_key: condition # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
   dataset.data_params.dose_key: dose # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: SMILES
+  dataset.data_params.degs_key: lincs_DEGs
   dataset.data_params.split_key: split # necessary field for train, test, ood splits.
-  dataset.data_params.use_drugs_idx: False
+  dataset.data_params.use_drugs_idx: True
 
+  # fixed, bc we're transfer learning now
+  model.hparams.dim: 256
+  model.hparams.dosers_width: 256
+  model.hparams.dosers_depth: 2
+  model.hparams.autoencoder_width: 256
+  model.hparams.autoencoder_depth: 5
+  model.hparams.embedding_encoder_width: 512
+  model.hparams.embedding_encoder_depth: 3
+
+  # to be tuned
   model.hparams.dropout: 0.1
-  model.hparams.dim: 128
-  model.hparams.dosers_width: 32
-  model.hparams.dosers_depth: 1
   model.hparams.dosers_lr: 1e-2
   model.hparams.dosers_wd: 1e-8
-  model.hparams.autoencoder_width: 256
-  model.hparams.autoencoder_depth: 3
   model.hparams.autoencoder_lr: 1e-2
   model.hparams.autoencoder_wd: 1e-8
   model.hparams.adversary_width: 64
-  model.hparams.adversary_depth: 2
+  model.hparams.adversary_depth: 3
   model.hparams.adversary_lr: 1e-3
   model.hparams.adversary_wd: 1e-6
   model.hparams.adversary_steps: 2
@@ -62,8 +79,6 @@ fixed:
   model.hparams.penalty_adversary: 1e-2
   model.hparams.batch_size: 128
   model.hparams.step_size_lr: 15
-  model.hparams.embedding_encoder_width: 512
-  model.hparams.embedding_encoder_depth: 0  # just a single linear layer for now
 
   model.embedding.model: jtvae
   model.embedding.directory: embeddings
