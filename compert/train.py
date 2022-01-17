@@ -246,6 +246,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         )
         idx_de = bool2idx(bool_de)
 
+        # need at least two genes to be able to calc r2 score
+        if len(idx_de) < 2:
+            continue
+
         bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
         idx_all = bool2idx(bool_category)
         idx = idx_all[0]
@@ -281,6 +285,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         r2_m_de = compute_r2(yt_m[idx_de], yp_m[idx_de])
         r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
 
+        # to be investigated
+        if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
+            continue
+
         mean_score.append(r2_m)
         var_score.append(r2_v)
         mean_score_de.append(r2_m_de)
@@ -304,14 +312,21 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
     start_time = time.time()
     autoencoder.eval()
     if disentangle:
+        drug_names, drug_counts = np.unique(
+            datasets["test"].drug_names, return_counts=True
+        )
         disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
         stats_disent_pert = disent_scores[0]
+        # optimal score == always predicting the most common drug
+        optimal_disent_score = max(drug_counts) / len(datasets["test"])
         stats_disent_cov = disent_scores[1:]
     else:
         stats_disent_pert = [0]
+        optimal_disent_score = 0
         stats_disent_cov = [0]
 
     with torch.no_grad():
+
         evaluation_stats = {
             "training": evaluate_r2(
                 autoencoder,
@@ -336,9 +351,7 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             #     autoencoder, datasets["ood"], datasets["test_control"]
             # ),
             "perturbation disentanglement": stats_disent_pert,
-            "optimal for perturbations": 1 / datasets["test"].num_drugs
-            if datasets["test"].num_drugs > 0
-            else None,
+            "optimal for perturbations": optimal_disent_score,
             "covariate disentanglement": stats_disent_cov,
             "optimal for covariates": [
                 1 / num for num in datasets["test"].num_covariates

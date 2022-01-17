@@ -92,8 +92,9 @@ class ExperimentWrapper:
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, embedding: dict):
+        self.embedding_model_type = embedding["model"]
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        if embedding["model"] is not None:
+        if embedding["model"] is not "vanilla":
             # ComPert will use the provided embedding, which is frozen during training
             self.drug_embeddings = get_chemical_representation(
                 smiles=self.dataset.canon_smiles_unique_sorted,
@@ -102,11 +103,19 @@ class ExperimentWrapper:
                 device=device,
             )
         else:
+            assert embedding["model"] == "vanilla"
             # ComPert will initialize a new embedding, which is updated during training
             self.drug_embeddings = None
 
     @ex.capture(prefix="model")
-    def init_model(self, hparams: dict, additional_params: dict):
+    def init_model(
+        self,
+        hparams: dict,
+        additional_params: dict,
+        load_pretrained: bool,
+        pretrained_model_path: str,
+        pretrained_model_hashes: dict,
+    ):
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -120,6 +129,52 @@ class ExperimentWrapper:
             drug_embeddings=self.drug_embeddings,
             use_drugs_idx=self.dataset.use_drugs_idx,
         )
+
+        if load_pretrained:
+            filename = pretrained_model_hashes[self.embedding_model_type] + ".pt"
+            filepath = Path(pretrained_model_path) / filename
+            logging.info(
+                f"Loading pretrained {self.embedding_model_type} model from: {filepath}"
+            )
+            dumped_model = torch.load(filepath)
+            if len(dumped_model) == 3:
+                # old version
+                state_dict, model_config, history = dumped_model
+            else:
+                # new version
+                assert len(dumped_model) == 4
+                (
+                    state_dict,
+                    adversary_cov_state_dicts,
+                    model_config,
+                    history,
+                ) = dumped_model
+
+            # sanity check
+            assert model_config["num_genes"] == self.datasets["training"].num_genes
+            assert model_config["use_drugs_idx"]
+
+            keys = list(state_dict.keys())
+            for key in keys:
+                # remove all components which we will train from scratch
+                # the drug embedding is saved in the state_dict for some reason, but we don't need it
+                if key.startswith("adversary_drugs") or key == "drug_embeddings.weight":
+                    state_dict.pop(key)
+
+            if self.embedding_model_type == "vanilla":
+                # for Vanilla CPA, we also train the amortized doser & drug_embedding_encoder anew
+                keys = list(state_dict.keys())
+                for key in keys:
+                    if key.startswith("dosers") or key.startswith(
+                        "drug_embedding_encoder"
+                    ):
+                        state_dict.pop(key)
+
+            # load the state dict
+            incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
+            logging.info(
+                f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}"
+            )
 
     def update_datasets(self):
         """
@@ -289,6 +344,12 @@ class ExperimentWrapper:
                     torch.save(
                         (
                             self.autoencoder.state_dict(),
+                            # adversary covariates are saved as a list attr on the autoencoder
+                            # which PyTorch doesn't include in the autoencoder's state dict
+                            [
+                                adversary_covariates.state_dict()
+                                for adversary_covariates in self.autoencoder.adversary_covariates
+                            ],
                             self.autoencoder.init_args,
                             self.autoencoder.history,
                         ),
