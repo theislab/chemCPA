@@ -181,23 +181,23 @@ def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
 
         # 2 non-linear layers of size <input_dimension>
         # followed by a linear layer.
-        model = MLP(
+        disentanglement_classifier = MLP(
             [normalized_basal.size(1)]
             + [normalized_basal.size(1) for _ in range(2)]
             + [len(unique_labels)]
         ).to(autoencoder.device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+        optimizer = torch.optim.Adam(disentanglement_classifier.parameters(), lr=1e-2)
 
         for epoch in range(400):
             for X, y in data_loader:
-                pred = model(X)
+                pred = disentanglement_classifier(X)
                 loss = criterion(pred, y)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
         with torch.no_grad():
-            pred = model(normalized_basal).argmax(dim=1)
+            pred = disentanglement_classifier(normalized_basal).argmax(dim=1)
             acc = torch.sum(pred == labels_tensor) / len(labels_tensor)
         return acc.item()
 
