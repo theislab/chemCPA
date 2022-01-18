@@ -1,10 +1,10 @@
 # Config for hyperparameter-tuning CPA on LINCS
 seml:
   executable: compert/seml_sweep_icb.py
-  name: chemical_CPA_lincs
+  name: lincs_rdkit_hparam
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
-  project_root_dir: ..
+  project_root_dir: ../..
 
 slurm:
   max_simultaneous_jobs: 10
@@ -37,6 +37,7 @@ fixed:
   dataset.data_params.dose_key: pert_dose # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_id # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: canonical_smiles
+  dataset.data_params.degs_key: rank_genes_groups_cov # `uns` column name denoting the DEGs for each perturbation
   dataset.data_params.split_key: random_split # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
 
@@ -48,26 +49,17 @@ fixed:
   model.additional_params.doser_type: amortized # non-linearity for doser function
   model.embedding.directory: null # null will load the path from paths.py
 
-  model.hparams.dim: 64
-
-grid:
-  model.additional_params.seed:
-    type: choice
-    options:
-      - 1337
-  model.embedding.model:
-    type: choice
-    options:
-#      - grover_base
-#      - MPNN
-      - rdkit
-#      - weave
-#      - GCN
-      - null
+  model.embedding.model: rdkit
+  model.additional_params.seed: 1337
 
 random:
-  samples: 15
+  samples: 25
   seed: 42
+  model.hparams.dim:
+    type: choice
+    options:
+      - 64
+      - 32
   model.hparams.dropout:
     type: uniform
     min: 0.0
@@ -96,9 +88,9 @@ random:
   model.hparams.autoencoder_width:
     type: choice
     options:
+      - 128
       - 256
       - 512
-      - 1024
   model.hparams.autoencoder_depth:
     type: choice
     options:
@@ -128,10 +120,10 @@ random:
   model.hparams.adversary_lr:
     type: loguniform
     min: 5e-5
-    max: 1e-3
+    max: 1e-2
   model.hparams.adversary_wd:
     type: loguniform
-    min: 1e-5
+    min: 1e-8
     max: 1e-3
   model.hparams.adversary_steps: # every X steps, update the adversary INSTEAD OF the autoencoder.
     type: choice
@@ -149,9 +141,9 @@ random:
   model.hparams.batch_size:
     type: choice
     options:
+      - 32
       - 64
       - 128
-      - 256
   model.hparams.step_size_lr:
     type: choice
     options:
