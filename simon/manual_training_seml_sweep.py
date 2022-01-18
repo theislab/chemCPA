@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
     # this is how seml loads the config file internally
     seml_config, slurm_config, experiment_config = read_config(
-        "config_sciplex3_interactive.yaml"
+        "simon/config_sciplex3_interactive.yaml"
     )
     # we take the first config generated
     configs = generate_configs(experiment_config)

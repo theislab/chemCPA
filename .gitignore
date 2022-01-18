@@ -11,7 +11,6 @@ git-lfs-folders/*
 cpa_binaries.tar
 notebooks/*.pth
 embeddings/*/data/*
-embeddings/jtvae
 
 # embeddings
 *.parquet
