@@ -75,6 +75,7 @@ class Dataset:
         dose_key=None,
         covariate_keys=None,
         smiles_key=None,
+        degs_key="rank_genes_groups_cov",
         pert_category="cov_drug_dose_name",
         split_key="split",
         use_drugs_idx=False,
@@ -109,7 +110,7 @@ class Dataset:
                     f"A 'dose_key' is required when provided a 'perturbation_key'({perturbation_key})."
                 )
             self.pert_categories = np.array(data.obs[pert_category].values)
-            self.de_genes = data.uns["rank_genes_groups_cov"]
+            self.de_genes = data.uns[degs_key]
             self.drugs_names = np.array(data.obs[perturbation_key].values)
             self.dose_names = np.array(data.obs[dose_key].values)
 
@@ -349,6 +350,7 @@ def load_dataset_splits(
     dose_key: Union[str, None],
     covariate_keys: Union[list, str, None],
     smiles_key: Union[str, None],
+    degs_key: str = "rank_genes_groups_cov",
     pert_category: str = "cov_drug_dose_name",
     split_key: str = "split",
     return_dataset: bool = False,
@@ -361,6 +363,7 @@ def load_dataset_splits(
         dose_key,
         covariate_keys,
         smiles_key,
+        degs_key,
         pert_category,
         split_key,
         use_drugs_idx,
