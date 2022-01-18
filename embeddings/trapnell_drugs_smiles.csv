@@ -1,188 +1,189 @@
-2-Methoxyestradiol, COc1cc2c(cc1O)CC[C@@H]1[C@@H]2CC[C@]2(C)[C@@H](O)CC[C@@H]12
-A-366, COc1cc2c(cc1OCCCN1CCCC1)N=C(N)C21CCC1
-ABT-737, CN(C)CCC(CSc1ccccc1)Nc1ccc(S(=O)(=O)NC(=O)c2ccc(N3CCN(Cc4ccccc4-c4ccc(Cl)cc4)CC3)cc2)cc1[N+](=O)[O-]
-AC480, Cc1c(NC(=O)OCC2COCCN2)cn2ncnc(Nc3ccc4c(cnn4Cc4cccc(F)c4)c3)c12
-AG-14361, CN(C)Cc1ccc(-c2nc3cccc4c3n2CCNC4=O)cc1
-AG-490, N#C/C(=C\c1ccc(O)c(O)c1)C(=O)NCc1ccccc1
-AICAR, NC(=O)c1ncn([C@@H]2O[C@H](CO)[C@@H](O)[C@H]2O)c1N
-AMG-900, Cc1csc(-c2nnc(Nc3ccc(Oc4ncccc4-c4ccnc(N)n4)cc3)c3ccccc23)c1
-AR-42, CC(C)[C@H](C(=O)Nc1ccc(C(=O)NO)cc1)c1ccccc1
-AT9283, O=C(Nc1c[nH]nc1-c1nc2cc(CN3CCOCC3)ccc2[nH]1)NC1CC1
-AZ, Cc1cc(Nc2nc(N[C@@H](C)c3ccc(F)cc3)c(C#N)cc2F)n[nH]1
-AZD1480, Cc1cc(Nc2nc(N[C@@H](C)c3ncc(F)cn3)ncc2Cl)n[nH]1
-Abexinostat, CN(C)Cc1c(C(=O)NCCOc2ccc(C(=O)NO)cc2)oc2ccccc12
-Alendronate, NCCCC(O)(P(=O)(O)O)P(=O)(O)O[Na].O.O.O
-Alisertib, COc1cc(Nc2ncc3c(n2)-c2ccc(Cl)cc2C(c2c(F)cccc2OC)=NC3)ccc1C(=O)O
-Altretamine, CN(C)c1nc(N(C)C)nc(N(C)C)n1
-Alvespimycin, COC1/C=C\C=C(/C)C(=O)NC2=CC(=O)C(NCCN(C)C)=C(CC(C)CC(OC)C(O)C(C)/C=C(\C)C1OC(N)=O)C2=O.Cl
-Aminoglutethimide, CCC1(c2ccc(N)cc2)CCC(=O)NC1=O
-Amisulpride, CCN1CCCC1CNC(=O)c1cc(S(=O)(=O)CC)c(N)cc1OC
-Anacardic, CCCCCCCCCCCCCCCc1cccc(O)c1C(=O)O
-Andarine, CC(=O)Nc1ccc(OCC(C)(O)C(=O)Nc2ccc([N+](=O)[O-])c(C(F)(F)F)c2)cc1
-Aurora, CCN1CCN(C(=O)Cc2ccc(Nc3ncc(F)c(Nc4ccc(C(=O)Nc5ccccc5Cl)cc4)n3)cc2)CC1
-Avagacestat, NC(=O)C(CCC(F)(F)F)N(Cc1ccc(-c2ncon2)cc1F)S(=O)(=O)c1ccc(Cl)cc1
-Azacitidine, Nc1ncn([C@@H]2O[C@H](CO)[C@@H](O)[C@H]2O)c(=O)n1
-BMS-265246, CCCCOc1c(C(=O)c2c(F)cc(C)cc2F)cnc2[nH]ncc12
-BMS-536924, Cc1cc(N2CCOCC2)cc2[nH]c(-c3c(NCC(O)c4cccc(Cl)c4)cc[nH]c3=O)nc12
-BMS-754807, CC1(C(=O)Nc2ccc(F)nc2)CCCN1c1nc(Nc2cc(C3CC3)[nH]n2)c2cccn2n1
-BMS-911543, CCn1c(C(=O)N(C2CC2)C2CC2)cc2c3c(ncn3C)c(Nc3cc(C)n(C)n3)nc21
-BRD4770, COC(=O)c1ccc2c(c1)nc(NC(=O)c1ccccc1)n2CCCc1ccccc1
-Barasertib, CCN(CCO)CCCOc1ccc2c(Nc3cc(CC(=O)Nc4cccc(F)c4)n[nH]3)ncnc2c1
-Baricitinib, CCS(=O)(=O)N1CC(CC#N)(n2cc(-c3ncnc4[nH]ccc34)cn2)C1
-Belinostat, O=C(/C=C/c1cccc(S(=O)(=O)Nc2ccccc2)c1)NO
-Bisindolylmaleimide, CS(=O)(=O)O.Cn1cc(C2=C(c3cn(CCCSC(=N)N)c4ccccc34)C(=O)NC2=O)c2ccccc21
-Bosutinib, COc1cc(Nc2c(C#N)cnc3cc(OCCCN4CCN(C)CC4)c(OC)cc23)c(Cl)cc1Cl
-Busulfan, CS(=O)(=O)OCCCCOS(C)(=O)=O
-CEP-33779, CN1CCN(c2cccc(Nc3nc4c(-c5ccc(S(C)(=O)=O)cc5)cccn4n3)c2)CC1
-CUDC-101, C#Cc1cccc(Nc2ncnc3cc(OC)c(OCCCCCCC(=O)NO)cc23)c1
-CUDC-907, COc1ccc(-c2nc(N3CCOCC3)c3sc(CN(C)c4ncc(C(=O)NO)cn4)cc3n2)cn1
-CYC116, Cc1nc(N)sc1-c1ccnc(Nc2ccc(N3CCOCC3)cc2)n1
-Capecitabine, CCCCCOC(=O)Nc1nc(=O)n(C2OC(C)C(O)C2O)cc1F
-Carmofur, CCCCCCNC(=O)n1cc(F)c(=O)[nH]c1=O
-Cediranib, COc1cc2c(Oc3ccc4[nH]c(C)cc4c3F)ncnc2cc1OCCCN1CCCC1
-Celecoxib, Cc1ccc(-c2cc(C(F)(F)F)nn2-c2ccc(S(N)(=O)=O)cc2)cc1
-Cerdulatinib, CCS(=O)(=O)N1CCN(c2ccc(Nc3ncc(C(N)=O)c(NC4CC4)n3)cc2)CC1.Cl
-Cimetidine, CNC(=NC#N)NCCSCc1nc[nH]c1C
-Clevudine, Cc1cn([C@H]2O[C@@H](CO)[C@H](O)[C@H]2F)c(=O)[nH]c1=O
-Costunolide, C=C1C(=O)OC2/C=C(\C)CC/C=C(\C)CCC12
-Crizotinib, CC(Oc1cc(-c2cnn(C3CCNCC3)c2)cnc1N)c1c(Cl)ccc(F)c1Cl
-Curcumin, COc1cc(/C=C/C(=O)/C=C(O)/C=C/c2ccc(O)c(OC)c2)ccc1O
-Cyclocytidine, Cl.N=c1ccn2c(n1)OC1C(O)C(CO)OC12
-Dacinostat, O=C(/C=C/c1ccc(CN(CCO)CCc2c[nH]c3ccccc23)cc1)NO
-Danusertib, CO[C@@H](C(=O)N1Cc2[nH]nc(NC(=O)c3ccc(N4CCN(C)CC4)cc3)c2C1)c1ccccc1
-Daphnetin, O=c1ccc2ccc(O)c(O)c2o1
-Dasatinib, Cc1nc(Nc2ncc(C(=O)Nc3c(C)cccc3Cl)s2)cc(N2CCN(CCO)CC2)n1
-Decitabine, Nc1ncn([C@H]2C[C@H](O)[C@@H](CO)O2)c(=O)n1
-Disulfiram, CCN(CC)C(=S)SSC(=S)N(CC)CC
-Divalproex, CCCC(CCC)C(=O)O.CCCC(CCC)C(=O)[O-].[Na+]
-Droxinostat, Cc1cc(Cl)ccc1OCCCC(=O)NO
-EED226, CS(=O)(=O)c1ccc(-c2cnc(NCc3ccco3)n3cnnc23)cc1
-ENMD-2076, Cc1cc(Nc2cc(N3CCN(C)CC3)nc(/C=C/c3ccccc3)n2)n[nH]1
-Ellagic, O=c1oc2c(O)c(O)cc3c(=O)oc4c(O)c(O)cc1c4c23
-Entacapone, CCN(CC)C(=O)/C(C#N)=C/c1cc(O)c(O)c([N+](=O)[O-])c1
-Entinostat, Nc1ccccc1NC(=O)c1ccc(CNC(=O)OCc2cccnc2)cc1
-Enzastaurin, Cn1cc(C2=C(c3cn(C4CCN(Cc5ccccn5)CC4)c4ccccc34)C(=O)NC2=O)c2ccccc21
-Epothilone, C/C(=C\c1csc(C)n1)C1CC2OC2CCCC(C)C(O)C(C)C(=O)C(C)(C)C(O)CC(=O)O1
-FLLL32, COc1ccc(/C=C/C(=O)C2(C(=O)/C=C/c3ccc(OC)c(OC)c3)CCCCC2)cc1OC
-Fasudil, Cl.O=S(=O)(c1cccc2cnccc12)N1CCCNCC1
-Fedratinib, Cc1cnc(Nc2ccc(OCCN3CCCC3)cc2)nc1Nc1cccc(S(=O)(=O)NC(C)(C)C)c1
-Filgotinib, O=C(Nc1nc2cccc(-c3ccc(CN4CCS(=O)(=O)CC4)cc3)n2n1)C1CC1
-Flavopiridol, CN1CCC(c2c(O)cc(O)c3c(=O)cc(-c4ccccc4Cl)oc23)C(O)C1.Cl
-Fluorouracil, O=c1[nH]cc(F)c(=O)[nH]1
-Fulvestrant, CC12CCC3c4ccc(O)cc4CC(CCCCCCCCCS(=O)CCCC(F)(F)C(F)(F)F)C3C1CCC2O
-G007-LK, CS(=O)(=O)c1ccc(-c2nnc(/C=C/c3nnc(-c4ccc(C#N)cc4)o3)n2-c2ccccc2Cl)nc1
-GSK, O=C(O)CCNc1cc(N2CCc3ccccc3CC2)nc(-c2ccccn2)n1
-GSK-LSD1, Cl.Cl.c1ccc([C@@H]2C[C@H]2NC2CCNCC2)cc1
-GSK1070916, CCn1cc(-c2ccnc3[nH]c(-c4cccc(CN(C)C)c4)cc23)c(-c2ccc(NC(=O)N(C)C)cc2)n1
-Gandotinib, Cc1cc(Nc2cc(CN3CCOCC3)c3nc(C)c(Cc4ccc(Cl)cc4F)n3n2)[nH]n1
-Givinostat, CCN(CC)Cc1ccc2cc(COC(=O)Nc3ccc(C(=O)NO)cc3)ccc2c1.Cl.O
-Glesatinib?(MGCD265), COCCNCc1ccc(-c2cc3nccc(Oc4ccc(NC(=S)NC(=O)Cc5ccc(F)cc5)cc4F)c3s2)nc1
-Hesperadin, CCS(=O)(=O)Nc1ccc2c(c1)/C(=C(/Nc1ccc(CN3CCCCC3)cc1)c1ccccc1)C(=O)N2
-INO-1001, NC(=O)c1cccc(N)c1
-IOX2, O=C(O)CNC(=O)c1c(O)c2ccccc2n(Cc2ccccc2)c1=O
-ITSA-1, O=C(c1ccc(Cl)cc1Cl)n1nnc2ccccc21
-Iniparib, NC(=O)c1ccc(I)c([N+](=O)[O-])c1
-Ivosidenib, N#Cc1ccnc(N2C(=O)CCC2C(=O)N(c2cncc(F)c2)C(C(=O)NC2CC(F)(F)C2)c2ccccc2Cl)c1
-JNJ-26854165, c1ccc2c(CCNc3ccc(Nc4ccncc4)cc3)c[nH]c2c1
-JNJ-7706621, Nc1nc(Nc2ccc(S(N)(=O)=O)cc2)nn1C(=O)c1c(F)cccc1F
-JQ1, Cc1sc2c(c1C)C(c1ccc(Cl)cc1)=N[C@@H](CC(=O)OC(C)(C)C)c1nnc(C)n1-2
-KW-2449, O=C(c1ccc(/C=C/c2n[nH]c3ccccc23)cc1)N1CCNCC1
-Ki16425, Cc1noc(-c2ccc(CSCCC(=O)O)cc2)c1NC(=O)OC(C)c1ccccc1Cl
-Ki8751, COc1cc2nccc(Oc3ccc(NC(=O)Nc4ccc(F)cc4F)c(F)c3)c2cc1OC
-Lapatinib, CS(=O)(=O)CCNCc1ccc(-c2ccc3ncnc(Nc4ccc(OCc5cccc(F)c5)c(Cl)c4)c3c2)o1.Cc1ccc(S(=O)(=O)O)cc1.Cc1ccc(S(=O)(=O)O)cc1
-Lenalidomide, Nc1cccc2c1CN(C1CCC(=O)NC1=O)C2=O
-Linifanib, Cc1ccc(F)c(NC(=O)Nc2ccc(-c3cccc4[nH]nc(N)c34)cc2)c1
-Lomustine, O=NN(CCCl)C(=O)NC1CCCCC1
-Luminespib, CCNC(=O)c1noc(-c2cc(C(C)C)c(O)cc2O)c1-c1ccc(CN2CCOCC2)cc1
-M344, CN(C)c1ccc(C(=O)NCCCCCCC(=O)NO)cc1
-MC1568, Cn1cc(/C=C/C(=O)c2cccc(F)c2)cc1/C=C/C(=O)NO
-MK-0752, O=C(O)CCC1CCC(c2cc(F)ccc2F)(S(=O)(=O)c2ccc(Cl)cc2)CC1
-MK-5108, O=C(O)[C@]1(Cc2cccc(Nc3nccs3)n2)CC[C@@H](Oc2cccc(Cl)c2F)CC1
-MLN8054, O=C(O)c1ccc(Nc2ncc3c(n2)-c2ccc(Cl)cc2C(c2c(F)cccc2F)=NC3)cc1
-Maraviroc, Cc1nnc(C(C)C)n1C1CC2CCC(C1)N2CCC(NC(=O)C1CCC(F)(F)CC1)c1ccccc1
-Meprednisone, CC1CC2C3CCC4=CC(=O)C=CC4(C)C3C(=O)CC2(C)C1(O)C(=O)CO
-Mercaptopurine, S=c1nc[nH]c2nc[nH]c12
-Mesna, O=S(=O)([O-])CCS.[Na+]
-Mocetinostat, Nc1ccccc1NC(=O)c1ccc(CNc2nccc(-c3cccnc3)n2)cc1
-Momelotinib, N#CCNC(=O)c1ccc(-c2ccnc(Nc3ccc(N4CCOCC4)cc3)n2)cc1
-Motesanib, CC1(C)CNc2cc(NC(=O)c3cccnc3NCc3ccncc3)ccc21.O=P(O)(O)O.O=P(O)(O)O
-NVP-BSK805, Cl.Cl.Fc1cc(-c2cccc3ncc(-c4cnn(C5CCNCC5)c4)nc23)cc(F)c1CN1CCOCC1
-Navitoclax, CC1(C)CCC(c2ccc(Cl)cc2)=C(CN2CCN(c3ccc(C(=O)NS(=O)(=O)c4ccc(N[C@H](CCN5CCOCC5)CSc5ccccc5)c(S(=O)(=O)C(F)(F)F)c4)cc3)CC2)C1
-Nilotinib, Cc1cn(-c2cc(NC(=O)c3ccc(C)c(Nc4nccc(-c5cccnc5)n4)c3)cc(C(F)(F)F)c2)cn1
-Nintedanib, COC(=O)c1ccc2c(c1)NC(=O)/C2=C(\Nc1ccc(N(C)C(=O)CN2CCN(C)CC2)cc1)c1ccccc1
-Obatoclax, COC1=CC(c2cc3ccccc3[nH]2)=N/C1=C\c1[nH]c(C)cc1C.CS(=O)(=O)O
-Ofloxacin, CC1COc2c(N3CCN(C)CC3)c(F)cc3c(=O)c(C(=O)O)cn1c23
-PCI-34051, COc1ccc(Cn2ccc3ccc(C(=O)NO)cc32)cc1
-PD173074, CCN(CC)CCCCNc1ncc2cc(-c3cc(OC)cc(OC)c3)c(NC(=O)NC(C)(C)C)nc2n1
-PD98059, COc1cccc(-c2cc(=O)c3ccccc3o2)c1N
-PF-3845, O=C(Nc1cccnc1)N1CCC(Cc2cccc(Oc3ccc(C(F)(F)F)cn3)c2)CC1
-PF-573228, CS(=O)(=O)c1cccc(CNc2nc(Nc3ccc4c(c3)CCC(=O)N4)ncc2C(F)(F)F)c1
-PFI-1, COc1ccccc1S(=O)(=O)Nc1ccc2c(c1)CN(C)C(=O)N2
-PHA-680632, CCc1cccc(CC)c1NC(=O)N1Cc2[nH]nc(NC(=O)c3ccc(N4CCN(C)CC4)cc3)c2C1
-PJ34, CN(C)CC(=O)Nc1ccc2[nH]c(=O)c3ccccc3c2c1
-Panobinostat, Cc1[nH]c2ccccc2c1CCNCc1ccc(/C=C/C(=O)NO)cc1
-Patupilone, C/C(=C\c1csc(C)n1)C1CC2OC2(C)CCCC(C)C(O)C(C)C(=O)C(C)(C)C(O)CC(=O)O1
-Pelitinib, CCOc1cc2ncc(C#N)c(Nc3ccc(F)c(Cl)c3)c2cc1NC(=O)/C=C/CN(C)C
-Pirarubicin, COc1cccc2c1C(=O)c1c(O)c3c(c(O)c1C2=O)C[C@@](O)(C(=O)CO)C[C@@H]3O[C@H]1C[C@H](N)[C@H](O[C@@H]2CCCCO2)[C@H](C)O1
-Pracinostat, CCCCc1nc2cc(/C=C/C(=O)NO)ccc2n1CCN(CC)CC
-Prednisone, CC12C=CC(=O)C=C1CCC1C2C(=O)CC2(C)C1CCC2(O)C(=O)CO
-Quercetin, O=c1c(O)c(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12
-Quisinostat, Cl.Cl.Cn1cc(CNCC2CCN(c3ncc(C(=O)NO)cn3)CC2)c2ccccc21
-RG108, O=C(O)[C@H](Cc1c[nH]c2ccccc12)N1C(=O)c2ccccc2C1=O
-Raltitrexed, Cc1nc2ccc(CN(C)c3ccc(C(=O)NC(CCC(=O)O)C(=O)O)s3)cc2c(=O)[nH]1
-Ramelteon, CCC(=O)NCCC1CCc2ccc3c(c21)CCO3
-Regorafenib, CNC(=O)c1cc(Oc2ccc(NC(=O)Nc3ccc(Cl)c(C(F)(F)F)c3)c(F)c2)ccn1
-Resminostat, CN(C)Cc1ccc(S(=O)(=O)n2ccc(/C=C/C(=O)NO)c2)cc1
-Resveratrol, Oc1ccc(/C=C/c2cc(O)cc(O)c2)cc1
-Rigosertib, COc1cc(OC)c(/C=C/S(=O)(=O)Cc2ccc(OC)c(NCC(=O)[O-])c2)c(OC)c1.[Na+]
-Roscovitine, CCC(CO)Nc1nc(NCc2ccccc2)c2ncn(C(C)C)c2n1
-Roxadustat, Cc1nc(C(=O)NCC(=O)O)c(O)c2ccc(Oc3ccccc3)cc12
-Rucaparib, CNCc1ccc(-c2[nH]c3cc(F)cc4c3c2CCNC4=O)cc1.O=P(O)(O)O
-Ruxolitinib, N#CC[C@H](C1CCCC1)n1cc(-c2ncnc3[nH]ccc23)cn1
-S-Ruxolitinib, N#CC[C@@H](C1CCCC1)n1cc(-c2ncnc3[nH]ccc23)cn1
-S3I-201, Cc1ccc(S(=O)(=O)OCC(=O)Nc2ccc(C(=O)O)c(O)c2)cc1
-SB431542, NC(=O)c1ccc(-c2nc(-c3ccc4c(c3)OCO4)c(-c3ccccn3)[nH]2)cc1
-SGI-1776, CN1CCC(CNc2ccc3ncc(-c4cccc(OC(F)(F)F)c4)n3n2)CC1
-SL-327, N#C/C(=C(/N)Sc1ccc(N)cc1)c1ccccc1C(F)(F)F
-SNS-314, CS(=O)(=O)O.O=C(Nc1cccc(Cl)c1)Nc1ncc(CCNc2ncnc3ccsc23)s1
-SRT1720, Cl.O=C(Nc1ccccc1-c1cn2c(CN3CCNCC3)csc2n1)c1cnc2ccccc2n1
-SRT2104, Cc1nc(-c2cccnc2)sc1C(=O)Nc1ccccc1-c1cn2c(CN3CCOCC3)csc2n1
-SRT3025, COCCCc1sc(-c2ccccc2)nc1C(=O)Nc1ccccc1-c1nc2cc(CN3CCCC3)cnc2s1.Cl
-Selisistat, NC(=O)C1CCCc2c1[nH]c1ccc(Cl)cc21
-Sirtinol, CC(NC(=O)c1ccccc1/N=C/c1c(O)ccc2ccccc12)c1ccccc1
-Sodium, O=C(CCCc1ccccc1)O[Na]
-Sorafenib, CNC(=O)c1cc(Oc2ccc(NC(=O)Nc3ccc(Cl)c(C(F)(F)F)c3)cc2)ccn1.Cc1ccc(S(=O)(=O)O)cc1
-Streptozotocin, CN(N=O)C(=O)NC1C(O)OC(CO)C(O)C1O
-TAK-901, CCS(=O)(=O)c1cccc(-c2cc(C(=O)NC3CCN(C)CC3)c(C)c3[nH]c4ncc(C)cc4c23)c1
-TG101209, Cc1cnc(Nc2ccc(N3CCN(C)CC3)cc2)nc1Nc1cccc(S(=O)(=O)NC(C)(C)C)c1
-TGX-221, Cc1cc(C(C)Nc2ccccc2)c2nc(N3CCOCC3)cc(=O)n2c1
-TMP195, CC(C)(CNC(=O)c1cccc(-c2noc(C(F)(F)F)n2)c1)c1coc(-c2ccccc2)n1
-Tacedinaline, CC(=O)Nc1ccc(C(=O)Nc2ccccc2N)cc1
-Tanespimycin, C=CCNC1=C2CC(C)CC(OC)C(O)C(C)/C=C(\C)C(OC(N)=O)C(OC)/C=C\C=C(/C)C(=O)NC(=CC1=O)C2=O
-Tazemetostat, CCN(c1cc(-c2ccc(CN3CCOCC3)cc2)cc(C(=O)NCc2c(C)cc(C)[nH]c2=O)c1C)C1CCOCC1
-Temsirolimus, COC1CC2CCC(C)C(O)(O2)C(=O)C(=O)N2CCCCC2C(=O)OC(C(C)CC2CCC(OC(=O)C(C)(CO)CO)C(OC)C2)CC(=O)C(C)/C=C(\C)C(O)C(OC)C(=O)C(C)CC(C)/C=C/C=C/C=C/1C
-Thalidomide, O=C1CCC(N2C(=O)c3ccccc3C2=O)C(=O)N1
-Thiotepa, S=P(N1CC1)(N1CC1)N1CC1
-Tie2, COc1ccc2cc(-c3[nH]c(-c4ccc(S(C)=O)cc4)nc3-c3ccncc3)ccc2c1
-Tofacitinib, C[C@@H]1CCN(C(=O)CC#N)C[C@@H]1N(C)c1ncnc2[nH]ccc12.O=C(O)CC(O)(CC(=O)O)C(=O)O
-Toremifene, CN(C)CCOc1ccc(/C(=C(/CCCl)c2ccccc2)c2ccccc2)cc1.O=C(O)CC(O)(CC(=O)O)C(=O)O
-Tozasertib, Cc1cc(Nc2cc(N3CCN(C)CC3)nc(Sc3ccc(NC(=O)C4CC4)cc3)n2)n[nH]1
-Trametinib, CC(=O)Nc1cccc(-n2c(=O)n(C3CC3)c(=O)c3c(Nc4ccc(I)cc4F)n(C)c(=O)c(C)c32)c1
-Tranylcypromine, *.Cl.N[C@@H]1C[C@H]1c1ccccc1
-Triamcinolone, CC1(C)OC2CC3C4CCC5=CC(=O)C=CC5(C)C4(F)C(O)CC3(C)C2(C(=O)CO)O1
-Trichostatin, CC(/C=C/C(=O)NO)=C\[C@@H](C)C(=O)c1ccc(N(C)C)cc1
-Tubastatin, CN1CCc2c(c3ccccc3n2Cc2ccc(C(=O)NO)cc2)C1.Cl
-Tucidinostat, Nc1ccc(F)cc1NC(=O)c1ccc(CNC(=O)/C=C/c2cccnc2)cc1
-UNC0379, COc1cc2nc(N3CCCC3)nc(NCCCCCN3CCCC3)c2cc1OC
-UNC0631, COc1cc2c(NC3CCN(CC4CCCCC4)CC3)nc(N3CCCN(C(C)C)CC3)nc2cc1OCCCN1CCCCC1
-UNC1999, CCCc1cc(C)[nH]c(=O)c1CNC(=O)c1cc(-c2ccc(N3CCN(C(C)C)CC3)nc2)cc2c1cnn2C(C)C
-Valproic, CCCC(CCC)C(=O)[O-].[Na+]
-Vandetanib, COc1cc2c(Nc3ccc(Br)cc3F)ncnc2cc1OCC1CCN(C)CC1
-Veliparib, C[C@]1(c2nc3c(C(N)=O)cccc3[nH]2)CCCN1
-WHI-P154, COc1cc2ncnc(Nc3ccc(O)c(Br)c3)c2cc1OC
-WP1066, C[C@H](NC(=O)/C(C#N)=C/c1cccc(Br)n1)c1ccccc1
-XAV-939, Oc1nc(-c2ccc(C(F)(F)F)cc2)nc2c1CSCC2
-YM155, COCCn1c2c([n+](Cc3cnccn3)c1C)C(=O)c1ccccc1C2=O.[Br-]
-ZM, COc1cc2c(Nc3ccc(NC(=O)c4ccccc4)cc3)ncnc2cc1OCCCN1CCOCC1
-Zileuton, CC(c1cc2ccccc2s1)N(O)C(N)=O
-control, CS(C)=O
+2-Methoxyestradiol,COc1cc2c(cc1O)CC[C@@H]1[C@@H]2CC[C@]2(C)[C@@H](O)CC[C@@H]12,Angiogenesis
+A-366,COc1cc2c(cc1OCCCN1CCCC1)N=C(N)C21CCC1,Epigenetics
+ABT-737,CN(C)CCC(CSc1ccccc1)Nc1ccc(S(=O)(=O)NC(=O)c2ccc(N3CCN(Cc4ccccc4-c4ccc(Cl)cc4)CC3)cc2)cc1[N+](=O)[O-],Apoptosis
+AC480,Cc1c(NC(=O)OCC2COCCN2)cn2ncnc(Nc3ccc4c(cnn4Cc4cccc(F)c4)c3)c12,Protein Tyrosine Kinase
+AG-14361,CN(C)Cc1ccc(-c2nc3cccc4c3n2CCNC4=O)cc1,DNA Damage
+AG-490,N#C/C(=C\c1ccc(O)c(O)c1)C(=O)NCc1ccccc1,Protein Tyrosine Kinase
+AICAR,NC(=O)c1ncn([C@@H]2O[C@H](CO)[C@@H](O)[C@H]2O)c1N,PI3K/Akt/mTOR
+AMG-900,Cc1csc(-c2nnc(Nc3ccc(Oc4ncccc4-c4ccnc(N)n4)cc3)c3ccccc23)c1,Cell Cycle
+AR-42,CC(C)[C@H](C(=O)Nc1ccc(C(=O)NO)cc1)c1ccccc1,Epigenetics
+AT9283,O=C(Nc1c[nH]nc1-c1nc2cc(CN3CCOCC3)ccc2[nH]1)NC1CC1,JAK/STAT
+AZ,Cc1cc(Nc2nc(N[C@@H](C)c3ccc(F)cc3)c(C#N)cc2F)n[nH]1,JAK/STAT
+AZD1480,Cc1cc(Nc2nc(N[C@@H](C)c3ncc(F)cn3)ncc2Cl)n[nH]1,JAK/STAT
+Abexinostat,CN(C)Cc1c(C(=O)NCCOc2ccc(C(=O)NO)cc2)oc2ccccc12,Cytoskeletal Signaling
+Alendronate,NCCCC(O)(P(=O)(O)O)P(=O)(O)O[Na].O.O.O,Others
+Alisertib,COc1cc(Nc2ncc3c(n2)-c2ccc(Cl)cc2C(c2c(F)cccc2OC)=NC3)ccc1C(=O)O,Cell Cycle
+Altretamine,CN(C)c1nc(N(C)C)nc(N(C)C)n1,DNA Damage
+Alvespimycin,COC1/C=C\C=C(/C)C(=O)NC2=CC(=O)C(NCCN(C)C)=C(CC(C)CC(OC)C(O)C(C)/C=C(\C)C1OC(N)=O)C2=O.Cl,Cytoskeletal Signaling
+Aminoglutethimide,CCC1(c2ccc(N)cc2)CCC(=O)NC1=O,Endocrinology & Hormones
+Amisulpride,CCN1CCCC1CNC(=O)c1cc(S(=O)(=O)CC)c(N)cc1OC,Neuronal Signaling
+Anacardic,CCCCCCCCCCCCCCCc1cccc(O)c1C(=O)O,Epigenetics
+Andarine,CC(=O)Nc1ccc(OCC(C)(O)C(=O)Nc2ccc([N+](=O)[O-])c(C(F)(F)F)c2)cc1,Endocrinology & Hormones
+Aurora,CCN1CCN(C(=O)Cc2ccc(Nc3ncc(F)c(Nc4ccc(C(=O)Nc5ccccc5Cl)cc4)n3)cc2)CC1,Cell Cycle
+Avagacestat,NC(=O)C(CCC(F)(F)F)N(Cc1ccc(-c2ncon2)cc1F)S(=O)(=O)c1ccc(Cl)cc1,Proteases
+Azacitidine,Nc1ncn([C@@H]2O[C@H](CO)[C@@H](O)[C@H]2O)c(=O)n1,DNA Damage
+BMS-265246,CCCCOc1c(C(=O)c2c(F)cc(C)cc2F)cnc2[nH]ncc12,Cell Cycle
+BMS-536924,Cc1cc(N2CCOCC2)cc2[nH]c(-c3c(NCC(O)c4cccc(Cl)c4)cc[nH]c3=O)nc12,Protein Tyrosine Kinase
+BMS-754807,CC1(C(=O)Nc2ccc(F)nc2)CCCN1c1nc(Nc2cc(C3CC3)[nH]n2)c2cccn2n1,Protein Tyrosine Kinase
+BMS-911543,CCn1c(C(=O)N(C2CC2)C2CC2)cc2c3c(ncn3C)c(Nc3cc(C)n(C)n3)nc21,JAK/STAT
+BRD4770,COC(=O)c1ccc2c(c1)nc(NC(=O)c1ccccc1)n2CCCc1ccccc1,Epigenetics
+Barasertib,CCN(CCO)CCCOc1ccc2c(Nc3cc(CC(=O)Nc4cccc(F)c4)n[nH]3)ncnc2c1,Cell Cycle
+Baricitinib,CCS(=O)(=O)N1CC(CC#N)(n2cc(-c3ncnc4[nH]ccc34)cn2)C1,Epigenetics
+Belinostat,O=C(/C=C/c1cccc(S(=O)(=O)Nc2ccccc2)c1)NO,Epigenetics
+Bisindolylmaleimide,CS(=O)(=O)O.Cn1cc(C2=C(c3cn(CCCSC(=N)N)c4ccccc34)C(=O)NC2=O)c2ccccc21,TGF-beta/Smad
+Bosutinib,COc1cc(Nc2c(C#N)cnc3cc(OCCCN4CCN(C)CC4)c(OC)cc23)c(Cl)cc1Cl,Angiogenesis
+Busulfan,CS(=O)(=O)OCCCCOS(C)(=O)=O,DNA Damage
+CEP-33779,CN1CCN(c2cccc(Nc3nc4c(-c5ccc(S(C)(=O)=O)cc5)cccn4n3)c2)CC1,JAK/STAT
+CUDC-101,C#Cc1cccc(Nc2ncnc3cc(OC)c(OCCCCCCC(=O)NO)cc23)c1,Epigenetics
+CUDC-907,COc1ccc(-c2nc(N3CCOCC3)c3sc(CN(C)c4ncc(C(=O)NO)cn4)cc3n2)cn1,Cytoskeletal Signaling
+CYC116,Cc1nc(N)sc1-c1ccnc(Nc2ccc(N3CCOCC3)cc2)n1,Cell Cycle
+Capecitabine,CCCCCOC(=O)Nc1nc(=O)n(C2OC(C)C(O)C2O)cc1F,DNA Damage
+Carmofur,CCCCCCNC(=O)n1cc(F)c(=O)[nH]c1=O,DNA Damage
+Cediranib,COc1cc2c(Oc3ccc4[nH]c(C)cc4c3F)ncnc2cc1OCCCN1CCCC1,Protein Tyrosine Kinase
+Celecoxib,Cc1ccc(-c2cc(C(F)(F)F)nn2-c2ccc(S(N)(=O)=O)cc2)cc1,Neuronal Signaling
+Cerdulatinib,CCS(=O)(=O)N1CCN(c2ccc(Nc3ncc(C(N)=O)c(NC4CC4)n3)cc2)CC1.Cl,JAK/STAT
+Cimetidine,CNC(=NC#N)NCCSCc1nc[nH]c1C,Neuronal Signaling
+Clevudine,Cc1cn([C@H]2O[C@@H](CO)[C@H](O)[C@H]2F)c(=O)[nH]c1=O,DNA Damage
+Costunolide,C=C1C(=O)OC2/C=C(\C)CC/C=C(\C)CCC12,DNA Damage
+Crizotinib,CC(Oc1cc(-c2cnn(C3CCNCC3)c2)cnc1N)c1c(Cl)ccc(F)c1Cl,Protein Tyrosine Kinase
+Curcumin,COc1cc(/C=C/C(=O)/C=C(O)/C=C/c2ccc(O)c(OC)c2)ccc1O,Epigenetics
+Cyclocytidine,Cl.N=c1ccn2c(n1)OC1C(O)C(CO)OC12,DNA Damage
+Dacinostat,O=C(/C=C/c1ccc(CN(CCO)CCc2c[nH]c3ccccc23)cc1)NO,Epigenetics
+Danusertib,CO[C@@H](C(=O)N1Cc2[nH]nc(NC(=O)c3ccc(N4CCN(C)CC4)cc3)c2C1)c1ccccc1,Cell Cycle
+Daphnetin,O=c1ccc2ccc(O)c(O)c2o1,DNA Damage
+Dasatinib,Cc1nc(Nc2ncc(C(=O)Nc3c(C)cccc3Cl)s2)cc(N2CCN(CCO)CC2)n1,Angiogenesis
+Decitabine,Nc1ncn([C@H]2C[C@H](O)[C@@H](CO)O2)c(=O)n1,Epigenetics
+Disulfiram,CCN(CC)C(=S)SSC(=S)N(CC)CC,Metabolism
+Divalproex,CCCC(CCC)C(=O)O.CCCC(CCC)C(=O)[O-].[Na+],Ubiquitin
+Droxinostat,Cc1cc(Cl)ccc1OCCCC(=O)NO,Cytoskeletal Signaling
+EED226,CS(=O)(=O)c1ccc(-c2cnc(NCc3ccco3)n3cnnc23)cc1,Epigenetics
+ENMD-2076,Cc1cc(Nc2cc(N3CCN(C)CC3)nc(/C=C/c3ccccc3)n2)n[nH]1,Angiogenesis
+Ellagic,O=c1oc2c(O)c(O)cc3c(=O)oc4c(O)c(O)cc1c4c23,DNA Damage
+Entacapone,CCN(CC)C(=O)/C(C#N)=C/c1cc(O)c(O)c([N+](=O)[O-])c1,Epigenetics
+Entinostat,Nc1ccccc1NC(=O)c1ccc(CNC(=O)OCc2cccnc2)cc1,Epigenetics
+Enzastaurin,Cn1cc(C2=C(c3cn(C4CCN(Cc5ccccn5)CC4)c4ccccc34)C(=O)NC2=O)c2ccccc21,TGF-beta/Smad
+Epothilone,C/C(=C\c1csc(C)n1)C1CC2OC2CCCC(C)C(O)C(C)C(=O)C(C)(C)C(O)CC(=O)O1,Cytoskeletal Signaling
+FLLL32,COc1ccc(/C=C/C(=O)C2(C(=O)/C=C/c3ccc(OC)c(OC)c3)CCCCC2)cc1OC,JAK/STAT
+Fasudil,Cl.O=S(=O)(c1cccc2cnccc12)N1CCCNCC1,Cell Cycle
+Fedratinib,Cc1cnc(Nc2ccc(OCCN3CCCC3)cc2)nc1Nc1cccc(S(=O)(=O)NC(C)(C)C)c1,JAK/STAT
+Filgotinib,O=C(Nc1nc2cccc(-c3ccc(CN4CCS(=O)(=O)CC4)cc3)n2n1)C1CC1,JAK/STAT
+Flavopiridol,CN1CCC(c2c(O)cc(O)c3c(=O)cc(-c4ccccc4Cl)oc23)C(O)C1.Cl,Cell Cycle
+Fluorouracil,O=c1[nH]cc(F)c(=O)[nH]1,DNA Damage
+Fulvestrant,CC12CCC3c4ccc(O)cc4CC(CCCCCCCCCS(=O)CCCC(F)(F)C(F)(F)F)C3C1CCC2O,Endocrinology & Hormones
+G007-LK,CS(=O)(=O)c1ccc(-c2nnc(/C=C/c3nnc(-c4ccc(C#N)cc4)o3)n2-c2ccccc2Cl)nc1,DNA Damage
+GSK,O=C(O)CCNc1cc(N2CCc3ccccc3CC2)nc(-c2ccccn2)n1,Epigenetics
+GSK-LSD1,Cl.Cl.c1ccc([C@@H]2C[C@H]2NC2CCNCC2)cc1,Epigenetics
+GSK1070916,CCn1cc(-c2ccnc3[nH]c(-c4cccc(CN(C)C)c4)cc23)c(-c2ccc(NC(=O)N(C)C)cc2)n1,Cell Cycle
+Gandotinib,Cc1cc(Nc2cc(CN3CCOCC3)c3nc(C)c(Cc4ccc(Cl)cc4F)n3n2)[nH]n1,JAK/STAT
+Givinostat,CCN(CC)Cc1ccc2cc(COC(=O)Nc3ccc(C(=O)NO)cc3)ccc2c1.Cl.O,Cytoskeletal Signaling
+Glesatinib?(MGCD265),COCCNCc1ccc(-c2cc3nccc(Oc4ccc(NC(=S)NC(=O)Cc5ccc(F)cc5)cc4F)c3s2)nc1,Protein Tyrosine Kinase
+Hesperadin,CCS(=O)(=O)Nc1ccc2c(c1)/C(=C(/Nc1ccc(CN3CCCCC3)cc1)c1ccccc1)C(=O)N2,Cell Cycle
+INO-1001,NC(=O)c1cccc(N)c1,DNA Damage
+IOX2,O=C(O)CNC(=O)c1c(O)c2ccccc2n(Cc2ccccc2)c1=O,Angiogenesis
+ITSA-1,O=C(c1ccc(Cl)cc1Cl)n1nnc2ccccc21,Epigenetics
+Iniparib,NC(=O)c1ccc(I)c([N+](=O)[O-])c1,DNA Damage
+Ivosidenib,N#Cc1ccnc(N2C(=O)CCC2C(=O)N(c2cncc(F)c2)C(C(=O)NC2CC(F)(F)C2)c2ccccc2Cl)c1,Metabolism
+JNJ-26854165,c1ccc2c(CCNc3ccc(Nc4ccncc4)cc3)c[nH]c2c1,Apoptosis
+JNJ-7706621,Nc1nc(Nc2ccc(S(N)(=O)=O)cc2)nn1C(=O)c1c(F)cccc1F,Cell Cycle
+JQ1,Cc1sc2c(c1C)C(c1ccc(Cl)cc1)=N[C@@H](CC(=O)OC(C)(C)C)c1nnc(C)n1-2,Epigenetics
+KW-2449,O=C(c1ccc(/C=C/c2n[nH]c3ccccc23)cc1)N1CCNCC1,Angiogenesis
+Ki16425,Cc1noc(-c2ccc(CSCCC(=O)O)cc2)c1NC(=O)OC(C)c1ccccc1Cl,GPCR & G Protein
+Ki8751,COc1cc2nccc(Oc3ccc(NC(=O)Nc4ccc(F)cc4F)c(F)c3)c2cc1OC,Protein Tyrosine Kinase
+Lapatinib,CS(=O)(=O)CCNCc1ccc(-c2ccc3ncnc(Nc4ccc(OCc5cccc(F)c5)c(Cl)c4)c3c2)o1.Cc1ccc(S(=O)(=O)O)cc1.Cc1ccc(S(=O)(=O)O)cc1,Protein Tyrosine Kinase
+Lenalidomide,Nc1cccc2c1CN(C1CCC(=O)NC1=O)C2=O,Apoptosis
+Linifanib,Cc1ccc(F)c(NC(=O)Nc2ccc(-c3cccc4[nH]nc(N)c34)cc2)c1,Protein Tyrosine Kinase
+Lomustine,O=NN(CCCl)C(=O)NC1CCCCC1,DNA Damage
+Luminespib,CCNC(=O)c1noc(-c2cc(C(C)C)c(O)cc2O)c1-c1ccc(CN2CCOCC2)cc1,Cytoskeletal Signaling
+M344,CN(C)c1ccc(C(=O)NCCCCCCC(=O)NO)cc1,Cytoskeletal Signaling
+MC1568,Cn1cc(/C=C/C(=O)c2cccc(F)c2)cc1/C=C/C(=O)NO,Cytoskeletal Signaling
+MK-0752,O=C(O)CCC1CCC(c2cc(F)ccc2F)(S(=O)(=O)c2ccc(Cl)cc2)CC1,Proteases
+MK-5108,O=C(O)[C@]1(Cc2cccc(Nc3nccs3)n2)CC[C@@H](Oc2cccc(Cl)c2F)CC1,Cell Cycle
+MLN8054,O=C(O)c1ccc(Nc2ncc3c(n2)-c2ccc(Cl)cc2C(c2c(F)cccc2F)=NC3)cc1,Cell Cycle
+Maraviroc,Cc1nnc(C(C)C)n1C1CC2CCC(C1)N2CCC(NC(=O)C1CCC(F)(F)CC1)c1ccccc1,Microbiology
+Meprednisone,CC1CC2C3CCC4=CC(=O)C=CC4(C)C3C(=O)CC2(C)C1(O)C(=O)CO,Endocrinology & Hormones
+Mercaptopurine,S=c1nc[nH]c2nc[nH]c12,DNA Damage
+Mesna,O=S(=O)([O-])CCS.[Na+],Others
+Mocetinostat,Nc1ccccc1NC(=O)c1ccc(CNc2nccc(-c3cccnc3)n2)cc1,Epigenetics
+Momelotinib,N#CCNC(=O)c1ccc(-c2ccnc(Nc3ccc(N4CCOCC4)cc3)n2)cc1,JAK/STAT
+Motesanib,CC1(C)CNc2cc(NC(=O)c3cccnc3NCc3ccncc3)ccc21.O=P(O)(O)O.O=P(O)(O)O,Protein Tyrosine Kinase
+NVP-BSK805,Cl.Cl.Fc1cc(-c2cccc3ncc(-c4cnn(C5CCNCC5)c4)nc23)cc(F)c1CN1CCOCC1,JAK/STAT
+Navitoclax,CC1(C)CCC(c2ccc(Cl)cc2)=C(CN2CCN(c3ccc(C(=O)NS(=O)(=O)c4ccc(N[C@H](CCN5CCOCC5)CSc5ccccc5)c(S(=O)(=O)C(F)(F)F)c4)cc3)CC2)C1,Apoptosis
+Nilotinib,Cc1cn(-c2cc(NC(=O)c3ccc(C)c(Nc4nccc(-c5cccnc5)n4)c3)cc(C(F)(F)F)c2)cn1,Angiogenesis
+Nintedanib,COC(=O)c1ccc2c(c1)NC(=O)/C2=C(\Nc1ccc(N(C)C(=O)CN2CCN(C)CC2)cc1)c1ccccc1,Protein Tyrosine Kinase
+Obatoclax,COC1=CC(c2cc3ccccc3[nH]2)=N/C1=C\c1[nH]c(C)cc1C.CS(=O)(=O)O,Apoptosis
+Ofloxacin,CC1COc2c(N3CCN(C)CC3)c(F)cc3c(=O)c(C(=O)O)cn1c23,DNA Damage
+PCI-34051,COc1ccc(Cn2ccc3ccc(C(=O)NO)cc32)cc1,Epigenetics
+PD173074,CCN(CC)CCCCNc1ncc2cc(-c3cc(OC)cc(OC)c3)c(NC(=O)NC(C)(C)C)nc2n1,Angiogenesis
+PD98059,COc1cccc(-c2cc(=O)c3ccccc3o2)c1N,MAPK
+PF-3845,O=C(Nc1cccnc1)N1CCC(Cc2cccc(Oc3ccc(C(F)(F)F)cn3)c2)CC1,Metabolism
+PF-573228,CS(=O)(=O)c1cccc(CNc2nc(Nc3ccc4c(c3)CCC(=O)N4)ncc2C(F)(F)F)c1,Angiogenesis
+PFI-1,COc1ccccc1S(=O)(=O)Nc1ccc2c(c1)CN(C)C(=O)N2,Epigenetics
+PHA-680632,CCc1cccc(CC)c1NC(=O)N1Cc2[nH]nc(NC(=O)c3ccc(N4CCN(C)CC4)cc3)c2C1,Cell Cycle
+PJ34,CN(C)CC(=O)Nc1ccc2[nH]c(=O)c3ccccc3c2c1,DNA Damage
+Panobinostat,Cc1[nH]c2ccccc2c1CCNCc1ccc(/C=C/C(=O)NO)cc1,Epigenetics
+Patupilone,C/C(=C\c1csc(C)n1)C1CC2OC2(C)CCCC(C)C(O)C(C)C(=O)C(C)(C)C(O)CC(=O)O1,Cytoskeletal Signaling
+Pelitinib,CCOc1cc2ncc(C#N)c(Nc3ccc(F)c(Cl)c3)c2cc1NC(=O)/C=C/CN(C)C,Protein Tyrosine Kinase
+Pirarubicin,COc1cccc2c1C(=O)c1c(O)c3c(c(O)c1C2=O)C[C@@](O)(C(=O)CO)C[C@@H]3O[C@H]1C[C@H](N)[C@H](O[C@@H]2CCCCO2)[C@H](C)O1,DNA Damage
+Pracinostat,CCCCc1nc2cc(/C=C/C(=O)NO)ccc2n1CCN(CC)CC,Cytoskeletal Signaling
+Prednisone,CC12C=CC(=O)C=C1CCC1C2C(=O)CC2(C)C1CCC2(O)C(=O)CO,Endocrinology & Hormones
+Quercetin,O=c1c(O)c(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,Epigenetics
+Quisinostat,Cl.Cl.Cn1cc(CNCC2CCN(c3ncc(C(=O)NO)cn3)CC2)c2ccccc21,Epigenetics
+RG108,O=C(O)[C@H](Cc1c[nH]c2ccccc12)N1C(=O)c2ccccc2C1=O,Epigenetics
+Raltitrexed,Cc1nc2ccc(CN(C)c3ccc(C(=O)NC(CCC(=O)O)C(=O)O)s3)cc2c(=O)[nH]1,DNA Damage
+Ramelteon,CCC(=O)NCCC1CCc2ccc3c(c21)CCO3,GPCR & G Protein
+Regorafenib,CNC(=O)c1cc(Oc2ccc(NC(=O)Nc3ccc(Cl)c(C(F)(F)F)c3)c(F)c2)ccn1,Protein Tyrosine Kinase
+Resminostat,CN(C)Cc1ccc(S(=O)(=O)n2ccc(/C=C/C(=O)NO)c2)cc1,Epigenetics
+Resveratrol,Oc1ccc(/C=C/c2cc(O)cc(O)c2)cc1,Epigenetics
+Rigosertib,COc1cc(OC)c(/C=C/S(=O)(=O)Cc2ccc(OC)c(NCC(=O)[O-])c2)c(OC)c1.[Na+],Cell Cycle
+Roscovitine,CCC(CO)Nc1nc(NCc2ccccc2)c2ncn(C(C)C)c2n1,Cell Cycle
+Roxadustat,Cc1nc(C(=O)NCC(=O)O)c(O)c2ccc(Oc3ccccc3)cc12,Angiogenesis
+Rucaparib,CNCc1ccc(-c2[nH]c3cc(F)cc4c3c2CCNC4=O)cc1.O=P(O)(O)O,DNA Damage
+Ruxolitinib,N#CC[C@H](C1CCCC1)n1cc(-c2ncnc3[nH]ccc23)cn1,JAK/STAT
+S-Ruxolitinib,N#CC[C@@H](C1CCCC1)n1cc(-c2ncnc3[nH]ccc23)cn1,JAK/STAT
+S3I-201,Cc1ccc(S(=O)(=O)OCC(=O)Nc2ccc(C(=O)O)c(O)c2)cc1,JAK/STAT
+SB431542,NC(=O)c1ccc(-c2nc(-c3ccc4c(c3)OCO4)c(-c3ccccn3)[nH]2)cc1,TGF-beta/Smad
+SGI-1776,CN1CCC(CNc2ccc3ncc(-c4cccc(OC(F)(F)F)c4)n3n2)CC1,JAK/STAT
+SL-327,N#C/C(=C(/N)Sc1ccc(N)cc1)c1ccccc1C(F)(F)F,MAPK
+SNS-314,CS(=O)(=O)O.O=C(Nc1cccc(Cl)c1)Nc1ncc(CCNc2ncnc3ccsc23)s1,Cell Cycle
+SRT1720,Cl.O=C(Nc1ccccc1-c1cn2c(CN3CCNCC3)csc2n1)c1cnc2ccccc2n1,Epigenetics
+SRT2104,Cc1nc(-c2cccnc2)sc1C(=O)Nc1ccccc1-c1cn2c(CN3CCOCC3)csc2n1,DNA Damage
+SRT3025,COCCCc1sc(-c2ccccc2)nc1C(=O)Nc1ccccc1-c1nc2cc(CN3CCCC3)cnc2s1.Cl,DNA Damage
+Selisistat,NC(=O)C1CCCc2c1[nH]c1ccc(Cl)cc21,Epigenetics
+Sirtinol,CC(NC(=O)c1ccccc1/N=C/c1c(O)ccc2ccccc12)c1ccccc1,Epigenetics
+Sodium,O=C(CCCc1ccccc1)O[Na],DNA Damage
+Sorafenib,CNC(=O)c1cc(Oc2ccc(NC(=O)Nc3ccc(Cl)c(C(F)(F)F)c3)cc2)ccn1.Cc1ccc(S(=O)(=O)O)cc1,MAPK
+Streptozotocin,CN(N=O)C(=O)NC1C(O)OC(CO)C(O)C1O,DNA Damage
+TAK-901,CCS(=O)(=O)c1cccc(-c2cc(C(=O)NC3CCN(C)CC3)c(C)c3[nH]c4ncc(C)cc4c23)c1,Cell Cycle
+TG101209,Cc1cnc(Nc2ccc(N3CCN(C)CC3)cc2)nc1Nc1cccc(S(=O)(=O)NC(C)(C)C)c1,JAK/STAT
+TGX-221,Cc1cc(C(C)Nc2ccccc2)c2nc(N3CCOCC3)cc(=O)n2c1,PI3K/Akt/mTOR
+TMP195,CC(C)(CNC(=O)c1cccc(-c2noc(C(F)(F)F)n2)c1)c1coc(-c2ccccc2)n1,Epigenetics
+Tacedinaline,CC(=O)Nc1ccc(C(=O)Nc2ccccc2N)cc1,Epigenetics
+Tanespimycin,C=CCNC1=C2CC(C)CC(OC)C(O)C(C)/C=C(\C)C(OC(N)=O)C(OC)/C=C\C=C(/C)C(=O)NC(=CC1=O)C2=O,Cytoskeletal Signaling
+Tazemetostat,CCN(c1cc(-c2ccc(CN3CCOCC3)cc2)cc(C(=O)NCc2c(C)cc(C)[nH]c2=O)c1C)C1CCOCC1,Epigenetics
+Temsirolimus,COC1CC2CCC(C)C(O)(O2)C(=O)C(=O)N2CCCCC2C(=O)OC(C(C)CC2CCC(OC(=O)C(C)(CO)CO)C(OC)C2)CC(=O)C(C)/C=C(\C)C(O)C(OC)C(=O)C(C)CC(C)/C=C/C=C/C=C/1C,PI3K/Akt/mTOR
+Thalidomide,O=C1CCC(N2C(=O)c3ccccc3C2=O)C(=O)N1,Ubiquitin
+Thiotepa,S=P(N1CC1)(N1CC1)N1CC1,Others
+Tie2,COc1ccc2cc(-c3[nH]c(-c4ccc(S(C)=O)cc4)nc3-c3ccncc3)ccc2c1,Protein Tyrosine Kinase
+Tofacitinib,C[C@@H]1CCN(C(=O)CC#N)C[C@@H]1N(C)c1ncnc2[nH]ccc12.O=C(O)CC(O)(CC(=O)O)C(=O)O,JAK/STAT
+Toremifene,CN(C)CCOc1ccc(/C(=C(/CCCl)c2ccccc2)c2ccccc2)cc1.O=C(O)CC(O)(CC(=O)O)C(=O)O,Endocrinology & Hormones
+Tozasertib,Cc1cc(Nc2cc(N3CCN(C)CC3)nc(Sc3ccc(NC(=O)C4CC4)cc3)n2)n[nH]1,Cell Cycle
+Trametinib,CC(=O)Nc1cccc(-n2c(=O)n(C3CC3)c(=O)c3c(Nc4ccc(I)cc4F)n(C)c(=O)c(C)c32)c1,MAPK
+Tranylcypromine,*.Cl.N[C@@H]1C[C@H]1c1ccccc1,Epigenetics
+Triamcinolone,CC1(C)OC2CC3C4CCC5=CC(=O)C=CC5(C)C4(F)C(O)CC3(C)C2(C(=O)CO)O1,Metabolism
+Trichostatin,CC(/C=C/C(=O)NO)=C\[C@@H](C)C(=O)c1ccc(N(C)C)cc1,Others
+Tubastatin,CN1CCc2c(c3ccccc3n2Cc2ccc(C(=O)NO)cc2)C1.Cl,Epigenetics
+Tucidinostat,Nc1ccc(F)cc1NC(=O)c1ccc(CNC(=O)/C=C/c2cccnc2)cc1,Epigenetics
+UNC0379,COc1cc2nc(N3CCCC3)nc(NCCCCCN3CCCC3)c2cc1OC,Epigenetics
+UNC0631,COc1cc2c(NC3CCN(CC4CCCCC4)CC3)nc(N3CCCN(C(C)C)CC3)nc2cc1OCCCN1CCCCC1,Epigenetics
+UNC1999,CCCc1cc(C)[nH]c(=O)c1CNC(=O)c1cc(-c2ccc(N3CCN(C(C)C)CC3)nc2)cc2c1cnn2C(C)C,Epigenetics
+Valproic,CCCC(CCC)C(=O)[O-].[Na+],Neuronal Signaling
+Vandetanib,COc1cc2c(Nc3ccc(Br)cc3F)ncnc2cc1OCC1CCN(C)CC1,Protein Tyrosine Kinase
+Veliparib,C[C@]1(c2nc3c(C(N)=O)cccc3[nH]2)CCCN1,DNA Damage
+WHI-P154,COc1cc2ncnc(Nc3ccc(O)c(Br)c3)c2cc1OC,JAK/STAT
+WP1066,C[C@H](NC(=O)/C(C#N)=C/c1cccc(Br)n1)c1ccccc1,JAK/STAT
+XAV-939,Oc1nc(-c2ccc(C(F)(F)F)cc2)nc2c1CSCC2,Stem Cells &  Wnt
+YM155,COCCn1c2c([n+](Cc3cnccn3)c1C)C(=O)c1ccccc1C2=O.[Br-],Apoptosis
+ZM,COc1cc2c(Nc3ccc(NC(=O)c4ccccc4)cc3)ncnc2cc1OCCCN1CCOCC1,Cell Cycle
+Zileuton,CC(c1cc2ccccc2s1)N(O)C(N)=O,Metabolism
+control,CS(C)=O,NA
+control,CS(C)=O,Vehicle
