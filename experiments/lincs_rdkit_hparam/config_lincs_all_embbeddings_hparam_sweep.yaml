@@ -1,7 +1,8 @@
-# Config for hyperparameter-tuning CCPA on LINCS, using rdkit embeddings (part 1 of lincs_rdkit_hparam)
+# Config for hyperparameter-tuning CCPA on LINCS, using all embeddings, while keeping AE hparams fixed
+# (part 2 of lincs_rdkit_hparam)
 seml:
   executable: compert/seml_sweep_icb.py
-  name: lincs_rdkit_hparam
+  name: lincs_all_emb_hparam
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
   project_root_dir: ../..
@@ -44,26 +45,43 @@ fixed:
   model.load_pretrained: False
   model.pretrained_model_path: null
   model.pretrained_model_hashes: null
-  model.additional_params.patience: 3 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
+  model.additional_params.patience: 4 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: amortized # non-linearity for doser function
   model.embedding.directory: null # null will load the path from paths.py
 
-  model.embedding.model: rdkit
   model.additional_params.seed: 1337
 
-random:
-  samples: 25
-  seed: 42
-  model.hparams.dim:
+  # these were picked using the first part of the experiment
+  model.hparams.dim: 32
+  model.hparams.dropout: 0.262378
+  model.hparams.autoencoder_width: 256
+  model.hparams.autoencoder_depth: 4
+  model.hparams.autoencoder_lr: 0.001121
+  model.hparams.autoencoder_wd: 3.752056e-7
+  model.hparams.adversary_width: 128
+  model.hparams.adversary_depth: 3
+  model.hparams.adversary_lr: 0.000806
+  model.hparams.adversary_wd: 0.000004
+  model.hparams.adversary_steps: 2 # every X steps, update the adversary INSTEAD OF the autoencoder.
+  model.hparams.reg_adversary: 24.082073
+  model.hparams.penalty_adversary: 3.347776
+  model.hparams.batch_size: 128
+
+grid:
+  model.embedding.model:
     type: choice
     options:
-      - 64
-      - 32
-  model.hparams.dropout:
-    type: uniform
-    min: 0.0
-    max: 0.5
+      - grover_base
+      - MPNN
+      - weave
+      - null # vanilla
+      - jtvae
+      - seq2seq
+
+random:
+  samples: 8
+  seed: 42
   model.hparams.dosers_width:
     type: choice
     options:
@@ -85,66 +103,7 @@ random:
     type: loguniform
     min: 1e-8
     max: 1e-5
-  model.hparams.autoencoder_width:
-    type: choice
-    options:
-      - 128
-      - 256
-      - 512
-  model.hparams.autoencoder_depth:
-    type: choice
-    options:
-      - 3
-      - 4
-      - 5
-  model.hparams.autoencoder_lr:
-    type: loguniform
-    min: 1e-4
-    max: 1e-2
-  model.hparams.autoencoder_wd:
-    type: loguniform
-    min: 1e-8
-    max: 1e-5
-  model.hparams.adversary_width:
-    type: choice
-    options:
-      - 64
-      - 128
-      - 256
-  model.hparams.adversary_depth:
-    type: choice
-    options:
-      - 2
-      - 3
-      - 4
-  model.hparams.adversary_lr:
-    type: loguniform
-    min: 5e-5
-    max: 1e-2
-  model.hparams.adversary_wd:
-    type: loguniform
-    min: 1e-8
-    max: 1e-3
-  model.hparams.adversary_steps: # every X steps, update the adversary INSTEAD OF the autoencoder.
-    type: choice
-    options:
-      - 2
-      - 3
-  model.hparams.reg_adversary:
-    type: loguniform
-    min: 5
-    max: 100
-  model.hparams.penalty_adversary:
-    type: loguniform
-    min: 1
-    max: 10
-  model.hparams.batch_size:
-    type: choice
-    options:
-      - 32
-      - 64
-      - 128
-  model.hparams.step_size_lr:
+  model.hparams.step_size_lr: # this applies to all optimizers (AE, ADV, DRUG)
     type: choice
     options:
       - 50
