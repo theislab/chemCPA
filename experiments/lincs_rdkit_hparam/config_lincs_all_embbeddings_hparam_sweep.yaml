@@ -8,7 +8,7 @@ seml:
   project_root_dir: ../..
 
 slurm:
-  max_simultaneous_jobs: 10
+  max_simultaneous_jobs: 20
   experiments_per_job: 1
   sbatch_options_template: GPU
   sbatch_options:
@@ -72,15 +72,16 @@ grid:
   model.embedding.model:
     type: choice
     options:
-      - grover_base
-      - MPNN
-      - weave
       - null # vanilla
+      - grover_base
+      - GCN
+      - weave
+      - MPNN
       - jtvae
       - seq2seq
 
 random:
-  samples: 8
+  samples: 10
   seed: 42
   model.hparams.dosers_width:
     type: choice
