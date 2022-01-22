@@ -72,7 +72,7 @@ grid:
   model.embedding.model:
     type: choice
     options:
-      - null # vanilla
+      - vanilla
       - grover_base
       - GCN
       - weave
