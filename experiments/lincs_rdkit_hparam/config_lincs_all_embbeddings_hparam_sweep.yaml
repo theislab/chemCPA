@@ -82,7 +82,7 @@ grid:
       - seq2seq
 
 random:
-  samples: 10
+  samples: 18
   seed: 42
   model.hparams.dosers_width:
     type: choice
