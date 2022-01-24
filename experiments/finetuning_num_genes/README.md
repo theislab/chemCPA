@@ -1,8 +1,10 @@
-In this experiment we test how the pretraining on lincs with smaller set of genes helps to increase the performance on a larger amount of genes for sciplex. We use a split for this where 1-2 drugs from each pathway are are choosen as ood, see `'split_ho_pathway'` in `lincs_sciplex_gene_matching.ipynb`. 85% of the maximum dosage observations of these drugs are set as `'ood'` and 15% are set as `'test'`. 
+**Summary**
+* In this experiment we test how the pretraining on lincs with a smaller set of genes helps to increase the performance on a larger gene set for sciplex. We use a split where 1-2 drugs from each pathway are are choosen as ood, see `'split_ho_pathway'` in `lincs_sciplex_gene_matching.ipynb`. 85% of the maximum dosage observations of these drugs are set as `'ood'` and 15% are set as `'test'`. 
 
-This is biologically relevant as different single-cell datasets have different important gene sets that explain their variation.
+**Why is this interesting?**
+* This is biologically relevant as different single-cell datasets have different important gene sets that explain their variation.
 
-Experiment steps:
+**Experiment steps**:
 
 1. Pretrain on LINCS (~900 genes), finetune on Trapnell (same ~900 genes) - `'config_sciplex_finetune_lincs_genes.yaml'`
 2. Pretrain on LINCS (~900 genes), finetune on Trapnell (2000 genes)
