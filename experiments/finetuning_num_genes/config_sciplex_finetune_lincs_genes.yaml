@@ -2,7 +2,7 @@
 # This doesn't yet contain the adjustments to the adversaries parameters.
 seml:
   executable: compert/seml_sweep_icb.py
-  name: ft_num_genes_lincs_genes
+  name: ft_trapnell_num_genes_lincs_genes
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
   project_root_dir: ../..
