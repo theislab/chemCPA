@@ -10,11 +10,11 @@ repos:
      - id: isort
        args: ["--profile", "black", "--filter-files"]
        verbose: true
-  - repo: https://github.com/Quantco/pre-commit-mirrors-jupytext
-    rev: 1.10.2
-    hooks:
-     - id: jupytext-conda
-       args:
-         - --to=py:percent
-         - --pipe=black
-         - --opt=notebook_metadata_filter=-kernelspec
+  # - repo: https://github.com/Quantco/pre-commit-mirrors-jupytext
+  #   rev: 1.10.2
+  #   hooks:
+  #    - id: jupytext-conda
+  #      args:
+  #        - --to=py:percent
+  #        - --pipe=black
+  #        - --opt=notebook_metadata_filter=-kernelspec

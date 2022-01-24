@@ -147,9 +147,7 @@ for i, y in enumerate(
         ax=ax[i],
     )
     ax[i].set_ylim([0.39, 1])
-    ax[i].set_xticklabels(
-        ax[i].get_xticklabels(), rotation=45, horizontalalignment="right"
-    )
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=45, ha="right")
     ax[i].set_xlabel("")
     ax[i].set_ylabel(y.split(".")[-1])
     plt.tight_layout()
@@ -160,7 +158,7 @@ for i, y in enumerate(
 # %%
 rows = 1
 cols = 3
-fig, ax = plt.subplots(rows, cols, figsize=(7 * cols, 7 * rows), sharex=True)
+fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 7 * rows), sharex=True)
 
 for i, y in enumerate(("result.training_mean", "result.val_mean", "result.test_mean")):
     sns.violinplot(
@@ -171,7 +169,7 @@ for i, y in enumerate(("result.training_mean", "result.val_mean", "result.test_m
         ax=ax[i],
     )
     ax[i].set_ylim([0.82, 1])
-    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=45)
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
     ax[i].set_xlabel("")
     ax[i].set_ylabel(y.split(".")[-1])
     plt.tight_layout()
@@ -182,14 +180,14 @@ for i, y in enumerate(("result.training_mean", "result.val_mean", "result.test_m
 # %%
 rows = 1
 cols = 1
-fig, ax = plt.subplots(rows, cols, figsize=(7 * cols, 7 * rows), sharex=True)
+fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 7 * rows), sharex=True)
 
 for y in ["result.perturbation disentanglement"]:
     sns.violinplot(
         data=results_clean, x="config.model.embedding.model", y=y, inner="point", ax=ax
     )
     # ax[i].set_ylim([0,1])
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=75, ha="right")
     ax.axhline(0.18, color="orange")
     ax.set_xlabel("")
     ax.set_ylabel(y.split(".")[-1])
@@ -199,7 +197,7 @@ for y in ["result.perturbation disentanglement"]:
 # ## Subselect to disentangled models
 
 # %%
-
+n_top = 3
 
 performance_condition = lambda emb, max_entangle: (
     results_clean["config.model.embedding.model"] == emb
@@ -209,14 +207,14 @@ best = []
 for embedding in list(results_clean["config.model.embedding.model"].unique()):
     df = results_clean[performance_condition(embedding, 0.18)]
     print(embedding, len(df))
-    best.append(df.sort_values(by="result.val_mean_de", ascending=False).head(3))
+    best.append(df.sort_values(by="result.val_mean_de", ascending=False).head(n_top))
 
 best = pd.concat(best)
 
 # %%
 # All genes, DE genes, disentanglement
 rows, cols = 1, 3
-fig, ax = plt.subplots(rows, cols, figsize=(6 * cols, 6 * rows))
+fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
 
 for i, y in enumerate(
     ["result.test_mean", "result.test_mean_de", "result.perturbation disentanglement"]
@@ -224,7 +222,7 @@ for i, y in enumerate(
     sns.violinplot(
         data=best, x="config.model.embedding.model", y=y, inner="points", ax=ax[i]
     )
-    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=45)
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
     ax[i].set_xlabel("")
     ax[i].set_ylabel(y.split(".")[-1])
 
@@ -241,11 +239,11 @@ best[
 ]
 
 # %%
-# -> Middle sized autoencoder width
-results_clean["config.model.hparams.autoencoder_width"].value_counts()
+# -> Middle sized doser width
+results_clean["config.model.hparams.dosers_width"].value_counts()
 
 # %%
-# -> rather high regularisation
-results_clean["config.model.hparams.reg_adversary"].sort_values(ascending=False)[:10]
+# Check dim
+results_clean["config.model.hparams.dim"].value_counts()
 
 # %%
