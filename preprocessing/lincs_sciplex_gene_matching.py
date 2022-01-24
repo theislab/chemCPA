@@ -343,9 +343,11 @@ test_idx = sc.pp.subsample(
 adata.obs.loc[test_idx, "split_tyrosine_ood"] = "test"
 
 adata.obs.loc[
-    adata.obs.condition.isin(["Cediranib", "Crizotinib", "Motesanib", "BMS-754807"]),
+    adata.obs.condition.isin(
+        ["Cediranib", "Crizotinib", "Motesanib", "BMS-754807", "Nintedanib"]
+    ),
     "split_tyrosine_ood",
-] = "odd"
+] = "ood"
 
 # %%
 adata.obs.split_tyrosine_ood.value_counts()
@@ -384,10 +386,10 @@ adata.obs.loc[test_idx, "split_epigenetic_ood"] = "test"
 
 adata.obs.loc[
     adata.obs.condition.isin(
-        ["Azacitidine", "Pracinostat", "Trichostatin", "Quisinostat"]
+        ["Azacitidine", "Pracinostat", "Trichostatin", "Quisinostat", "Tazemetostat"]
     ),
     "split_epigenetic_ood",
-] = "odd"
+] = "ood"
 
 # %%
 adata.obs.split_epigenetic_ood.value_counts()
@@ -427,7 +429,7 @@ adata.obs.loc[test_idx, "split_cellcycle_ood"] = "test"
 adata.obs.loc[
     adata.obs.condition.isin(["SNS-314", "Flavopiridol", "Roscovitine"]),
     "split_cellcycle_ood",
-] = "odd"
+] = "ood"
 
 # %%
 adata.obs.split_cellcycle_ood.value_counts()
@@ -581,12 +583,14 @@ fname = PROJECT_DIR / "datasets" / "sciplex3_lincs_genes.h5ad"
 
 sc.write(fname, adata)
 
-# %%
-fname_lincs = PROJECT_DIR / "datasets" / "lincs_full_smiles_sciplex_genes.h5ad"
-
-sc.write(fname_lincs, adata_lincs)
+# %% [markdown]
+# ____
 
 # %%
-print("hi")
+# fname_lincs = PROJECT_DIR/'datasets'/'lincs_full_smiles_sciplex_genes.h5ad'
+
+# sc.write(fname_lincs, adata_lincs)
+
+# %%
 
 # %%
