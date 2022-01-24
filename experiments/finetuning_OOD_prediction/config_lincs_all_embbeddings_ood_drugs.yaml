@@ -1,0 +1,139 @@
+# Config for hyperparameter-tuning CCPA on LINCS, using all embeddings, while keeping AE hparams fixed
+# (part 2 of lincs_rdkit_hparam)
+seml:
+  executable: compert/seml_sweep_icb.py
+  name: lincs_all_emb_ood_drugs
+  output_dir: sweeps/logs
+  conda_environment: chemical_CPA
+  project_root_dir: ../..
+
+slurm:
+  max_simultaneous_jobs: 20
+  experiments_per_job: 1
+  sbatch_options_template: GPU
+  sbatch_options:
+    gres: gpu:1       # num GPUs
+    mem: 32G          # memory
+    cpus-per-task: 6  # num cores
+    # speeds is roughly 3 epochs / minute
+    time: 1-00:01     # max time, D-HH:MM
+###### BEGIN PARAMETER CONFIGURATION ######
+
+fixed:
+  profiling.run_profiler: False
+  profiling.outdir: "./"
+
+  training.checkpoint_freq: 25 # checkpoint frequency to run evaluate, and maybe save checkpoint
+  training.num_epochs: 1500 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
+  training.max_minutes: 1200 # maximum computation time
+  training.full_eval_during_train: False
+  training.run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
+  training.save_checkpoints: True # checkpoints tend to be ~250MB large for LINCS.
+  training.save_dir: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
+  
+  dataset.dataset_type: lincs
+  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/lincs_full_smiles_sciplex_genes.h5ad # full path to the anndata dataset
+  dataset.data_params.perturbation_key: pert_id # stores name of the drug
+  dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
+  dataset.data_params.dose_key: pert_dose # stores drug dose as a float
+  dataset.data_params.covariate_keys: cell_id # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+  dataset.data_params.smiles_key: canonical_smiles
+  dataset.data_params.degs_key: rank_genes_groups_cov # `uns` column name denoting the DEGs for each perturbation
+  dataset.data_params.split_key: split_ood_drugs # necessary field for train, test, ood splits.
+  dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
+
+  model.load_pretrained: False
+  model.pretrained_model_path: null
+  model.pretrained_model_hashes: null
+  model.additional_params.patience: 4 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
+  model.additional_params.decoder_activation: linear # last layer of the decoder
+  model.additional_params.doser_type: amortized # non-linearity for doser function
+  model.embedding.directory: null # null will load the path from paths.py
+
+  model.additional_params.seed: 1337
+
+  # these were picked in the `lincs_rdkit_hparam` experiment
+  model.hparams.dim: 32
+  model.hparams.dropout: 0.262378
+  model.hparams.autoencoder_width: 256
+  model.hparams.autoencoder_depth: 4
+  model.hparams.autoencoder_lr: 0.001121
+  model.hparams.autoencoder_wd: 3.752056e-7
+  model.hparams.adversary_width: 128
+  model.hparams.adversary_depth: 3
+  model.hparams.adversary_lr: 0.000806
+  model.hparams.adversary_wd: 0.000004
+  model.hparams.adversary_steps: 2 # every X steps, update the adversary INSTEAD OF the autoencoder.
+  model.hparams.reg_adversary: 24.082073
+  model.hparams.penalty_adversary: 3.347776
+  model.hparams.batch_size: 128
+
+# these were picked in the `lincs_all_embedding_hparam` experiment (2nd part in `lincs_rdkit_hparam`)
+rdkit:
+  fixed:
+    model.embedding.model: rdkit
+    model.hparams.dosers_width: 64
+    model.hparams.dosers_depth: 3
+    model.hparams.dosers_lr: 0.001121
+    model.hparams.dosers_wd: 3.752056e-7
+    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+    model.hparams.embedding_encoder_width: 128
+    model.hparams.embedding_encoder_depth: 4
+
+vanilla:
+  fixed:
+    model.embedding.model: vanilla
+    model.hparams.dosers_width: 512
+    model.hparams.dosers_depth: 2
+    model.hparams.dosers_lr: 0.000233
+    model.hparams.dosers_wd: 3.549879e-08
+    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+    model.hparams.embedding_encoder_width: 128
+    model.hparams.embedding_encoder_depth: 2
+
+grover_base:
+  fixed:
+    model.embedding.model: grover_base
+    model.hparams.dosers_width: 512
+    model.hparams.dosers_depth: 3
+    model.hparams.dosers_lr: 0.000561
+    model.hparams.dosers_wd: 1.329292e-07 
+    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+    model.hparams.embedding_encoder_width: 512
+    model.hparams.embedding_encoder_depth: 3
+
+jtvae:
+  fixed:
+    model.embedding.model: jtvae
+    model.hparams.dosers_width: 64
+    model.hparams.dosers_depth: 2
+    model.hparams.dosers_lr: 0.000205
+    model.hparams.dosers_wd: 2.937538e-08 
+    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+    model.hparams.embedding_encoder_width: 256
+    model.hparams.embedding_encoder_depth: 4
+
+MPNN:
+  fixed:
+    model.embedding.model: MPNN
+    model.hparams.dosers_width: 64
+    model.hparams.dosers_depth: 2
+    model.hparams.dosers_lr: 0.001575
+    model.hparams.dosers_wd: 6.251374e-07
+    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+    model.hparams.embedding_encoder_width: 128
+    model.hparams.embedding_encoder_depth: 4
+
+seq2seq:
+  fixed:
+    model.embedding.model: seq2seq
+    model.hparams.dosers_width: 256
+    model.hparams.dosers_depth: 32
+    model.hparams.dosers_lr: 0.005399
+    model.hparams.dosers_wd: 3.967605e-06
+    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+    model.hparams.embedding_encoder_width: 256
+    model.hparams.embedding_encoder_depth: 4
+
+
+
