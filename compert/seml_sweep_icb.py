@@ -94,7 +94,7 @@ class ExperimentWrapper:
     def init_drug_embedding(self, embedding: dict):
         self.embedding_model_type = embedding["model"]
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        if embedding["model"] is not "vanilla":
+        if embedding["model"] != "vanilla":
             # ComPert will use the provided embedding, which is frozen during training
             self.drug_embeddings = get_chemical_representation(
                 smiles=self.dataset.canon_smiles_unique_sorted,

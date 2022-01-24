@@ -1,13 +1,14 @@
-# Config for hyperparameter-tuning CPA on LINCS
+# Config for hyperparameter-tuning CCPA on LINCS, using all embeddings, while keeping AE hparams fixed
+# (part 2 of lincs_rdkit_hparam)
 seml:
   executable: compert/seml_sweep_icb.py
-  name: chemical_CPA_lincs
+  name: lincs_all_emb_hparam
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
-  project_root_dir: ..
+  project_root_dir: ../..
 
 slurm:
-  max_simultaneous_jobs: 10
+  max_simultaneous_jobs: 20
   experiments_per_job: 1
   sbatch_options_template: GPU
   sbatch_options:
@@ -37,41 +38,52 @@ fixed:
   dataset.data_params.dose_key: pert_dose # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_id # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: canonical_smiles
+  dataset.data_params.degs_key: rank_genes_groups_cov # `uns` column name denoting the DEGs for each perturbation
   dataset.data_params.split_key: random_split # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
 
   model.load_pretrained: False
   model.pretrained_model_path: null
   model.pretrained_model_hashes: null
-  model.additional_params.patience: 3 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
+  model.additional_params.patience: 4 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: amortized # non-linearity for doser function
   model.embedding.directory: null # null will load the path from paths.py
 
-  model.hparams.dim: 64
+  model.additional_params.seed: 1337
+
+  # these were picked using the first part of the experiment
+  model.hparams.dim: 32
+  model.hparams.dropout: 0.262378
+  model.hparams.autoencoder_width: 256
+  model.hparams.autoencoder_depth: 4
+  model.hparams.autoencoder_lr: 0.001121
+  model.hparams.autoencoder_wd: 3.752056e-7
+  model.hparams.adversary_width: 128
+  model.hparams.adversary_depth: 3
+  model.hparams.adversary_lr: 0.000806
+  model.hparams.adversary_wd: 0.000004
+  model.hparams.adversary_steps: 2 # every X steps, update the adversary INSTEAD OF the autoencoder.
+  model.hparams.reg_adversary: 24.082073
+  model.hparams.penalty_adversary: 3.347776
+  model.hparams.batch_size: 128
 
 grid:
-  model.additional_params.seed:
-    type: choice
-    options:
-      - 1337
   model.embedding.model:
     type: choice
     options:
-#      - grover_base
-#      - MPNN
+      - vanilla
+      - grover_base
+      - GCN
+      - weave
+      - MPNN
       - rdkit
-#      - weave
-#      - GCN
-      - null
+      - jtvae
+      - seq2seq
 
 random:
-  samples: 15
+  samples: 18
   seed: 42
-  model.hparams.dropout:
-    type: uniform
-    min: 0.0
-    max: 0.5
   model.hparams.dosers_width:
     type: choice
     options:
@@ -93,66 +105,7 @@ random:
     type: loguniform
     min: 1e-8
     max: 1e-5
-  model.hparams.autoencoder_width:
-    type: choice
-    options:
-      - 256
-      - 512
-      - 1024
-  model.hparams.autoencoder_depth:
-    type: choice
-    options:
-      - 3
-      - 4
-      - 5
-  model.hparams.autoencoder_lr:
-    type: loguniform
-    min: 1e-4
-    max: 1e-2
-  model.hparams.autoencoder_wd:
-    type: loguniform
-    min: 1e-8
-    max: 1e-5
-  model.hparams.adversary_width:
-    type: choice
-    options:
-      - 64
-      - 128
-      - 256
-  model.hparams.adversary_depth:
-    type: choice
-    options:
-      - 2
-      - 3
-      - 4
-  model.hparams.adversary_lr:
-    type: loguniform
-    min: 5e-5
-    max: 1e-3
-  model.hparams.adversary_wd:
-    type: loguniform
-    min: 1e-5
-    max: 1e-3
-  model.hparams.adversary_steps: # every X steps, update the adversary INSTEAD OF the autoencoder.
-    type: choice
-    options:
-      - 2
-      - 3
-  model.hparams.reg_adversary:
-    type: loguniform
-    min: 5
-    max: 100
-  model.hparams.penalty_adversary:
-    type: loguniform
-    min: 1
-    max: 10
-  model.hparams.batch_size:
-    type: choice
-    options:
-      - 64
-      - 128
-      - 256
-  model.hparams.step_size_lr:
+  model.hparams.step_size_lr: # this applies to all optimizers (AE, ADV, DRUG)
     type: choice
     options:
       - 50
