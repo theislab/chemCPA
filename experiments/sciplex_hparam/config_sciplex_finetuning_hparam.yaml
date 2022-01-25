@@ -2,7 +2,7 @@
 # This lead direclt to part 1 and 3 of `finetuning_num_genes`
 seml:
   executable: compert/seml_sweep_icb.py
-  name: ft_trapnell_num_genes_lincs_genes
+  name: ft_sciplex_hparam
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
   project_root_dir: ../..
@@ -67,7 +67,7 @@ fixed:
   model.hparams.autoencoder_depth: 4
 
 random: 
-  samples: 30
+  samples: 10
   seed: 42
   model.hparams.batch_size:
     type: choice
@@ -125,7 +125,12 @@ random:
     min: 1e-8
     max: 1e-5
 
-
+grid:
+  model.load_pretrained:
+    type: choice
+    options:
+      - True
+      - False
 rdkit:
   fixed:
     model.embedding.model: rdkit
@@ -137,12 +142,6 @@ rdkit:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 128
     model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False
 
 grover_base:
   fixed:
@@ -155,12 +154,6 @@ grover_base:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 512
     model.hparams.embedding_encoder_depth: 3
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False
 
 jtvae:
   fixed:
@@ -173,12 +166,6 @@ jtvae:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 256
     model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False 
 
 MPNN:
   fixed:
@@ -191,12 +178,6 @@ MPNN:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 128
     model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False 
 
 seq2seq:
   fixed:
@@ -209,12 +190,6 @@ seq2seq:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 256
     model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False 
 
 vanilla:
   fixed:
@@ -227,11 +202,3 @@ vanilla:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 128
     model.hparams.embedding_encoder_depth: 2
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False
-
-
