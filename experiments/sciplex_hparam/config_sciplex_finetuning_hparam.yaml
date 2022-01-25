@@ -147,7 +147,7 @@ grover_base:
   fixed:
     model.embedding.model: grover_base
     model.hparams.dosers_width: 512
-    model.hparams.dosers_depth: 3
+    model.hparams.dosers_depth: 2
     # Params for corresponding hash - left in for reference
     # model.hparams.dosers_lr: 0.000561
     # model.hparams.dosers_wd: 1.329292e-07 
