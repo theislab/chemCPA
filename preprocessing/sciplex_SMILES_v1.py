@@ -55,7 +55,7 @@ adata_cpi = sc.read(PROJECT_DIR / "datasets" / "trapnell_final_V7.h5ad")
 
 # %%
 adata_out = PROJECT_DIR / "datasets" / "trapnell_cpa.h5ad"
-adata_out_subset = PROJECT_DIR / "datasets" / "trapnell_cpa_subsets.h5ad"
+adata_out_subset = PROJECT_DIR / "datasets" / "trapnell_cpa_subset.h5ad"
 
 # %% [markdown]
 # Overview over adata files
