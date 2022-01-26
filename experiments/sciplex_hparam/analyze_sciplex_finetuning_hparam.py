@@ -116,7 +116,7 @@ results_clean["result.perturbation disentanglement"] = results_clean[
 ].apply(lambda x: x[0])
 
 
-results_clean.head(3)
+results_clean.head(10)
 
 # %% [markdown]
 # ## Look at early stopping
@@ -211,17 +211,24 @@ for y in ["result.perturbation disentanglement"]:
 # ## Subselect to disentangled models
 
 # %%
-n_top = 10
+n_top = 5
 
-performance_condition = lambda emb, max_entangle: (
-    results_clean["config.model.embedding.model"] == emb
-) & (results_clean["result.perturbation disentanglement"] < max_entangle)
+performance_condition = (
+    lambda emb, pretrained, max_entangle: (
+        results_clean["config.model.embedding.model"] == emb
+    )
+    & (results_clean["result.perturbation disentanglement"] < max_entangle)
+    & (results_clean["config.model.load_pretrained"] == pretrained)
+)
 
 best = []
 for embedding in list(results_clean["config.model.embedding.model"].unique()):
-    df = results_clean[performance_condition(embedding, 0.18)]
-    print(embedding, len(df))
-    best.append(df.sort_values(by="result.val_mean_de", ascending=False).head(n_top))
+    for pretrained in [True, False]:
+        df = results_clean[performance_condition(embedding, pretrained, 0.18)]
+        print(embedding, pretrained, len(df))
+        best.append(
+            df.sort_values(by="result.val_mean_de", ascending=False).head(n_top)
+        )
 
 best = pd.concat(best)
 
