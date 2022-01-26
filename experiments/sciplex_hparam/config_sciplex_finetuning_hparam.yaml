@@ -183,7 +183,7 @@ seq2seq:
   fixed:
     model.embedding.model: seq2seq
     model.hparams.dosers_width: 256
-    model.hparams.dosers_depth: 32
+    model.hparams.dosers_depth: 3
     # Params for corresponding hash - left in for reference
     # model.hparams.dosers_lr: 0.005399
     # model.hparams.dosers_wd: 3.967605e-06
