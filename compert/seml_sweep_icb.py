@@ -113,68 +113,95 @@ class ExperimentWrapper:
         hparams: dict,
         additional_params: dict,
         load_pretrained: bool,
+        append_ae_layer: bool,
         pretrained_model_path: str,
         pretrained_model_hashes: dict,
     ):
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.autoencoder = ComPert(
-            self.datasets["training"].num_genes,
-            self.datasets["training"].num_drugs,
-            self.datasets["training"].num_covariates,
-            device=device,
-            **additional_params,
-            hparams=hparams,
-            drug_embeddings=self.drug_embeddings,
-            use_drugs_idx=self.dataset.use_drugs_idx,
-        )
-
         if load_pretrained:
-            filename = pretrained_model_hashes[self.embedding_model_type] + ".pt"
-            filepath = Path(pretrained_model_path) / filename
-            logging.info(
-                f"Loading pretrained {self.embedding_model_type} model from: {filepath}"
+            state_dict, model_config = self.load_state_dict(
+                pretrained_model_hashes, pretrained_model_path, append_ae_layer
             )
-            dumped_model = torch.load(filepath)
-            if len(dumped_model) == 3:
-                # old version
-                state_dict, model_config, history = dumped_model
-            else:
-                # new version
-                assert len(dumped_model) == 4
-                (
-                    state_dict,
-                    adversary_cov_state_dicts,
-                    model_config,
-                    history,
-                ) = dumped_model
-
-            # sanity check
-            assert model_config["num_genes"] == self.datasets["training"].num_genes
-            assert model_config["use_drugs_idx"]
-
-            keys = list(state_dict.keys())
-            for key in keys:
-                # remove all components which we will train from scratch
-                # the drug embedding is saved in the state_dict for some reason, but we don't need it
-                if key.startswith("adversary_drugs") or key == "drug_embeddings.weight":
-                    state_dict.pop(key)
-
-            if self.embedding_model_type == "vanilla":
-                # for Vanilla CPA, we also train the amortized doser & drug_embedding_encoder anew
-                keys = list(state_dict.keys())
-                for key in keys:
-                    if key.startswith("dosers") or key.startswith(
-                        "drug_embedding_encoder"
-                    ):
-                        state_dict.pop(key)
-
-            # load the state dict
+            append_layer_width = (
+                self.datasets["training"].num_genes if append_ae_layer else None
+            )
+            in_out_size = (
+                model_config["num_genes"]
+                if append_ae_layer
+                else self.datasets["training"].num_genes
+            )
+            # idea: Reconstruct the ComPert model as pretrained (hence the "old" in_out_size)
+            # then add the append_layer (the "new" in_out_size)
+            self.autoencoder = ComPert(
+                in_out_size,
+                self.datasets["training"].num_drugs,
+                self.datasets["training"].num_covariates,
+                device=device,
+                **additional_params,
+                hparams=hparams,
+                drug_embeddings=self.drug_embeddings,
+                use_drugs_idx=self.dataset.use_drugs_idx,
+                append_layer_width=append_layer_width,
+            )
             incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
             logging.info(
                 f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}"
             )
+        else:
+            self.autoencoder = ComPert(
+                self.datasets["training"].num_genes,
+                self.datasets["training"].num_drugs,
+                self.datasets["training"].num_covariates,
+                device=device,
+                **additional_params,
+                hparams=hparams,
+                drug_embeddings=self.drug_embeddings,
+                use_drugs_idx=self.dataset.use_drugs_idx,
+                append_layer_width=None,
+            )
+
+    def load_state_dict(
+        self, pretrained_model_hashes, pretrained_model_path, append_ae_layer
+    ):
+        filename = pretrained_model_hashes[self.embedding_model_type] + ".pt"
+        filepath = Path(pretrained_model_path) / filename
+        logging.info(
+            f"Loading pretrained {self.embedding_model_type} model from: {filepath}"
+        )
+        dumped_model = torch.load(filepath)
+        if len(dumped_model) == 3:
+            # old version
+            state_dict, model_config, history = dumped_model
+        else:
+            # new version
+            assert len(dumped_model) == 4
+            (
+                state_dict,
+                adversary_cov_state_dicts,
+                model_config,
+                history,
+            ) = dumped_model
+        # sanity check
+        if append_ae_layer:
+            assert model_config["num_genes"] < self.datasets["training"].num_genes
+        else:
+            assert model_config["num_genes"] == self.datasets["training"].num_genes
+        assert model_config["use_drugs_idx"]
+        keys = list(state_dict.keys())
+        for key in keys:
+            # remove all components which we will train from scratch
+            # the drug embedding is saved in the state_dict for some reason, but we don't need it
+            if key.startswith("adversary_drugs") or key == "drug_embeddings.weight":
+                state_dict.pop(key)
+        if self.embedding_model_type == "vanilla":
+            # for Vanilla CPA, we also train the amortized doser & drug_embedding_encoder anew
+            keys = list(state_dict.keys())
+            for key in keys:
+                if key.startswith("dosers") or key.startswith("drug_embedding_encoder"):
+                    state_dict.pop(key)
+        return state_dict, model_config
 
     def update_datasets(self):
         """

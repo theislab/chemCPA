@@ -15,6 +15,7 @@ repos:
     hooks:
      - id: jupytext
        args:
+         - --from=ipynb
          - --to=py:percent
          - --pipe=black
          - --pipe=isort - --profile black --filter-files

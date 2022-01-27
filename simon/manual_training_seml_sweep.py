@@ -28,6 +28,7 @@ if __name__ == "__main__":
         hparams=args["model"]["hparams"],
         additional_params=args["model"]["additional_params"],
         load_pretrained=args["model"]["load_pretrained"],
+        append_ae_layer=args["model"]["append_ae_layer"],
         pretrained_model_path=args["model"]["pretrained_model_path"],
         pretrained_model_hashes=args["model"]["pretrained_model_hashes"],
     )
