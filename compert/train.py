@@ -359,8 +359,8 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             "optimal for perturbations": optimal_disent_score,
             "covariate disentanglement": stats_disent_cov,
             "optimal for covariates": [
-                1 / num for num in datasets["test"].num_covariates
-            ]
+                max(cov.mean(axis=0)).item() for cov in datasets["test"].covariates
+            ]  # mean over OHE embedding of covariates
             if datasets["test"].num_covariates[0] > 0
             else None,
         }
