@@ -28,6 +28,7 @@ def get_chemical_representation(
         "seq2seq",
         "rdkit",
         "jtvae",
+        "zeros",
     )
 
     if data_dir is None:
@@ -36,6 +37,7 @@ def get_chemical_representation(
         data_dir = Path(data_dir)
     assert Path(data_dir).exists()
 
+    df = None
     if embedding_model == "grover_base":
         df = pd.read_parquet(
             data_dir / "grover" / "data" / "embeddings" / "grover_base.parquet"
@@ -85,6 +87,10 @@ def get_chemical_representation(
     elif embedding_model == "jtvae":
         df = pd.read_parquet(data_dir / "jtvae" / "data" / "jtvae_dgl.parquet")
 
-    emb = torch.tensor(df.loc[smiles].values, dtype=torch.float32, device=device)
-    assert emb.shape[0] == len(smiles)
+    if df is not None:
+        emb = torch.tensor(df.loc[smiles].values, dtype=torch.float32, device=device)
+        assert emb.shape[0] == len(smiles)
+    else:
+        assert embedding_model == "zeros"
+        emb = torch.zeros((len(smiles), 256))
     return torch.nn.Embedding.from_pretrained(emb, freeze=True)

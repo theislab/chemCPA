@@ -291,7 +291,7 @@ class ComPert(torch.nn.Module):
             + [self.hparams["autoencoder_width"]] * self.hparams["autoencoder_depth"]
             + [num_genes * 2],
             last_layer_act=decoder_activation,
-            append_layer_width=2 * append_layer_width,
+            append_layer_width=2 * append_layer_width if append_layer_width else None,
             append_layer_position="last",
         )
         if self.num_drugs > 0:
