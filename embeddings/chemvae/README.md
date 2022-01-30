@@ -1,4 +1,7 @@
-# Training the Chemical VAE (w/ Teacher forcing)
+# Training the Chemical VAE
+
+This is the chemical VAE as presented in [this paper](https://pubs.acs.org/doi/abs/10.1021/acscentsci.7b00572).
+The only difference is that we're not jointly training a mol property predictor.
 
 The files need to contain a single SMILES per row, no trailing comma.
 Header needs to be `SMILES`.
