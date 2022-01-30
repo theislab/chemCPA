@@ -12,11 +12,11 @@
 # %%
 from pathlib import Path
 
+# %%
+import moses
 import numpy as np
 import pandas as pd
 import torch
-
-# %%
 from moses.vae import VAE
 from rdkit import Chem, RDLogger
 from tqdm import tqdm
@@ -29,7 +29,7 @@ config_fpath = Path(
     "/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/embeddings/chemvae/config.txt"
 )
 state_dict_fpath = Path(
-    "/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/embeddings/chem_020.pt"
+    "/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/embeddings/chemvae/vae_checkpoint_final.pt"
 )
 
 # %% pycharm={"name": "#%%\n"}
@@ -63,9 +63,7 @@ emb = np.concatenate(embeddings, axis=0)
 final_df = pd.DataFrame(
     emb, index=all_smiles, columns=[f"latent_{i+1}" for i in range(emb.shape[1])]
 )
-final_df.to_parquet(
-    "/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/embeddings/chemvae/chemvae.parquet"
-)
+final_df.to_parquet("chemvae.parquet")
 final_df
 
 
@@ -95,3 +93,8 @@ samples = model.sample(1000)
 syn_valid = sum(smiles_is_syntatically_valid(s) for s in samples) / len(samples)
 sem_valid = sum(smiles_is_syntatically_valid(s) for s in samples) / len(samples)
 print(f"TOTAL: {len(samples)} SYN: {syn_valid} SEM: {sem_valid}")
+
+# %%
+samples
+
+# %%
