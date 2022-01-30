@@ -63,7 +63,9 @@ emb = np.concatenate(embeddings, axis=0)
 final_df = pd.DataFrame(
     emb, index=all_smiles, columns=[f"latent_{i+1}" for i in range(emb.shape[1])]
 )
-final_df.to_parquet("chemvae.parquet")
+final_df.to_parquet(
+    "/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/embeddings/chemvae/chemvae.parquet"
+)
 final_df
 
 
