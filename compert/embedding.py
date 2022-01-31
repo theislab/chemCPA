@@ -29,6 +29,7 @@ def get_chemical_representation(
         "rdkit",
         "jtvae",
         "zeros",
+        "chemvae",
     )
 
     if data_dir is None:
@@ -86,6 +87,8 @@ def get_chemical_representation(
         )
     elif embedding_model == "jtvae":
         df = pd.read_parquet(data_dir / "jtvae" / "data" / "jtvae_dgl.parquet")
+    elif embedding_model == "chemvae":
+        df = pd.read_parquet(data_dir / "chemvae" / "chemvae.parquet")
 
     if df is not None:
         emb = torch.tensor(df.loc[smiles].values, dtype=torch.float32, device=device)

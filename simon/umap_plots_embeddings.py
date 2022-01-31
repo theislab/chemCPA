@@ -72,7 +72,7 @@ for i, embedding_name in enumerate(embedding_names):
     )
     mappers.append(
         (
-            umap.UMAP(n_neighbors=20, min_dist=0.1).fit_transform(embedding),
+            umap.UMAP(n_neighbors=8, min_dist=0.15).fit_transform(embedding),
             df["pathway"],
         )
     )
@@ -81,6 +81,12 @@ for i, embedding_name in enumerate(embedding_names):
 fig, axs = plt.subplots(2, 2)
 fig.set_figheight(15)
 fig.set_figwidth(15)
+emb_nice_title = {
+    "jtvae": "JTVAE",
+    "grover_base": "GROVER",
+    "rdkit": "RDKit",
+    "seq2seq": "seq2seq",
+}
 for i, ((mapper, pathway), embedding) in enumerate(zip(mappers, embedding_names)):
     ax = sn.scatterplot(
         x=mapper[:, 0],
@@ -89,7 +95,7 @@ for i, ((mapper, pathway), embedding) in enumerate(zip(mappers, embedding_names)
         hue=pathway,
         palette="tab20",
     )
-    ax.set_title(embedding)
+    ax.set_title(emb_nice_title[embedding])
     if i == 3:
         # legend on the right
         # bbox = (1.05, 2.05)
@@ -103,5 +109,3 @@ figure.savefig(
     "../../Latex/figures/05_results/UMAP_latent_embeddings_raw.png", bbox_inches="tight"
 )
 plt.show()
-
-# %% pycharm={"name": "#%%\n"}

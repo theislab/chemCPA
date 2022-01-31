@@ -369,4 +369,31 @@ ax.set_xlim([0, 0.44])
 ax.set_ylim([0.44, 0.93])
 ax.legend(loc="best")
 
+# %% [markdown]
+# ## Look at epochs vs. performance
+
+# %%
+[c for c in results_clean.columns if "epochs" in c]
+
+# %%
+fig, ax = plt.subplots(figsize=(10, 8))
+sns.scatterplot(
+    data=results_clean,
+    x="result.total_epochs",
+    y="result.test_mean_de",
+    ax=ax,
+    style="config.model.embedding.model",
+    color="grey",
+    alpha=0.7,
+    legend=None,
+)
+sns.scatterplot(
+    data=best,
+    x="result.total_epochs",
+    y="result.test_mean_de",
+    ax=ax,
+    style="config.model.embedding.model",
+    hue="config.model.embedding.model",
+)
+
 # %%

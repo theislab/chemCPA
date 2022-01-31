@@ -26,6 +26,7 @@ dependencies:
   - pre-commit
   - seml
   - py-spy
+  - moses
   # UMAP
   - umap-learn
   - datashader
