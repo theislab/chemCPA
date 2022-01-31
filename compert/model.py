@@ -2,6 +2,7 @@
 
 import json
 import logging
+from collections import OrderedDict
 from typing import Union
 
 import numpy as np
@@ -100,7 +101,14 @@ class MLP(torch.nn.Module):
     Careful: if activation is set to ReLU, ReLU is only applied to the first half of NN outputs!
     """
 
-    def __init__(self, sizes, batch_norm=True, last_layer_act="linear"):
+    def __init__(
+        self,
+        sizes,
+        batch_norm=True,
+        last_layer_act="linear",
+        append_layer_width=None,
+        append_layer_position=None,
+    ):
         super(MLP, self).__init__()
         layers = []
         for s in range(len(sizes) - 1):
@@ -121,7 +129,35 @@ class MLP(torch.nn.Module):
         else:
             raise ValueError("last_layer_act must be one of 'linear' or 'ReLU'")
 
-        self.network = torch.nn.Sequential(*layers)
+        # We add another layer either at the front / back of the sequential model. It gets a different name
+        # `append_XXX`. The naming of the other layers stays consistent.
+        # This allows us to load the state dict of the "non_appended" MLP without errors.
+        if append_layer_width:
+            assert append_layer_position in ("first", "last")
+            if append_layer_position == "first":
+                layers_dict = OrderedDict()
+                layers_dict["append_linear"] = torch.nn.Linear(
+                    append_layer_width, sizes[0]
+                )
+                layers_dict["append_bn1d"] = torch.nn.BatchNorm1d(sizes[0])
+                layers_dict["append_relu"] = torch.nn.ReLU()
+                for i, module in enumerate(layers):
+                    layers_dict[str(i)] = module
+            else:
+                layers_dict = OrderedDict(
+                    {str(i): module for i, module in enumerate(layers)}
+                )
+                layers_dict["append_bn1d"] = torch.nn.BatchNorm1d(sizes[-1])
+                layers_dict["append_relu"] = torch.nn.ReLU()
+                layers_dict["append_linear"] = torch.nn.Linear(
+                    sizes[-1], append_layer_width
+                )
+        else:
+            layers_dict = OrderedDict(
+                {str(i): module for i, module in enumerate(layers)}
+            )
+
+        self.network = torch.nn.Sequential(layers_dict)
 
     def forward(self, x):
         if self.activation == "ReLU":
@@ -208,6 +244,7 @@ class ComPert(torch.nn.Module):
         hparams="",
         drug_embeddings: Union[None, torch.nn.Embedding] = None,
         use_drugs_idx=False,
+        append_layer_width=None,
     ):
         super(ComPert, self).__init__()
         # set generic attributes
@@ -241,11 +278,12 @@ class ComPert(torch.nn.Module):
             "use_drugs_idx": use_drugs_idx,
         }
 
-        # set models
         self.encoder = MLP(
             [num_genes]
             + [self.hparams["autoencoder_width"]] * self.hparams["autoencoder_depth"]
-            + [self.hparams["dim"]]
+            + [self.hparams["dim"]],
+            append_layer_width=append_layer_width,
+            append_layer_position="first",
         )
 
         self.decoder = MLP(
@@ -253,6 +291,8 @@ class ComPert(torch.nn.Module):
             + [self.hparams["autoencoder_width"]] * self.hparams["autoencoder_depth"]
             + [num_genes * 2],
             last_layer_act=decoder_activation,
+            append_layer_width=2 * append_layer_width if append_layer_width else None,
+            append_layer_position="last",
         )
         if self.num_drugs > 0:
             self.adversary_drugs = MLP(
