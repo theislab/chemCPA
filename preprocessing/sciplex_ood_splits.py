@@ -93,6 +93,8 @@ def preprocess_adata_subset_type(adata, cell_type, n_comps=25):
 
 # %%
 preprocess_adata(adata_sciplex, n_comps=25, n_neighbors=50)
+
+# %%
 preprocess_adata(adata_sciplex_lincs_genes)
 
 # %% [markdown]
@@ -755,9 +757,18 @@ adata_sciplex_lincs_genes.obs["split_ood_finetuning"] = adata_sciplex.obs[
 sc.write(PROJECT_DIR / "datasets" / "sciplex_complete.h5ad", adata_sciplex)
 
 # %%
-sc.write(PROJECT_DIR / "datasets" / "sciplex_complete_lincs_genes.h5ad", adata_sciplex)
+sc.write(
+    PROJECT_DIR / "datasets" / "sciplex_complete_lincs_genes.h5ad",
+    adata_sciplex_lincs_genes,
+)
 
 # %% [markdown]
 # ______
+
+# %%
+sc.read(PROJECT_DIR / "datasets" / "sciplex_complete.h5ad")
+
+# %%
+sc.read(PROJECT_DIR / "datasets" / "sciplex_complete_lincs_genes.h5ad")
 
 # %%
