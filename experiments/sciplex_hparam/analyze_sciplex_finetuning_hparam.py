@@ -15,6 +15,7 @@
 # This is preliminary to the `fintuning_num_genes` and `finetuning_OOD_prediction` experiments. We look at the results of sweeping the optimisation related hyperparameters for fine-tuning on the sciplex dataset for all other embeddings.
 
 # %% pycharm={"name": "#%%\n"}
+import math
 from pathlib import Path
 
 import matplotlib
@@ -40,34 +41,25 @@ results = seml.get_results(
 )
 
 # %% pycharm={"name": "#%%\n"}
-# filter out the non-relevant rdkit runs
-results = results[(results["config.model.hparams.dim"] == 32)]
+# Look at number of experiments per model
 results["config.model.embedding.model"].value_counts()
 
 # %% pycharm={"name": "#%%\n"}
 results.loc[:, [c for c in results.columns if "disentanglement" in c]]
-
-# %% pycharm={"name": "#%%\n"}
-good_disentanglement = (
-    results["result.perturbation disentanglement"].apply(lambda x: x[0]) < 0.2
-)
-
-# %%
-results.loc[good_disentanglement, [c for c in results.columns if "result" in c]]
 
 # %% [markdown]
 # ## Preprocessing the results dataframe
 
 # %%
 sweeped_params = [
-    "model.hparams.dim",
-    "model.hparams.dropout",
-    "model.hparams.dosers_width",
-    "model.hparams.dosers_depth",
+    # "model.hparams.dim",
+    # "model.hparams.dropout",
+    # "model.hparams.dosers_width",
+    # "model.hparams.dosers_depth",
     "model.hparams.dosers_lr",
     "model.hparams.dosers_wd",
-    "model.hparams.autoencoder_width",
-    "model.hparams.autoencoder_depth",
+    # "model.hparams.autoencoder_width",
+    # "model.hparams.autoencoder_depth",
     "model.hparams.autoencoder_lr",
     "model.hparams.autoencoder_wd",
     "model.hparams.adversary_width",
@@ -79,14 +71,12 @@ sweeped_params = [
     "model.hparams.penalty_adversary",
     "model.hparams.batch_size",
     "model.hparams.step_size_lr",
-    "model.hparams.embedding_encoder_width",
-    "model.hparams.embedding_encoder_depth",
+    # "model.hparams.embedding_encoder_width",
+    # "model.hparams.embedding_encoder_depth",
 ]
 
 # %%
-# percentage of training runs that resulted in NaNs
-import math
-
+# percentage of training runs that resulted in NaNs or totally failed
 nan_results = results[
     results["result.loss_reconstruction"].apply(lambda x: math.isnan(sum(x)))
 ]
@@ -94,6 +84,11 @@ results_clean = results[
     ~results["result.loss_reconstruction"].apply(lambda x: math.isnan(sum(x)))
 ].copy()
 print(len(nan_results) / len(results))
+
+# Remove runs with r2 < 0.6 on the training set
+results_clean = results_clean[
+    results_clean["result.training"].apply(lambda x: x[0][0]) > 0.6
+]
 
 # %%
 results_clean["config.model.embedding.model"].value_counts()
@@ -116,7 +111,7 @@ results_clean["result.perturbation disentanglement"] = results_clean[
 ].apply(lambda x: x[0])
 
 
-results_clean.head(10)
+results_clean.head(3)
 
 # %% [markdown]
 # ## Look at early stopping
@@ -152,7 +147,7 @@ for i, y in enumerate(
         ax=ax[i],
         scale="width",
     )
-    # ax[i].set_ylim([0.39,1])
+    ax[i].set_ylim([0.0, 1])
     ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
     ax[i].set_xlabel("")
     ax[i].set_ylabel(y.split(".")[-1])
@@ -232,6 +227,13 @@ for embedding in list(results_clean["config.model.embedding.model"].unique()):
 
 best = pd.concat(best)
 
+# %% [markdown]
+# 1. Check the disentanglement computation
+# 2. Plot the UMAP on the drug latens and compare from scratch vs. pre-trained
+#     * This would be a major selling point
+# 3. Other metics but R2? CPA Review: Wasserstein distance?
+# 4. Better variance r2 for pre-trained models? Variance of the gaussian output (3rd and 4th output)
+
 # %%
 # All genes, DE genes, disentanglement
 rows, cols = 1, 3
@@ -249,12 +251,39 @@ for i, y in enumerate(
         ax=ax[i],
         scale="width",
     )
+    # ax[i].set_ylim([0.75, 1.01])
     ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
     ax[i].set_xlabel("")
     ax[i].set_ylabel(y.split(".")[-1])
     ax[i].legend(title="Pretrained", loc="lower right", fontsize=18, title_fontsize=24)
 plt.tight_layout()
 
+
+# %%
+rows, cols = 1, 3
+fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
+
+for i, y in enumerate(
+    [
+        "result.training_mean",
+        "result.training_mean_de",
+        "result.perturbation disentanglement",
+    ]
+):
+    sns.violinplot(
+        data=best,
+        x="config.model.embedding.model",
+        y=y,
+        hue="config.model.load_pretrained",
+        inner="points",
+        ax=ax[i],
+        scale="width",
+    )
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
+    ax[i].set_xlabel("")
+    ax[i].set_ylabel(y.split(".")[-1])
+    ax[i].legend(title="Pretrained", loc="best", fontsize=18, title_fontsize=24)
+plt.tight_layout()
 
 # %% [markdown]
 # ## Take a deeper look in the `.config` of the best performing models
