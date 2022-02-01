@@ -1,5 +1,5 @@
 # Config for fine-tuning CCPA on Trapnell from LINCS pre-training with identical gene sets 
-# This lead direclt to part 1 and 3 of `finetuning_num_genes`
+# This leads direclty to part 1 and 3 of `finetuning_num_genes` and also o `finetuning_OOD_prediction`
 seml:
   executable: compert/seml_sweep_icb.py
   name: ft_sciplex_hparam
@@ -32,7 +32,7 @@ fixed:
   training.save_dir: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
   
   dataset.dataset_type: trapnell
-  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa_lincs_genes.h5ad # full path to the anndata dataset
+  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_lincs_genes.h5ad # full path to the anndata dataset
   dataset.data_params.perturbation_key: condition # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
   dataset.data_params.dose_key: dose # stores drug dose as a float
@@ -66,7 +66,7 @@ fixed:
   model.hparams.autoencoder_depth: 4
 
 random: 
-  samples: 20
+  samples: 10
   seed: 42
   model.hparams.batch_size:
     type: choice
