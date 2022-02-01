@@ -134,7 +134,7 @@ grid:
     type: choice 
     options: 
       - split_ho_pathway # necessary field for train, test, ood splits.
-      - split_ood_significant_drugs # necessary field for train, test, ood splits.
+      - split_ood_finetuning # necessary field for train, test, ood splits.
 
 rdkit:
   fixed:
