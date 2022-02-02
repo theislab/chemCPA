@@ -707,6 +707,16 @@ validation_cond = (adata_sciplex.obs.condition.isin(validation_drugs)) & (
 val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.2, copy=True).obs.index
 adata_sciplex.obs.loc[val_idx, "split_ood_finetuning"] = "test"
 
+validation_cond = adata_sciplex.obs.split_ood_finetuning == "train"
+val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.04, copy=True).obs.index
+adata_sciplex.obs.loc[val_idx, "split_ood_finetuning"] = "test"
+
+validation_cond = (adata_sciplex.obs.split_ood_finetuning == "train") & (
+    adata_sciplex.obs.control.isin([1])
+)
+val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.05, copy=True).obs.index
+adata_sciplex.obs.loc[val_idx, "split_ood_finetuning"] = "test"
+
 # %%
 adata_sciplex.obs.condition.value_counts()
 
@@ -770,5 +780,17 @@ sc.read(PROJECT_DIR / "datasets" / "sciplex_complete.h5ad")
 
 # %%
 sc.read(PROJECT_DIR / "datasets" / "sciplex_complete_lincs_genes.h5ad")
+
+# %% [markdown]
+# _________
+
+# %% [markdown]
+# ### Check splits
+
+# %%
+pd.crosstab(adata_sciplex.obs.split_ood_finetuning, adata_sciplex.obs.control)
+
+# %%
+pd.crosstab(adata_sciplex.obs.split_ho_pathway, adata_sciplex.obs.control)
 
 # %%
