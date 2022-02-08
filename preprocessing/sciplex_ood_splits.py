@@ -793,4 +793,46 @@ pd.crosstab(adata_sciplex.obs.split_ood_finetuning, adata_sciplex.obs.control)
 # %%
 pd.crosstab(adata_sciplex.obs.split_ho_pathway, adata_sciplex.obs.control)
 
+# %% [markdown]
+# ____
+
+# %% [markdown]
+# ## Create small sciplex dataset
+
+# %%
+adatas = []
+
+for perturbation in np.unique(adata.obs.condition):
+    tmp = adata[adata.obs.condition == perturbation].copy()
+    tmp = sc.pp.subsample(tmp, n_obs=40, copy=True)
+    adatas.append(tmp)
+
+adata_subset = adatas[0].concatenate(adatas[1:])
+adata_subset.uns = adata.uns.copy()
+
+adata_subset
+
+# %%
+from sklearn.model_selection import train_test_split
+
+if "split" not in list(adata_subset.obs):
+    print("Addig 'split' to 'adata_subset.obs'.")
+    obs_train, obs_tmp = train_test_split(adata_subset.obs.index, test_size=0.3)
+    obs_val, obs_test = train_test_split(obs_tmp, test_size=0.5)
+
+    adata_subset.obs["split"] = "train"
+    adata_subset.obs.loc[adata_subset.obs.index.isin(obs_val), "split"] = "test"
+    adata_subset.obs.loc[adata_subset.obs.index.isin(obs_test), "split"] = "ood"
+
+# %%
+adata_subset.obs.split.value_counts()
+
+# %%
+sc.write(
+    PROJECT_DIR / "datasets" / "sciplex_complete_subset_lincs_genes.h5ad", adata_subset
+)
+
+# %% [markdown]
+# ____
+
 # %%
