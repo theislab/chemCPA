@@ -15,7 +15,7 @@ from compert.data import load_dataset_splits
 from compert.embedding import get_chemical_representation
 from compert.model import ComPert
 from compert.profiling import Profiler
-from compert.train import custom_collate, evaluate, evaluate_r2
+from compert.train import custom_collate, evaluate, evaluate_r2, evaluate_single_loss
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -319,9 +319,19 @@ class ExperimentWrapper:
                         self.datasets["test_treated"],
                         self.datasets["test_control"].genes,
                     )
+                    evaluation_stats["test_single_loss"] = evaluate_single_loss(
+                        self.autoencoder,
+                        self.datasets["test_treated"],
+                    )
                     self.autoencoder.train()
+                # test_score = (
+                #     np.mean(evaluation_stats["test"])
+                #     if evaluation_stats["test"]
+                #     else None
+                # )
+
                 test_score = (
-                    np.mean(evaluation_stats["test"])
+                    evaluation_stats["test"][1]  # DE genes
                     if evaluation_stats["test"]
                     else None
                 )

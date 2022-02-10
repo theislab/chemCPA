@@ -240,7 +240,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if "dmso" in cell_drug_dose_comb.lower():
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+        ):
             continue
 
         # dataset.var_names is the list of gene names
@@ -307,6 +310,104 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         return []
 
 
+def evaluate_single_loss(autoencoder: ComPert, dataset: SubDataset):
+    """
+    Measures quality metric about an ComPert `autoencoder`. Computing
+    the reconstruction of a single datapoint in terms of the R2 score.
+
+    Considered metrics are R2 score about means and variances for all genes, as
+    well as R2 score about means and variances about differentially expressed
+    (_de) genes.
+    """
+    mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
+
+    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+    for cell_drug_dose_comb, category_count in zip(
+        *np.unique(dataset.pert_categories, return_counts=True)
+    ):
+        if dataset.perturbation_key is None:
+            break
+
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
+
+        # doesn't make sense to evaluate DMSO (=control) as a perturbation
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+        ):
+            continue
+
+        # dataset.var_names is the list of gene names
+        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
+        # genes for every cell_drug_dose combination.
+        bool_de = dataset.var_names.isin(
+            np.array(dataset.de_genes[cell_drug_dose_comb])
+        )
+        idx_de = bool2idx(bool_de)
+
+        # need at least two genes to be able to calc r2 score
+        if len(idx_de) < 2:
+            continue
+
+        bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
+        idx_all = bool2idx(bool_category)
+        idx = idx_all[0]
+        y_true = dataset.genes[idx_all, :].to(device="cuda")
+        n_obs = y_true.size(0)
+
+        emb_covs = [repeat_n(cov[idx], n_obs) for cov in dataset.covariates]
+        if dataset.use_drugs_idx:
+            emb_drugs = (
+                repeat_n(dataset.drugs_idx[idx], n_obs).squeeze(),
+                repeat_n(dataset.dosages[idx], n_obs).squeeze(),
+            )
+        else:
+            emb_drugs = repeat_n(dataset.drugs[idx], n_obs)
+
+        # copies just the needed genes to GPU
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
+
+        mean_pred, var_pred = compute_prediction(
+            autoencoder,
+            y_true,
+            emb_drugs,
+            emb_covs,
+        )
+
+        # mean of r2 scores for current cell_drug_dose_comb
+        r2_m = torch.Tensor(
+            [compute_r2(y_true[i], mean_pred[i]) for i in range(n_obs)]
+        ).mean()
+        r2_m_de = torch.Tensor(
+            [compute_r2(y_true[i, idx_de], mean_pred[i, idx_de]) for i in range(n_obs)]
+        ).mean()
+
+        # r2 score for predicted variance of obs in current cell_drug_dose_comb
+        yt_v = y_true.var(dim=0)
+        yp_v = var_pred.mean(dim=0)
+        r2_v = compute_r2(yt_v, yp_v)
+        r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
+
+        # if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
+        #     continue
+
+        mean_score.append(r2_m)
+        var_score.append(r2_v)
+        mean_score_de.append(r2_m_de)
+        var_score_de.append(r2_v_de)
+    print(f"Number of different r2 computations: {len(mean_score)}")
+    if len(mean_score) > 0:
+        return [
+            np.mean(s, dtype=float)
+            for s in [mean_score, mean_score_de, var_score, var_score_de]
+        ]
+    else:
+        return []
+
+
 def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
     """
     Measure quality metrics using `evaluate()` on the training, test, and
@@ -346,6 +447,13 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
             ),
+            "training_single_loss": evaluate_single_loss(
+                autoencoder, datasets["training_treated"]
+            ),
+            "test_single_loss": eval_stats["test_single_loss"]
+            if "test_single_loss" in eval_stats
+            else evaluate_single_loss(autoencoder, datasets["test_treated"]),
+            "ood_single_loss": evaluate_single_loss(autoencoder, datasets["ood"]),
             # "training_logfold": evaluate_logfold_r2(
             #     autoencoder, datasets["training_treated"], datasets["training_control"]
             # ),
