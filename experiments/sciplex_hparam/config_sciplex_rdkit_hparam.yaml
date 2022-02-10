@@ -113,8 +113,8 @@ random:
     max: 100
   model.hparams.penalty_adversary:
     type: loguniform
-    min: 0.01
-    max: 2
+    min: 0.5
+    max: 5
   model.hparams.dosers_lr:
     type: loguniform
     min: 1e-4
