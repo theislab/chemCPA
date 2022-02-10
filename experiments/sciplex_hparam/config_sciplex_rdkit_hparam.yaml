@@ -24,7 +24,7 @@ fixed:
   profiling.outdir: "./"
 
   training.checkpoint_freq: 15 # checkpoint frequency to run evaluate, and maybe save checkpoint
-  training.num_epochs: 1500 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
+  training.num_epochs: 500 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
   training.max_minutes: 1200 # maximum computation time
   training.full_eval_during_train: False
   training.run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
@@ -45,14 +45,14 @@ fixed:
   model.pretrained_model_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
   model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding. Used for loading model checkpoints. Hashes taken from `analyze_lincs_all_embeddings_hparam.ipynb`
       grover_base: ff420aea264fca7668ecb147f60762a1
-      MPNN: ff9629a1b216372be8b205556cabc6fb
+      # MPNN: ff9629a1b216372be8b205556cabc6fb
       rdkit: 4f061dbfc7af05cf84f06a724b0c8563
-      weave: 1244d8b476696a7e1c01fd05d73d7450
-      jtvae: a7060ac4e2c6154e64a13acd414cbba2
-      seq2seq: e31119adc782888d5b75c57f8c803ee0
-      GCN: aedb25c686fb856e574a951f749b8dcf
-      vanilla: ba3569d1f5898a6bb964b7fafbed2641 # Vanilla CPA, new embedding will be trained.
-  model.additional_params.patience: 4 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
+      # weave: 1244d8b476696a7e1c01fd05d73d7450
+      # jtvae: a7060ac4e2c6154e64a13acd414cbba2
+      # seq2seq: e31119adc782888d5b75c57f8c803ee0
+      # GCN: aedb25c686fb856e574a951f749b8dcf
+      # vanilla: ba3569d1f5898a6bb964b7fafbed2641 # Vanilla CPA, new embedding will be trained.
+  model.additional_params.patience: 5 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: amortized # non-linearity for doser function
   model.embedding.directory: null # null will load the path from paths.py
@@ -66,7 +66,7 @@ fixed:
   model.hparams.autoencoder_depth: 4
 
 random: 
-  samples: 10
+  samples: 15
   seed: 42
   model.hparams.batch_size:
     type: choice
