@@ -310,7 +310,7 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         return []
 
 
-def evaluate_single_loss(autoencoder: ComPert, dataset: SubDataset):
+def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
     """
     Measures quality metric about an ComPert `autoencoder`. Computing
     the reconstruction of a single datapoint in terms of the R2 score.
@@ -458,13 +458,11 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
             ),
-            "training_single_loss": evaluate_single_loss(
-                autoencoder, datasets["training_treated"]
-            ),
-            "test_single_loss": eval_stats["test_single_loss"]
-            if "test_single_loss" in eval_stats
-            else evaluate_single_loss(autoencoder, datasets["test_treated"]),
-            "ood_single_loss": evaluate_single_loss(autoencoder, datasets["ood"]),
+            "training_sc": evaluate_r2_sc(autoencoder, datasets["training_treated"]),
+            "test_sc": eval_stats["test_sc"]
+            if "test_sc" in eval_stats
+            else evaluate_r2_sc(autoencoder, datasets["test_treated"]),
+            "ood_sc": evaluate_r2_sc(autoencoder, datasets["ood"]),
             # "training_logfold": evaluate_logfold_r2(
             #     autoencoder, datasets["training_treated"], datasets["training_control"]
             # ),
