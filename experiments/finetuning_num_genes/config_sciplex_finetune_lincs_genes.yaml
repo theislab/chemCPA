@@ -1,8 +1,7 @@
 # Config for finetuning-tuning (on Trapnell) a CPA model that was petrained on LINCS
-# This doesn't yet contain the adjustments to the adversaries parameters.
 seml:
   executable: compert/seml_sweep_icb.py
-  name: ft_trapnell_num_genes_lincs_genes
+  name: ft_trapnell_num_genes
   output_dir: sweeps/logs
   conda_environment: chemical_CPA
   project_root_dir: ../..
@@ -23,8 +22,8 @@ fixed:
   profiling.run_profiler: False
   profiling.outdir: "./"
 
-  training.checkpoint_freq: 15 # checkpoint frequency to run evaluate, and maybe save checkpoint
-  training.num_epochs: 1500 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
+  training.checkpoint_freq: 25 # checkpoint frequency to run evaluate, and maybe save checkpoint
+  training.num_epochs: 400 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
   training.max_minutes: 1200 # maximum computation time
   training.full_eval_during_train: False
   training.run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
@@ -32,28 +31,25 @@ fixed:
   training.save_dir: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
   
   dataset.dataset_type: trapnell
-  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa_lincs_genes.h5ad # full path to the anndata dataset
   dataset.data_params.perturbation_key: condition # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
   dataset.data_params.dose_key: dose # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: SMILES
-  dataset.data_params.degs_key: lincs_DEGs # `uns` column name denoting the DEGs for each perturbation
-  dataset.data_params.split_key: split_ho_pathway # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True # If false, will use One-hot encoding instead
 
   # model.load_pretrained: True
   model.pretrained_model_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
   model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding. Used for loading model checkpoints. Hashes taken from `analyze_lincs_all_embeddings_hparam.ipynb`
-      grover_base: ff420aea264fca7668ecb147f60762a1
-      MPNN: ff9629a1b216372be8b205556cabc6fb
+      # grover_base: ff420aea264fca7668ecb147f60762a1
+      # MPNN: ff9629a1b216372be8b205556cabc6fb
       rdkit: 4f061dbfc7af05cf84f06a724b0c8563
-      weave: 1244d8b476696a7e1c01fd05d73d7450
-      jtvae: a7060ac4e2c6154e64a13acd414cbba2
-      seq2seq: e31119adc782888d5b75c57f8c803ee0
-      GCN: 6b078a999327392c2d1b34c96154e317
-      vanilla: ba3569d1f5898a6bb964b7fafbed2641 # Vanilla CPA, new embedding will be trained.
-  model.additional_params.patience: 4 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
+      # weave: 1244d8b476696a7e1c01fd05d73d7450
+      # jtvae: a7060ac4e2c6154e64a13acd414cbba2
+      # seq2seq: e31119adc782888d5b75c57f8c803ee0
+      # GCN: 6b078a999327392c2d1b34c96154e317
+      # vanilla: ba3569d1f5898a6bb964b7fafbed2641 # Vanilla CPA, new embedding will be trained.
+  model.additional_params.patience: 50 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
   model.additional_params.decoder_activation: linear # last layer of the decoder
   model.additional_params.doser_type: amortized # non-linearity for doser function
   model.embedding.directory: null # null will load the path from paths.py
@@ -65,25 +61,109 @@ fixed:
   model.hparams.dropout: 0.262378
   model.hparams.autoencoder_width: 256
   model.hparams.autoencoder_depth: 4
-  model.hparams.autoencoder_lr: 0.001121
-  model.hparams.autoencoder_wd: 3.752056e-7
-  model.hparams.adversary_width: 128
-  model.hparams.adversary_depth: 3
-  model.hparams.adversary_lr: 0.000806
-  model.hparams.adversary_wd: 0.000004
-  model.hparams.adversary_steps: 2 # every X steps, update the adversary INSTEAD OF the autoencoder.
-  model.hparams.reg_adversary: 24.082073
-  model.hparams.penalty_adversary: 3.347776
-  model.hparams.batch_size: 128
 
+  # model.hparams.autoencoder_lr: 0.001121
+  # model.hparams.autoencoder_wd: 3.752056e-7
+  # model.hparams.adversary_width: 128
+  # model.hparams.adversary_depth: 3
+  # model.hparams.adversary_lr: 0.000806
+  # model.hparams.adversary_wd: 0.000004
+  # model.hparams.adversary_steps: 2 # every X steps, update the adversary INSTEAD OF the autoencoder.
+  # model.hparams.reg_adversary: 24.082073
+  # model.hparams.penalty_adversary: 3.347776
+  # model.hparams.batch_size: 128
+
+  random: 
+  samples: 5
+  seed: 42
+  model.hparams.batch_size:
+    type: choice
+    options:
+      - 32
+      - 64
+      - 128
+  model.hparams.autoencoder_lr:
+    type: loguniform
+    min: 1e-4
+    max: 1e-2
+  model.hparams.autoencoder_wd:
+    type: loguniform
+    min: 1e-8
+    max: 1e-5
+  model.hparams.adversary_width:
+    type: choice
+    options:
+      - 64
+      - 128
+      - 256
+  model.hparams.adversary_depth:
+    type: choice
+    options:
+      - 2
+      - 3
+      - 4
+  model.hparams.adversary_lr:
+    type: loguniform
+    min: 5e-5
+    max: 1e-2
+  model.hparams.adversary_wd:
+    type: loguniform
+    min: 1e-8
+    max: 1e-3
+  model.hparams.adversary_steps: # every X steps, update the adversary INSTEAD OF the autoencoder.
+    type: choice
+    options:
+      - 2
+      - 3
+  model.hparams.reg_adversary:
+    type: loguniform
+    min: 5
+    max: 100
+  model.hparams.penalty_adversary:
+    type: loguniform
+    min: 0.01
+    max: 2
+  model.hparams.dosers_lr:
+    type: loguniform
+    min: 1e-4
+    max: 1e-2
+  model.hparams.dosers_wd:
+    type: loguniform
+    min: 1e-8
+    max: 1e-5
+
+grid:
+  model.load_pretrained:
+    type: choice
+    options:
+      - True
+      - False
+  dataset.data_params.split_key: 
+    type: choice 
+    options: 
+      - split_ho_pathway # necessary field for train, test, ood splits.
+      - split_ood_finetuning # necessary field for train, test, ood splits.
+      - split_random
+      - split_ho_epigenetic
+      - split_ho_epigenetic_all
 
 rdkit:
+  lincs_genes:
+    fixed: 
+      model.append_ae_layer: False
+      dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa_lincs_genes.h5ad # full path to the anndata dataset
+      dataset.data_params.degs_key: lincs_DEGs # `uns` column name denoting the DEGs for each perturbation
+  all_genes:
+    fixed:    
+      model.append_ae_layer: True
+      dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa.h5ad # full path to the anndata dataset
+      dataset.data_params.degs_key: all_DEGs # `uns` column name denoting the DEGs for each perturbation
   fixed:
     model.embedding.model: rdkit
     model.hparams.dosers_width: 64
     model.hparams.dosers_depth: 3
-    model.hparams.dosers_lr: 0.001121
-    model.hparams.dosers_wd: 3.752056e-7
+    # model.hparams.dosers_lr: 0.001121
+    # model.hparams.dosers_wd: 3.752056e-7
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 128
     model.hparams.embedding_encoder_depth: 4
@@ -94,89 +174,89 @@ rdkit:
         - True
         - False
 
-vanilla:
-  fixed:
-    model.embedding.model: vanilla
-    model.hparams.dosers_width: 512
-    model.hparams.dosers_depth: 2
-    model.hparams.dosers_lr: 0.000233
-    model.hparams.dosers_wd: 3.549879e-08
-    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
-    model.hparams.embedding_encoder_width: 128
-    model.hparams.embedding_encoder_depth: 2
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False
+# vanilla:
+#   fixed:
+#     model.embedding.model: vanilla
+#     model.hparams.dosers_width: 512
+#     model.hparams.dosers_depth: 2
+#     model.hparams.dosers_lr: 0.000233
+#     model.hparams.dosers_wd: 3.549879e-08
+#     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+#     model.hparams.embedding_encoder_width: 128
+#     model.hparams.embedding_encoder_depth: 2
+#   grid:
+#     model.load_pretrained:
+#       type: choice
+#       options:
+#         - True
+#         - False
 
-grover_base:
-  fixed:
-    model.embedding.model: grover_base
-    model.hparams.dosers_width: 512
-    model.hparams.dosers_depth: 3
-    model.hparams.dosers_lr: 0.000561
-    model.hparams.dosers_wd: 1.329292e-07 
-    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
-    model.hparams.embedding_encoder_width: 512
-    model.hparams.embedding_encoder_depth: 3
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False
+# grover_base:
+#   fixed:
+#     model.embedding.model: grover_base
+#     model.hparams.dosers_width: 512
+#     model.hparams.dosers_depth: 3
+#     model.hparams.dosers_lr: 0.000561
+#     model.hparams.dosers_wd: 1.329292e-07 
+#     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+#     model.hparams.embedding_encoder_width: 512
+#     model.hparams.embedding_encoder_depth: 3
+#   grid:
+#     model.load_pretrained:
+#       type: choice
+#       options:
+#         - True
+#         - False
 
-jtvae:
-  fixed:
-    model.embedding.model: jtvae
-    model.hparams.dosers_width: 64
-    model.hparams.dosers_depth: 2
-    model.hparams.dosers_lr: 0.000205
-    model.hparams.dosers_wd: 2.937538e-08 
-    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
-    model.hparams.embedding_encoder_width: 256
-    model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False 
+# jtvae:
+#   fixed:
+#     model.embedding.model: jtvae
+#     model.hparams.dosers_width: 64
+#     model.hparams.dosers_depth: 2
+#     model.hparams.dosers_lr: 0.000205
+#     model.hparams.dosers_wd: 2.937538e-08 
+#     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+#     model.hparams.embedding_encoder_width: 256
+#     model.hparams.embedding_encoder_depth: 4
+#   grid:
+#     model.load_pretrained:
+#       type: choice
+#       options:
+#         - True
+#         - False 
 
-MPNN:
-  fixed:
-    model.embedding.model: MPNN
-    model.hparams.dosers_width: 64
-    model.hparams.dosers_depth: 2
-    model.hparams.dosers_lr: 0.001575
-    model.hparams.dosers_wd: 6.251374e-07
-    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
-    model.hparams.embedding_encoder_width: 128
-    model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False 
+# MPNN:
+#   fixed:
+#     model.embedding.model: MPNN
+#     model.hparams.dosers_width: 64
+#     model.hparams.dosers_depth: 2
+#     model.hparams.dosers_lr: 0.001575
+#     model.hparams.dosers_wd: 6.251374e-07
+#     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+#     model.hparams.embedding_encoder_width: 128
+#     model.hparams.embedding_encoder_depth: 4
+#   grid:
+#     model.load_pretrained:
+#       type: choice
+#       options:
+#         - True
+#         - False 
 
-seq2seq:
-  fixed:
-    model.embedding.model: seq2seq
-    model.hparams.dosers_width: 256
-    model.hparams.dosers_depth: 32
-    model.hparams.dosers_lr: 0.005399
-    model.hparams.dosers_wd: 3.967605e-06
-    model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
-    model.hparams.embedding_encoder_width: 256
-    model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False 
+# seq2seq:
+#   fixed:
+#     model.embedding.model: seq2seq
+#     model.hparams.dosers_width: 256
+#     model.hparams.dosers_depth: 32
+#     model.hparams.dosers_lr: 0.005399
+#     model.hparams.dosers_wd: 3.967605e-06
+#     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
+#     model.hparams.embedding_encoder_width: 256
+#     model.hparams.embedding_encoder_depth: 4
+#   grid:
+#     model.load_pretrained:
+#       type: choice
+#       options:
+#         - True
+#         - False 
 
 
