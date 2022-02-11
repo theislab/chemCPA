@@ -323,6 +323,7 @@ def evaluate_single_loss(autoencoder: ComPert, dataset: SubDataset):
 
     # dataset.pert_categories contains: 'celltype_perturbation_dose' info
     pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+    inf_combinations = set()
     for cell_drug_dose_comb, category_count in zip(
         *np.unique(dataset.pert_categories, return_counts=True)
     ):
@@ -384,7 +385,6 @@ def evaluate_single_loss(autoencoder: ComPert, dataset: SubDataset):
         r2_m_de = torch.Tensor(
             [compute_r2(y_true[i, idx_de], mean_pred[i, idx_de]) for i in range(n_obs)]
         ).mean()
-
         # r2 score for predicted variance of obs in current cell_drug_dose_comb
         yt_v = y_true.var(dim=0)
         yp_v = var_pred.mean(dim=0)
@@ -394,11 +394,22 @@ def evaluate_single_loss(autoencoder: ComPert, dataset: SubDataset):
         # if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
         #     continue
 
-        mean_score.append(r2_m)
-        var_score.append(r2_v)
-        mean_score_de.append(r2_m_de)
-        var_score_de.append(r2_v_de)
+        mean_score.append(r2_m) if not r2_m == float("-inf") else inf_combinations.add(
+            cell_drug_dose_comb
+        )
+        var_score.append(r2_v) if not r2_v == float("-inf") else inf_combinations.add(
+            cell_drug_dose_comb
+        )
+        mean_score_de.append(r2_m_de) if not r2_m_de == float(
+            "-inf"
+        ) else inf_combinations.add(cell_drug_dose_comb)
+        var_score_de.append(r2_v_de) if not r2_v_de == float(
+            "-inf"
+        ) else inf_combinations.add(cell_drug_dose_comb)
     print(f"Number of different r2 computations: {len(mean_score)}")
+    print(
+        f"{len(inf_combinations)} combinations had '-inf' R2 scores:\n\t {inf_combinations}"
+    )
     if len(mean_score) > 0:
         return [
             np.mean(s, dtype=float)
