@@ -929,6 +929,13 @@ assert (adata_sciplex.obs.index == adata_sciplex_lincs_genes.obs.index).all()
 adata_sciplex_lincs_genes.obs["split_ood_finetuning"] = adata_sciplex.obs[
     "split_ood_finetuning"
 ]
+adata_sciplex_lincs_genes.obs["split_ho_epigenetic"] = adata_sciplex.obs[
+    "split_ho_epigenetic"
+]
+adata_sciplex_lincs_genes.obs["split_ho_epigenetic_all"] = adata_sciplex.obs[
+    "split_ho_epigenetic_all"
+]
+adata_sciplex_lincs_genes.obs["split_random"] = adata_sciplex.obs["split_random"]
 
 # %%
 sc.write(PROJECT_DIR / "datasets" / "sciplex_complete.h5ad", adata_sciplex)
