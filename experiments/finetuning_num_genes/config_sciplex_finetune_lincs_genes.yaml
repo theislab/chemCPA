@@ -73,7 +73,7 @@ fixed:
   # model.hparams.penalty_adversary: 3.347776
   # model.hparams.batch_size: 128
 
-  random: 
+random: 
   samples: 5
   seed: 42
   model.hparams.batch_size:
@@ -151,12 +151,12 @@ rdkit:
   lincs_genes:
     fixed: 
       model.append_ae_layer: False
-      dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa_lincs_genes.h5ad # full path to the anndata dataset
+      dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_lincs_genes.h5ad # full path to the anndata dataset
       dataset.data_params.degs_key: lincs_DEGs # `uns` column name denoting the DEGs for each perturbation
   all_genes:
     fixed:    
       model.append_ae_layer: True
-      dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa.h5ad # full path to the anndata dataset
+      dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete.h5ad # full path to the anndata dataset
       dataset.data_params.degs_key: all_DEGs # `uns` column name denoting the DEGs for each perturbation
   fixed:
     model.embedding.model: rdkit
@@ -167,12 +167,6 @@ rdkit:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 128
     model.hparams.embedding_encoder_depth: 4
-  grid:
-    model.load_pretrained:
-      type: choice
-      options:
-        - True
-        - False
 
 # vanilla:
 #   fixed:
