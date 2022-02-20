@@ -8,3 +8,6 @@ EMBEDDING_DIR = Path(
     "/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/embeddings"
 )
 PROJECT_DIR = Path("/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/")
+CHECKPOINT_DIR = Path(
+    "/storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints"
+)
