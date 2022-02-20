@@ -74,6 +74,7 @@ def evaluate_logfold_r2(
     autoencoder: ComPert, ds_treated: SubDataset, ds_ctrl: SubDataset
 ):
     logfold_score = []
+    signs_score = []
     # assumes that `pert_categories` where constructed with first covariate type
     cov_type = ds_treated.covariate_keys[0]
     treated_pert_cat_index = pd.Index(ds_treated.pert_categories, dtype="category")
@@ -98,6 +99,17 @@ def evaluate_logfold_r2(
         idx_ctrl_all = bool2idx(bool_ctrl_all)
         n_idx_ctrl = len(idx_ctrl_all)
 
+        bool_de = ds_treated.var_names.isin(
+            np.array(ds_treated.de_genes[cell_drug_dose_comb])
+        )
+        idx_de = bool2idx(bool_de)
+
+        if n_idx_ctrl == 1:
+            print(
+                f"For covariate {covariate} we have only one control in current set of observations. Skipping {cell_drug_dose_comb}."
+            )
+            continue
+
         emb_covs = [
             repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
         ]
@@ -121,17 +133,19 @@ def evaluate_logfold_r2(
         # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         genes_true = ds_treated.genes[idx_treated_all, :].to(device="cuda")
 
-        y_ctrl = genes_ctrl.mean(0)
-        y_pred = genes_pred.mean(0)
-        y_true = genes_true.mean(0)
+        y_ctrl = genes_ctrl.mean(0)[idx_de]
+        y_pred = genes_pred.mean(0)[idx_de]
+        y_true = genes_true.mean(0)[idx_de]
 
         eps = 1e-5
         pred = torch.log2((y_pred + eps) / (y_ctrl + eps))
         true = torch.log2((y_true + eps) / (y_ctrl + eps))
         r2 = compute_r2(true, pred)
+        acc_signs = ((pred * true) > 0).sum() / len(true)
 
         logfold_score.append(r2)
-    return mean(logfold_score)
+        signs_score.append(acc_signs.item())
+    return mean(logfold_score), mean(signs_score)
 
 
 def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
@@ -463,15 +477,15 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             if "test_sc" in eval_stats
             else evaluate_r2_sc(autoencoder, datasets["test_treated"]),
             "ood_sc": evaluate_r2_sc(autoencoder, datasets["ood"]),
-            # "training_logfold": evaluate_logfold_r2(
-            #     autoencoder, datasets["training_treated"], datasets["training_control"]
-            # ),
-            # "test_logfold": evaluate_logfold_r2(
-            #     autoencoder, datasets["test_treated"], datasets["test_control"]
-            # ),
-            # "ood_logfold": evaluate_logfold_r2(
-            #     autoencoder, datasets["ood"], datasets["test_control"]
-            # ),
+            "training_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["training_treated"], datasets["training_control"]
+            ),
+            "test_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["test_treated"], datasets["test_control"]
+            ),
+            "ood_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["ood"], datasets["test_control"]
+            ),
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": optimal_disent_score,
             "covariate disentanglement": stats_disent_cov,
