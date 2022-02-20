@@ -29,6 +29,7 @@ fixed:
   training.save_dir: sweeps/checkpoints
 
   model.load_pretrained: True # if False, will initialize all weights randomly
+  model.append_ae_layer: True # if True, will add another layer to encoder & decoder to expand gene set
   model.pretrained_model_path: /home/simon/Documents/ETH/Masters_thesis/chemical_CPA/sweeps/checkpoints
 #  model.pretrained_model_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/sweeps/checkpoints
   model.pretrained_model_hashes: # seml config_hashes for the pretrained models for each embedding
@@ -45,14 +46,14 @@ fixed:
   model.additional_params.doser_type: amortized # non-linearity for doser function
 
   dataset.dataset_type: trapnell
-  dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/trapnell_cpa_subset_lincs_genes.h5ad # full path to the anndata dataset
+  dataset.data_params.dataset_path: datasets/trapnell_cpa_subsets.h5ad # full path to the anndata dataset
   dataset.data_params.perturbation_key: condition # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
   dataset.data_params.dose_key: dose # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: SMILES
   dataset.data_params.degs_key: lincs_DEGs
-  dataset.data_params.split_key: split # necessary field for train, test, ood splits.
+  dataset.data_params.split_key: split_ho_pathway # necessary field for train, test, ood splits.
   dataset.data_params.use_drugs_idx: True
 
   # fixed, bc we're transfer learning now

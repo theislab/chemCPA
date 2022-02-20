@@ -74,6 +74,7 @@ def evaluate_logfold_r2(
     autoencoder: ComPert, ds_treated: SubDataset, ds_ctrl: SubDataset
 ):
     logfold_score = []
+    signs_score = []
     # assumes that `pert_categories` where constructed with first covariate type
     cov_type = ds_treated.covariate_keys[0]
     treated_pert_cat_index = pd.Index(ds_treated.pert_categories, dtype="category")
@@ -98,6 +99,17 @@ def evaluate_logfold_r2(
         idx_ctrl_all = bool2idx(bool_ctrl_all)
         n_idx_ctrl = len(idx_ctrl_all)
 
+        bool_de = ds_treated.var_names.isin(
+            np.array(ds_treated.de_genes[cell_drug_dose_comb])
+        )
+        idx_de = bool2idx(bool_de)
+
+        if n_idx_ctrl == 1:
+            print(
+                f"For covariate {covariate} we have only one control in current set of observations. Skipping {cell_drug_dose_comb}."
+            )
+            continue
+
         emb_covs = [
             repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
         ]
@@ -121,17 +133,19 @@ def evaluate_logfold_r2(
         # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
         genes_true = ds_treated.genes[idx_treated_all, :].to(device="cuda")
 
-        y_ctrl = genes_ctrl.mean(0)
-        y_pred = genes_pred.mean(0)
-        y_true = genes_true.mean(0)
+        y_ctrl = genes_ctrl.mean(0)[idx_de]
+        y_pred = genes_pred.mean(0)[idx_de]
+        y_true = genes_true.mean(0)[idx_de]
 
         eps = 1e-5
         pred = torch.log2((y_pred + eps) / (y_ctrl + eps))
         true = torch.log2((y_true + eps) / (y_ctrl + eps))
         r2 = compute_r2(true, pred)
+        acc_signs = ((pred * true) > 0).sum() / len(true)
 
         logfold_score.append(r2)
-    return mean(logfold_score)
+        signs_score.append(acc_signs.item())
+    return mean(logfold_score), mean(signs_score)
 
 
 def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
@@ -240,7 +254,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if "dmso" in cell_drug_dose_comb.lower():
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+        ):
             continue
 
         # dataset.var_names is the list of gene names
@@ -307,6 +324,115 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         return []
 
 
+def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
+    """
+    Measures quality metric about an ComPert `autoencoder`. Computing
+    the reconstruction of a single datapoint in terms of the R2 score.
+
+    Considered metrics are R2 score about means and variances for all genes, as
+    well as R2 score about means and variances about differentially expressed
+    (_de) genes.
+    """
+    mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
+
+    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+    inf_combinations = set()
+    for cell_drug_dose_comb, category_count in zip(
+        *np.unique(dataset.pert_categories, return_counts=True)
+    ):
+        if dataset.perturbation_key is None:
+            break
+
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
+
+        # doesn't make sense to evaluate DMSO (=control) as a perturbation
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+        ):
+            continue
+
+        # dataset.var_names is the list of gene names
+        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
+        # genes for every cell_drug_dose combination.
+        bool_de = dataset.var_names.isin(
+            np.array(dataset.de_genes[cell_drug_dose_comb])
+        )
+        idx_de = bool2idx(bool_de)
+
+        # need at least two genes to be able to calc r2 score
+        if len(idx_de) < 2:
+            continue
+
+        bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
+        idx_all = bool2idx(bool_category)
+        idx = idx_all[0]
+        y_true = dataset.genes[idx_all, :].to(device="cuda")
+        n_obs = y_true.size(0)
+
+        emb_covs = [repeat_n(cov[idx], n_obs) for cov in dataset.covariates]
+        if dataset.use_drugs_idx:
+            emb_drugs = (
+                repeat_n(dataset.drugs_idx[idx], n_obs).squeeze(),
+                repeat_n(dataset.dosages[idx], n_obs).squeeze(),
+            )
+        else:
+            emb_drugs = repeat_n(dataset.drugs[idx], n_obs)
+
+        # copies just the needed genes to GPU
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
+
+        mean_pred, var_pred = compute_prediction(
+            autoencoder,
+            y_true,
+            emb_drugs,
+            emb_covs,
+        )
+
+        # mean of r2 scores for current cell_drug_dose_comb
+        r2_m = torch.Tensor(
+            [compute_r2(y_true[i], mean_pred[i]) for i in range(n_obs)]
+        ).mean()
+        r2_m_de = torch.Tensor(
+            [compute_r2(y_true[i, idx_de], mean_pred[i, idx_de]) for i in range(n_obs)]
+        ).mean()
+        # r2 score for predicted variance of obs in current cell_drug_dose_comb
+        yt_v = y_true.var(dim=0)
+        yp_v = var_pred.mean(dim=0)
+        r2_v = compute_r2(yt_v, yp_v)
+        r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
+
+        # if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
+        #     continue
+
+        mean_score.append(r2_m) if not r2_m == float("-inf") else inf_combinations.add(
+            cell_drug_dose_comb
+        )
+        var_score.append(r2_v) if not r2_v == float("-inf") else inf_combinations.add(
+            cell_drug_dose_comb
+        )
+        mean_score_de.append(r2_m_de) if not r2_m_de == float(
+            "-inf"
+        ) else inf_combinations.add(cell_drug_dose_comb)
+        var_score_de.append(r2_v_de) if not r2_v_de == float(
+            "-inf"
+        ) else inf_combinations.add(cell_drug_dose_comb)
+    print(f"Number of different r2 computations: {len(mean_score)}")
+    print(
+        f"{len(inf_combinations)} combinations had '-inf' R2 scores:\n\t {inf_combinations}"
+    )
+    if len(mean_score) > 0:
+        return [
+            np.mean(s, dtype=float)
+            for s in [mean_score, mean_score_de, var_score, var_score_de]
+        ]
+    else:
+        return []
+
+
 def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
     """
     Measure quality metrics using `evaluate()` on the training, test, and
@@ -346,21 +472,26 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             "ood": evaluate_r2(
                 autoencoder, datasets["ood"], datasets["test_control"].genes
             ),
-            # "training_logfold": evaluate_logfold_r2(
-            #     autoencoder, datasets["training_treated"], datasets["training_control"]
-            # ),
-            # "test_logfold": evaluate_logfold_r2(
-            #     autoencoder, datasets["test_treated"], datasets["test_control"]
-            # ),
-            # "ood_logfold": evaluate_logfold_r2(
-            #     autoencoder, datasets["ood"], datasets["test_control"]
-            # ),
+            "training_sc": evaluate_r2_sc(autoencoder, datasets["training_treated"]),
+            "test_sc": eval_stats["test_sc"]
+            if "test_sc" in eval_stats
+            else evaluate_r2_sc(autoencoder, datasets["test_treated"]),
+            "ood_sc": evaluate_r2_sc(autoencoder, datasets["ood"]),
+            "training_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["training_treated"], datasets["training_control"]
+            ),
+            "test_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["test_treated"], datasets["test_control"]
+            ),
+            "ood_logfold": evaluate_logfold_r2(
+                autoencoder, datasets["ood"], datasets["test_control"]
+            ),
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": optimal_disent_score,
             "covariate disentanglement": stats_disent_cov,
             "optimal for covariates": [
-                1 / num for num in datasets["test"].num_covariates
-            ]
+                max(cov.mean(axis=0)).item() for cov in datasets["test"].covariates
+            ]  # mean over OHE embedding of covariates
             if datasets["test"].num_covariates[0] > 0
             else None,
         }

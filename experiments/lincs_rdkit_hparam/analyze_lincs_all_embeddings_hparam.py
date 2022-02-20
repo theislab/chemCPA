@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.13.6
 # ---
 
 # %% [markdown] pycharm={"name": "#%% md\n"}
@@ -37,6 +37,7 @@ results = seml.get_results(
     to_data_frame=True,
     fields=["config", "result", "seml", "config_hash"],
     states=["COMPLETED"],
+    # filter_dict={"batch_id": 6}
 )
 
 # %% pycharm={"name": "#%%\n"}
@@ -122,7 +123,7 @@ results_clean
 # ## Look at early stopping
 
 # %%
-ax = sns.histplot(data=results_clean["result.epoch"].apply(max))
+ax = sns.histplot(data=results_clean["result.epoch"].apply(max), bins=15)
 ax.set_title("Total epochs before final stopping (min 125)")
 
 # %% [markdown]
@@ -197,19 +198,29 @@ for y in ["result.perturbation disentanglement"]:
 # ## Subselect to disentangled models
 
 # %%
-n_top = 3
+n_top = 5
 
 performance_condition = lambda emb, max_entangle: (
     results_clean["config.model.embedding.model"] == emb
 ) & (results_clean["result.perturbation disentanglement"] < max_entangle)
 
 best = []
+top_one = []
+best_disentangled = []
 for embedding in list(results_clean["config.model.embedding.model"].unique()):
-    df = results_clean[performance_condition(embedding, 0.18)]
+    df = results_clean[performance_condition(embedding, 0.15)]
     print(embedding, len(df))
     best.append(df.sort_values(by="result.val_mean_de", ascending=False).head(n_top))
+    top_one.append(df.sort_values(by="result.val_mean_de", ascending=False).head(1))
+    best_disentangled.append(
+        df.sort_values(by="result.perturbation disentanglement", ascending=True).head(
+            n_top
+        )
+    )
 
 best = pd.concat(best)
+top_one = pd.concat(top_one)
+best_disentangled = pd.concat(best_disentangled)
 
 # %%
 # All genes, DE genes, disentanglement
@@ -220,7 +231,12 @@ for i, y in enumerate(
     ["result.test_mean", "result.test_mean_de", "result.perturbation disentanglement"]
 ):
     sns.violinplot(
-        data=best, x="config.model.embedding.model", y=y, inner="points", ax=ax[i]
+        data=best,
+        x="config.model.embedding.model",
+        y=y,
+        inner="points",
+        ax=ax[i],
+        scale="width",
     )
     ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
     ax[i].set_xlabel("")
@@ -230,12 +246,72 @@ plt.tight_layout()
 
 
 # %% [markdown]
+# Top 3 best disentangled models per embedding type
+
+# %%
+# All genes, DE genes, disentanglement
+rows, cols = 1, 3
+fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
+
+for i, y in enumerate(
+    ["result.test_mean", "result.test_mean_de", "result.perturbation disentanglement"]
+):
+    sns.violinplot(
+        data=best_disentangled,
+        x="config.model.embedding.model",
+        y=y,
+        inner="points",
+        ax=ax[i],
+        scale="width",
+    )
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
+    ax[i].set_xlabel("")
+    ax[i].set_ylabel(y.split(".")[-1])
+
+plt.tight_layout()
+
+# %% [markdown]
+# Top one performing models
+
+# %%
+# All genes, DE genes, disentanglement
+rows, cols = 1, 3
+fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
+
+for i, y in enumerate(
+    ["result.test_mean", "result.test_mean_de", "result.perturbation disentanglement"]
+):
+    sns.violinplot(
+        data=top_one,
+        x="config.model.embedding.model",
+        y=y,
+        inner="points",
+        ax=ax[i],
+        scale="width",
+    )
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
+    ax[i].set_xlabel("")
+    ax[i].set_ylabel(y.split(".")[-1])
+
+plt.tight_layout()
+
+# %% [markdown]
 # ## Take a deeper look in the `.config` of the best performing models
 
 # %%
-best[
+top_one["config.model.embedding.model"]
+
+# %%
+top_one[
     ["config." + col for col in sweeped_params]
     + ["result.perturbation disentanglement", "result.test_mean", "result.test_mean_de"]
+]
+
+# %%
+sweeped_cols = np.array(["config." + col for col in sweeped_params])
+top_one[
+    ["config.model.embedding.model"]
+    + list(sweeped_cols[best[sweeped_cols].std() > 1e-5])
 ]
 
 # %%
@@ -245,5 +321,79 @@ results_clean["config.model.hparams.dosers_width"].value_counts()
 # %%
 # Check dim
 results_clean["config.model.hparams.dim"].value_counts()
+
+# %%
+# Only GCN was able to improve in {batch_id: 6}
+top_one[[c for c in results_clean.columns if ("hash" in c) | ("embedding.model" in c)]]
+
+# %%
+best[[c for c in results_clean.columns if ("hash" in c) | ("embedding.model" in c)]]
+
+# %%
+best[best["config.model.embedding.model"] == "GCN"]
+
+# %% [markdown]
+# ## Look at correlation between disentanglement and reconstruction
+
+# %%
+fig, ax = plt.subplots(figsize=(10, 8))
+
+# Regression without weave
+sns.regplot(
+    data=results_clean[results_clean["config.model.embedding.model"] != "weave"],
+    x="result.perturbation disentanglement",
+    y="result.test_mean_de",
+    ax=ax,
+    scatter=False,
+)
+
+sns.scatterplot(
+    data=results_clean,
+    x="result.perturbation disentanglement",
+    y="result.test_mean_de",
+    ax=ax,
+    style="config.model.embedding.model",
+    legend=None,
+    color="grey",
+    alpha=0.6,
+)
+sns.scatterplot(
+    data=best,
+    x="result.perturbation disentanglement",
+    y="result.test_mean_de",
+    hue="config.model.embedding.model",
+    ax=ax,
+    style="config.model.embedding.model",
+)
+ax.set_xlim([0, 0.44])
+ax.set_ylim([0.44, 0.93])
+ax.legend(loc="best")
+
+# %% [markdown]
+# ## Look at epochs vs. performance
+
+# %%
+[c for c in results_clean.columns if "epochs" in c]
+
+# %%
+fig, ax = plt.subplots(figsize=(10, 8))
+sns.scatterplot(
+    data=results_clean,
+    x="result.total_epochs",
+    y="result.test_mean_de",
+    ax=ax,
+    style="config.model.embedding.model",
+    color="grey",
+    alpha=0.7,
+    legend=None,
+)
+sns.scatterplot(
+    data=best,
+    x="result.total_epochs",
+    y="result.test_mean_de",
+    ax=ax,
+    style="config.model.embedding.model",
+    hue="config.model.embedding.model",
+)
 
 # %%
