@@ -121,7 +121,7 @@ class ExperimentWrapper:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         if load_pretrained:
-            state_dict, model_config = self.load_state_dict(
+            state_dict, cov_embeddings_state_dicts, model_config = self.load_state_dict(
                 pretrained_model_hashes, pretrained_model_path, append_ae_layer
             )
             append_layer_width = (
@@ -146,6 +146,10 @@ class ExperimentWrapper:
                 append_layer_width=append_layer_width,
             )
             incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
+            for embedding, state_dict in zip(
+                self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts
+            ):
+                embedding.load_state_dict(state_dict)
             logging.info(
                 f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}"
             )
@@ -176,13 +180,15 @@ class ExperimentWrapper:
             state_dict, model_config, history = dumped_model
         else:
             # new version
-            assert len(dumped_model) == 4
+            assert len(dumped_model) == 5
             (
                 state_dict,
                 adversary_cov_state_dicts,
+                cov_embeddings_state_dicts,
                 model_config,
                 history,
             ) = dumped_model
+            assert len(cov_embeddings_state_dicts) == 1
         # sanity check
         if append_ae_layer:
             assert model_config["num_genes"] < self.datasets["training"].num_genes
@@ -201,7 +207,7 @@ class ExperimentWrapper:
             for key in keys:
                 if key.startswith("dosers") or key.startswith("drug_embedding_encoder"):
                     state_dict.pop(key)
-        return state_dict, model_config
+        return state_dict, cov_embeddings_state_dicts, model_config
 
     def update_datasets(self):
         """
@@ -387,6 +393,11 @@ class ExperimentWrapper:
                                 adversary_covariates.state_dict()
                                 for adversary_covariates in self.autoencoder.adversary_covariates
                             ],
+                            # TODO I haven't checked that this actually works
+                            # [
+                            #   covariate_embedding.state_dict()
+                            #   for covariate_embedding in self.autoencoder.covariates_embeddings
+                            # ],
                             self.autoencoder.init_args,
                             self.autoencoder.history,
                         ),
