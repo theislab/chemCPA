@@ -54,13 +54,12 @@ sn.set_context("poster")
 
 # %%
 seml_collection = "finetuning_num_genes"
-
 # split_ho_pathway, append_ae_layer: true
 model_hash_pretrained = (
     "70290e4f42ac4cb19246fafa0b75ccb6"  # "config.model.load_pretrained": true,
 )
 model_hash_scratch = (
-    "ed3bc586a5fcfe3c4dbb0157cd67d0d9"  # "config.model.load_pretrained": false,
+    "00e7e9c7979f90d1325f25f9ff4e3fcb"  # "config.model.load_pretrained": false,
 )
 
 # split_ood_finetuning, append_ae_layer: true
@@ -69,6 +68,25 @@ model_hash_pretrained = (
 )
 model_hash_scratch = (
     "6e9d00880375aa450a8e5de60250659f"  # "config.model.load_pretrained": false,
+)
+
+seml_collection = "sciplex_hparam"
+# rdkit
+# split_ood_finetuning, append_ae_layer: false
+model_hash_pretrained = (
+    "d9ee464c93a0d2d947e9115f8d834f22"  # "config.model.load_pretrained": true,
+)
+model_hash_scratch = (
+    "0a929eab639127e304271036fe478e0b"  # "config.model.load_pretrained": false,
+)
+
+# grover
+# split_ood_finetuning, append_ae_layer: false
+model_hash_pretrained = (
+    "bacf2e0b3f9dee9078a97c5216bf7f1c"  # "config.model.load_pretrained": true,
+)
+model_hash_scratch = (
+    "d635df7c184dfff217e09ca93395604b"  # "config.model.load_pretrained": false,
 )
 
 # %% [markdown]
@@ -140,7 +158,9 @@ datasets = load_dataset_splits(**data_params, return_dataset=False)
 # ## Pretrained model
 
 # %%
-dosages = [1e1, 1e2, 1e3, 1e4]
+dosages = [1e3, 1e4]
+cell_lines = ["A549", "K562", "MCF7"]  # ["A549", "K562", "MCF7"]
+# cell_lines = ['MCF7']
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
@@ -152,6 +172,7 @@ drug_r2_pretrained, _ = compute_pred(
     model_pretrained,
     datasets["ood"],
     genes_control=datasets["test_control"].genes,
+    cell_lines=cell_lines,
     dosages=dosages,
 )
 
@@ -169,12 +190,8 @@ drug_r2_scratch, _ = compute_pred(
     datasets["ood"],
     genes_control=datasets["test_control"].genes,
     dosages=dosages,
+    cell_lines=cell_lines,
 )  # non-pretrained
-
-# %%
-dataset.obs.loc[
-    dataset.obs.split_ood_finetuning == "ood", "condition"
-].unique().to_list()
 
 # %%
 np.mean([max(v, 0) for v in drug_r2_scratch.values()])
@@ -183,5 +200,30 @@ np.mean([max(v, 0) for v in drug_r2_scratch.values()])
 np.mean([max(v, 0) for v in drug_r2_pretrained.values()])
 
 # %%
+from utils import evaluate_r2
+
+# %%
+evaluate_r2(model_pretrained, datasets["ood"], datasets["test_control"].genes)
+
+import torch
+
+# %%
+from compert.paths import CHECKPOINT_DIR
+
+model_checkp = CHECKPOINT_DIR / (model_hash_pretrained + ".pt")
+
+state_dict, cov_state_dicts, init_args, history = torch.load(model_checkp)
+
+# %%
+model_pretrained
+
+# %%
+cov_state_dicts
+
+# %%
+model_pretrained.covariates_embeddings[0].weight
+
+# %%
+[k for k in state_dict.keys() if "emb" in k]
 
 # %%
