@@ -40,7 +40,7 @@ results = seml.get_results(
     filter_dict={
         "batch_id": 3,
         "config.dataset.data_params.split_key": "split_ood_finetuning",  # split_ood_finetuning, split_random, split_ho_pathway, split_ho_epigenetic, split_ho_epigenetic_all
-        "config.model.append_ae_layer": True,
+        "config.model.append_ae_layer": False,
     },
 )
 
@@ -119,6 +119,9 @@ results_clean["result.test_mean_de"] = results_clean["result.ood"].apply(get_mea
 results_clean["result.perturbation disentanglement"] = results_clean[
     "result.perturbation disentanglement"
 ].apply(lambda x: x[0])
+results_clean["result.covariate disentanglement"] = results_clean[
+    "result.covariate disentanglement"
+].apply(lambda x: x[0][0])
 results_clean["result.final_reconstruction"] = results_clean[
     "result.loss_reconstruction"
 ].apply(lambda x: x[-1])
@@ -144,19 +147,6 @@ results_clean["result.test_sc_mean_de"] = results_clean["result.ood_sc"].apply(
 results_clean = results_clean[results_clean["result.val_sc_mean"] > 0.01]
 results_clean = results_clean[results_clean["result.val_mean_de"] > 0.4]
 # results_clean = results_clean[results_clean["config.model.append_ae_layer"] == True]
-
-# %%
-# results_clean["config.model.load_pretrained"]
-
-# %%
-# results_clean.plot.box(by="config.model.load_pretrained", y="result.final_reconstruction")
-sns.violinplot(
-    data=results_clean,
-    x="config.model.load_pretrained",
-    y="result.final_reconstruction",
-    inner="point",
-    scale="width",
-)
 
 # %% [markdown]
 # ## Look at early stopping
@@ -305,25 +295,35 @@ plt.tight_layout()
 # ## Look at disentanglement scores
 
 # %%
-rows = 1
+rows = 2
 cols = 1
-fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows), sharex=True)
+fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 7 * rows), sharex=True)
 
-for y in ["result.perturbation disentanglement"]:
+max_entangle = [0.1, 0.8]
+for i, y in enumerate(
+    ["result.perturbation disentanglement", "result.covariate disentanglement"]
+):
     sns.violinplot(
         data=results_clean,
         x="config.model.embedding.model",
         y=y,
-        hue="config.model.load_pretrained",
         inner="point",
-        ax=ax,
-        scale="width",
+        ax=ax[i],
+        hue="config.model.load_pretrained",
     )
     # ax[i].set_ylim([0,1])
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=75, ha="right")
-    ax.axhline(0.18, color="orange")
-    ax.set_xlabel("")
-    ax.set_ylabel(y.split(".")[-1])
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
+    ax[i].axhline(max_entangle[i], ls=":", color="black")
+    ax[i].set_xlabel("")
+    ax[i].set_ylabel(y.split(".")[-1])
+ax[0].get_legend().remove()
+ax[1].legend(
+    title="Pretrained",
+    fontsize=18,
+    title_fontsize=24,
+    loc="center left",
+    bbox_to_anchor=(1, 0.5),
+)
 plt.tight_layout()
 
 # %% [markdown]
@@ -331,18 +331,20 @@ plt.tight_layout()
 
 # %%
 n_top = 2
-performance_condition = (
-    lambda emb, pretrained, max_entangle: (
-        results_clean["config.model.embedding.model"] == emb
-    )
-    & (results_clean["result.perturbation disentanglement"] < max_entangle)
-    & (results_clean["config.model.load_pretrained"] == pretrained)
-)
+
+
+def performance_condition(emb, pretrained, max_entangle, max_entangle_cov):
+    cond = results_clean["config.model.embedding.model"] == emb
+    cond = cond & (results_clean["result.perturbation disentanglement"] < max_entangle)
+    cond = cond & (results_clean["result.covariate disentanglement"] < max_entangle_cov)
+    cond = cond & (results_clean["config.model.load_pretrained"] == pretrained)
+    return cond
+
 
 best = []
 for embedding in list(results_clean["config.model.embedding.model"].unique()):
     for pretrained in [True, False]:
-        df = results_clean[performance_condition(embedding, pretrained, 0.8)]
+        df = results_clean[performance_condition(embedding, pretrained, 0.1, 1)]
         print(embedding, pretrained, len(df))
         best.append(
             df.sort_values(by="result.val_mean_de", ascending=False).head(n_top)
@@ -352,11 +354,16 @@ best = pd.concat(best)
 
 # %%
 # All genes, DE genes, disentanglement
-rows, cols = 1, 3
+rows, cols = 1, 4
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
 
 for i, y in enumerate(
-    ["result.test_mean", "result.test_mean_de", "result.perturbation disentanglement"]
+    [
+        "result.test_mean",
+        "result.test_mean_de",
+        "result.perturbation disentanglement",
+        "result.covariate disentanglement",
+    ]
 ):
     sns.violinplot(
         data=best,
@@ -372,10 +379,11 @@ for i, y in enumerate(
     ax[i].set_ylabel(y.split(".")[-1])
     ax[i].legend(title="Pretrained", loc="lower right", fontsize=18, title_fontsize=24)
 ax[0].get_legend().remove()
-ax[0].set_ylim([0.4, 1.01])
+# ax[0].set_ylim([0.4, 1.01])
 ax[1].get_legend().remove()
-ax[1].set_ylim([0.4, 1.01])
-ax[2].legend(
+# ax[1].set_ylim([0.4, 1.01])
+ax[2].get_legend().remove()
+ax[3].legend(
     title="Pretrained",
     fontsize=18,
     title_fontsize=24,
@@ -428,6 +436,13 @@ plt.tight_layout()
 [c for c in best.columns if "hash" in c]
 
 # %%
-best[["config.model.load_pretrained", "config_hash", "result.test_mean_de"]]
+best[
+    [
+        "config.model.load_pretrained",
+        "config_hash",
+        "result.test_mean_de",
+        "result.covariate disentanglement",
+    ]
+]
 
 # %%
