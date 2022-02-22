@@ -35,10 +35,12 @@ from utils import (
     load_smiles,
 )
 
+from compert.paths import FIGURE_DIR
+
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
 matplotlib.rcParams["font.family"] = "monospace"
-matplotlib.rcParams["figure.dpi"] = 60
+matplotlib.rcParams["figure.dpi"] = 200
 matplotlib.pyplot.rcParams["savefig.facecolor"] = "white"
 sn.set_context("poster")
 
@@ -91,11 +93,12 @@ def plot_umap(
                 x=mapper[i, 0] + shift,
                 y=mapper[i, 1] + shift,
                 s=label,
-                fontdict=dict(color="black", alpha=0.5, size=6),
+                fontdict=dict(color="black", alpha=0.9, size=12),
             )
     bbox = (1, 1)
 
-    plt.legend(bbox_to_anchor=bbox)
+    #     plt.legend(bbox_to_anchor=bbox)
+    plt.legend(loc="best")
 
 
 # %% [markdown]
@@ -132,8 +135,9 @@ model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_
 # #### Define which drugs should be annotaded with list `ood_drugs`
 
 # %%
+split_key = config["dataset"]["data_params"]["split_key"]
 ood_drugs = (
-    dataset.obs.condition[dataset.obs.split_ho_pathway.isin(["ood"])].unique().to_list()
+    dataset.obs.condition[dataset.obs[split_key].isin(["ood"])].unique().to_list()
 )
 
 # %% [markdown]
@@ -176,10 +180,18 @@ mapper_pretrained = umap.UMAP(n_neighbors=25, min_dist=0.5).fit_transform(
 plot_umap(
     mapper_pretrained,
     canon_smiles_unique_sorted,
-    smiles_to_pw_level2_map,
+    smiles_to_pathway_map,
     smiles_to_drug_map,
-    groups=groups_pw2,
+    groups=[
+        "Epigenetic regulation",
+        "Tyrosine kinase signaling",
+        "Cell cycle regulation",
+    ],
     ood_drugs=ood_drugs,
+)
+
+plt.savefig(
+    FIGURE_DIR / "UMAP_embedding_pretrained.eps", format="eps", bbox_inches="tight"
 )
 
 # %% [markdown]
@@ -215,10 +227,18 @@ mapper_scratch = umap.UMAP(n_neighbors=25, min_dist=0.5).fit_transform(
 plot_umap(
     mapper_scratch,
     canon_smiles_unique_sorted,
-    smiles_to_pw_level2_map,
+    smiles_to_pathway_map,
     smiles_to_drug_map,
-    groups=groups_pw2,
+    groups=[
+        "Epigenetic regulation",
+        "Tyrosine kinase signaling",
+        "Cell cycle regulation",
+    ],
     ood_drugs=ood_drugs,
+)
+
+plt.savefig(
+    FIGURE_DIR / "UMAP_embedding_scratch.eps", format="eps", bbox_inches="tight"
 )
 
 # %%
