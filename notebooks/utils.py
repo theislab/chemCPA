@@ -5,7 +5,11 @@ import seml
 import torch
 from tqdm.auto import tqdm
 
-from compert.data import canonicalize_smiles, drug_names_to_once_canon_smiles
+from compert.data import (
+    SubDataset,
+    canonicalize_smiles,
+    drug_names_to_once_canon_smiles,
+)
 from compert.embedding import get_chemical_representation
 from compert.model import ComPert
 from compert.paths import CHECKPOINT_DIR
@@ -13,8 +17,6 @@ from compert.train import bool2idx, compute_prediction, compute_r2, repeat_n
 
 
 def load_config(seml_collection, model_hash):
-    seml_collection = "finetuning_num_genes"  # "sciplex_hparam"
-
     results_df = seml.get_results(
         seml_collection,
         to_data_frame=True,
@@ -142,9 +144,22 @@ def compute_drug_embeddings(model, embedding, dosage=1e4):
     return transf_embeddings
 
 
-def compute_pred(model, dataset, dosages=[1e4], genes_control=None):
+def compute_pred(model, dataset, dosages=[1e4], cell_lines=None, genes_control=None):
     # dataset.pert_categories contains: 'celltype_perturbation_dose' info
     pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+
+    allowed_cell_lines = []
+
+    cl_dict = {
+        torch.Tensor([1, 0, 0]): "A549",
+        torch.Tensor([0, 1, 0]): "K562",
+        torch.Tensor([0, 0, 1]): "MCF7",
+    }
+
+    if cell_lines is None:
+        cell_lines = ["A549", "K562", "MCF7"]
+
+    print(cell_lines)
 
     predictions_dict = {}
     drug_r2 = {}
@@ -192,7 +207,12 @@ def compute_pred(model, dataset, dosages=[1e4], genes_control=None):
         if dataset.dosages[idx] not in dosages:
             continue
 
-        if (dataset.covariates[0][idx] != torch.Tensor([0, 0, 1])).any():
+        stop = False
+        for tensor, cl in cl_dict.items():
+            if (tensor == dataset.covariates[0][idx]).all():
+                if cl not in cell_lines:
+                    stop = True
+        if stop:
             continue
 
         if dataset.use_drugs_idx:
@@ -228,5 +248,102 @@ def compute_pred(model, dataset, dosages=[1e4], genes_control=None):
         r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
         print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}")
         predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
-        drug_r2[cell_drug_dose_comb.split("_")[1]] = r2_m_de
+        drug_r2[cell_drug_dose_comb] = r2_m_de
     return drug_r2, predictions_dict
+
+
+def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.Tensor):
+    """
+    Measures different quality metrics about an ComPert `autoencoder`, when
+    tasked to translate some `genes_control` into each of the drug/covariates
+    combinations described in `dataset`.
+
+    Considered metrics are R2 score about means and variances for all genes, as
+    well as R2 score about means and variances about differentially expressed
+    (_de) genes.
+    """
+    mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
+    n_rows = genes_control.size(0)
+    # genes_control = genes_control.to(autoencoder.device)
+
+    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+    for cell_drug_dose_comb, category_count in zip(
+        *np.unique(dataset.pert_categories, return_counts=True)
+    ):
+        if dataset.perturbation_key is None:
+            break
+
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
+
+        # doesn't make sense to evaluate DMSO (=control) as a perturbation
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+        ):
+            continue
+
+        # dataset.var_names is the list of gene names
+        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
+        # genes for every cell_drug_dose combination.
+        bool_de = dataset.var_names.isin(
+            np.array(dataset.de_genes[cell_drug_dose_comb])
+        )
+        idx_de = bool2idx(bool_de)
+
+        # need at least two genes to be able to calc r2 score
+        if len(idx_de) < 2:
+            continue
+
+        bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
+        idx_all = bool2idx(bool_category)
+        idx = idx_all[0]
+
+        emb_covs = [repeat_n(cov[idx], n_rows) for cov in dataset.covariates]
+        if dataset.use_drugs_idx:
+            emb_drugs = (
+                repeat_n(dataset.drugs_idx[idx], n_rows).squeeze(),
+                repeat_n(dataset.dosages[idx], n_rows).squeeze(),
+            )
+        else:
+            emb_drugs = repeat_n(dataset.drugs[idx], n_rows)
+        mean_pred, var_pred = compute_prediction(
+            autoencoder,
+            genes_control,
+            emb_drugs,
+            emb_covs,
+        )
+
+        # copies just the needed genes to GPU
+        # Could try moving the whole genes tensor to GPU once for further speedups (but more memory problems)
+        y_true = dataset.genes[idx_all, :].to(device="cuda")
+
+        # true means and variances
+        yt_m = y_true.mean(dim=0)
+        yt_v = y_true.var(dim=0)
+        # predicted means and variances
+        yp_m = mean_pred.mean(dim=0).to(device="cuda")
+        yp_v = var_pred.mean(dim=0).to(device="cuda")
+
+        r2_m = compute_r2(yt_m, yp_m)
+        r2_v = compute_r2(yt_v, yp_v)
+        r2_m_de = compute_r2(yt_m[idx_de], yp_m[idx_de])
+        r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
+
+        # to be investigated
+        if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
+            continue
+
+        mean_score.append(r2_m)
+        var_score.append(r2_v)
+        mean_score_de.append(r2_m_de)
+        var_score_de.append(r2_v_de)
+    print(f"Number of different r2 computations: {len(mean_score)}")
+    if len(mean_score) > 0:
+        return [
+            np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]
+        ]
+    else:
+        return []
