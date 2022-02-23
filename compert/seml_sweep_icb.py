@@ -393,11 +393,10 @@ class ExperimentWrapper:
                                 adversary_covariates.state_dict()
                                 for adversary_covariates in self.autoencoder.adversary_covariates
                             ],
-                            # TODO I haven't checked that this actually works
-                            # [
-                            #   covariate_embedding.state_dict()
-                            #   for covariate_embedding in self.autoencoder.covariates_embeddings
-                            # ],
+                            [
+                                covariate_embedding.state_dict()
+                                for covariate_embedding in self.autoencoder.covariates_embeddings
+                            ],
                             self.autoencoder.init_args,
                             self.autoencoder.history,
                         ),
