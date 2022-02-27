@@ -54,12 +54,13 @@ sn.set_context("poster")
 
 # %%
 seml_collection = "finetuning_num_genes"
+
 # split_ho_pathway, append_ae_layer: true
 model_hash_pretrained = (
     "70290e4f42ac4cb19246fafa0b75ccb6"  # "config.model.load_pretrained": true,
 )
 model_hash_scratch = (
-    "00e7e9c7979f90d1325f25f9ff4e3fcb"  # "config.model.load_pretrained": false,
+    "ed3bc586a5fcfe3c4dbb0157cd67d0d9"  # "config.model.load_pretrained": false,
 )
 
 # split_ood_finetuning, append_ae_layer: true
@@ -68,25 +69,6 @@ model_hash_pretrained = (
 )
 model_hash_scratch = (
     "6e9d00880375aa450a8e5de60250659f"  # "config.model.load_pretrained": false,
-)
-
-seml_collection = "sciplex_hparam"
-# rdkit
-# split_ood_finetuning, append_ae_layer: false
-model_hash_pretrained = (
-    "d9ee464c93a0d2d947e9115f8d834f22"  # "config.model.load_pretrained": true,
-)
-model_hash_scratch = (
-    "0a929eab639127e304271036fe478e0b"  # "config.model.load_pretrained": false,
-)
-
-# grover
-# split_ood_finetuning, append_ae_layer: false
-model_hash_pretrained = (
-    "bacf2e0b3f9dee9078a97c5216bf7f1c"  # "config.model.load_pretrained": true,
-)
-model_hash_scratch = (
-    "d635df7c184dfff217e09ca93395604b"  # "config.model.load_pretrained": false,
 )
 
 # %% [markdown]
@@ -158,9 +140,7 @@ datasets = load_dataset_splits(**data_params, return_dataset=False)
 # ## Pretrained model
 
 # %%
-dosages = [1e3, 1e4]
-cell_lines = ["A549", "K562", "MCF7"]  # ["A549", "K562", "MCF7"]
-# cell_lines = ['MCF7']
+dosages = [1e1, 1e2, 1e3, 1e4]
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
@@ -172,7 +152,6 @@ drug_r2_pretrained, _ = compute_pred(
     model_pretrained,
     datasets["ood"],
     genes_control=datasets["test_control"].genes,
-    cell_lines=cell_lines,
     dosages=dosages,
 )
 
@@ -190,8 +169,12 @@ drug_r2_scratch, _ = compute_pred(
     datasets["ood"],
     genes_control=datasets["test_control"].genes,
     dosages=dosages,
-    cell_lines=cell_lines,
 )  # non-pretrained
+
+# %%
+dataset.obs.loc[
+    dataset.obs.split_ood_finetuning == "ood", "condition"
+].unique().to_list()
 
 # %%
 np.mean([max(v, 0) for v in drug_r2_scratch.values()])
@@ -199,31 +182,131 @@ np.mean([max(v, 0) for v in drug_r2_scratch.values()])
 # %%
 np.mean([max(v, 0) for v in drug_r2_pretrained.values()])
 
-# %%
-from utils import evaluate_r2
+# %% [markdown]
+# ____
+#
+# import json
 
 # %%
-evaluate_r2(model_pretrained, datasets["ood"], datasets["test_control"].genes)
-
 import torch
 
+file_name = "test.pt"
+torch.save(
+    (
+        model_scratch.state_dict(),
+        # adversary covariates are saved as a list attr on the autoencoder
+        # which PyTorch doesn't include in the autoencoder's state dict
+        [
+            adversary_covariates.state_dict()
+            for adversary_covariates in model_scratch.adversary_covariates
+        ],
+        #                 TODO I haven't checked that this actually works
+        [
+            covariate_embedding.state_dict()
+            for covariate_embedding in model_scratch.covariates_embeddings
+        ],
+        model_scratch.init_args,
+        model_scratch.history,
+    ),
+    file_name,
+)
+pjson = lambda s: print(json.dumps(s), flush=True)
+pjson({"model_saved": file_name})
+
+
 # %%
-from compert.paths import CHECKPOINT_DIR
+def load_torch_model(file_path, append_ae_layer=False):
+    dumped_model = torch.load(file_path)
+    if len(dumped_model) == 3:
+        # old version
+        state_dict, model_config, history = dumped_model
+    else:
+        # new version
+        assert len(dumped_model) == 5
+        (
+            state_dict,
+            adversary_cov_state_dicts,
+            cov_embeddings_state_dicts,
+            model_config,
+            history,
+        ) = dumped_model
+        assert len(cov_embeddings_state_dicts) == 1
+        print("hi")
+    #     # sanity check
+    #     if append_ae_layer:
+    #         assert model_config["num_genes"] < self.datasets["training"].num_genes
+    #     else:
+    #         assert model_config["num_genes"] == self.datasets["training"].num_genes
+    #     assert model_config["use_drugs_idx"]
+    #     keys = list(state_dict.keys())
+    #     for key in keys:
+    #         # remove all components which we will train from scratch
+    #         # the drug embedding is saved in the state_dict for some reason, but we don't need it
+    #         if key.startswith("adversary_drugs") or key == "drug_embeddings.weight":
+    #             state_dict.pop(key)
+    #     if self.embedding_model_type == "vanilla":
+    #         # for Vanilla CPA, we also train the amortized doser & drug_embedding_encoder anew
+    #         keys = list(state_dict.keys())
+    #         for key in keys:
+    #             if key.startswith("dosers") or key.startswith("drug_embedding_encoder"):
+    #                 state_dict.pop(key)
+    return state_dict, cov_embeddings_state_dicts, model_config
 
-model_checkp = CHECKPOINT_DIR / (model_hash_pretrained + ".pt")
-
-state_dict, cov_state_dicts, init_args, history = torch.load(model_checkp)
 
 # %%
-model_pretrained
+model_scratch.drug_embeddings.weight
 
 # %%
-cov_state_dicts
+append_ae_layer = False
+append_layer_width = datasets["training"].num_genes if append_ae_layer else None
+in_out_size = (
+    model_config["num_genes"] if append_ae_layer else datasets["training"].num_genes
+)
+# idea: Reconstruct the ComPert model as pretrained (hence the "old" in_out_size)
+# then add the append_layer (the "new" in_out_size)
+
+from compert.embedding import get_chemical_representation
+
+embedding = get_chemical_representation(
+    smiles=canon_smiles_unique_sorted,
+    embedding_model=config["model"]["embedding"]["model"],
+    data_dir=config["model"]["embedding"]["directory"],
+    device="cuda",
+)
+state_dict, cov_embeddings_state_dicts, model_config = load_torch_model("test.pt")
+append_layer_width = (
+    config["dataset"]["n_vars"]
+    if (config["model"]["append_ae_layer"] and config["model"]["load_pretrained"])
+    else None
+)
+
+if config["model"]["embedding"]["model"] != "vanilla":
+    state_dict.pop("drug_embeddings.weight")
+
+from compert.model import ComPert
+
+autoencoder = ComPert(
+    **model_config, drug_embeddings=embedding, append_layer_width=append_layer_width
+)
+incomp_keys = autoencoder.load_state_dict(state_dict, strict=False)
+for embedding, state_dict in zip(
+    autoencoder.covariates_embeddings, cov_embeddings_state_dicts
+):
+    embedding.load_state_dict(state_dict)
+autoencoder.eval()
+print(f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}")
 
 # %%
-model_pretrained.covariates_embeddings[0].weight
+x = torch.randn((3, 2000))
+
+(model_scratch.encoder.network[0](x) == autoencoder.encoder.network[0](x)).all()
 
 # %%
-[k for k in state_dict.keys() if "emb" in k]
+drug_r2_scratch, _ = compute_pred(
+    autoencoder,
+    datasets["ood"],
+    genes_control=datasets["test_control"].genes,
+    dosages=dosages,
+)  # non-pretrained
 
 # %%

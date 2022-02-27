@@ -53,7 +53,7 @@ def load_dataset(config):
     return dataset, key_dict
 
 
-def load_smiles(config, dataset, key_dict):
+def load_smiles(config, dataset, key_dict, return_pathway_map=False):
     perturbation_key = key_dict["perturbation_key"]
     smiles_key = key_dict["smiles_key"]
 
@@ -69,20 +69,21 @@ def load_smiles(config, dataset, key_dict):
         list(drugs_names_unique_sorted), dataset, perturbation_key, smiles_key
     )
 
-    smiles_to_pathway_map = {
-        canonicalize_smiles(smiles): pathway
-        for smiles, pathway in dataset.obs.groupby(
-            [config["dataset"]["data_params"]["smiles_key"], "pathway_level_1"]
-        ).groups.keys()
-    }
     smiles_to_drug_map = {
         canonicalize_smiles(smiles): drug
         for smiles, drug in dataset.obs.groupby(
             [config["dataset"]["data_params"]["smiles_key"], perturbation_key]
         ).groups.keys()
     }
-
-    return canon_smiles_unique_sorted, smiles_to_pathway_map, smiles_to_drug_map
+    if return_pathway_map:
+        smiles_to_pathway_map = {
+            canonicalize_smiles(smiles): pathway
+            for smiles, pathway in dataset.obs.groupby(
+                [config["dataset"]["data_params"]["smiles_key"], "pathway_level_1"]
+            ).groups.keys()
+        }
+        return canon_smiles_unique_sorted, smiles_to_pathway_map, smiles_to_drug_map
+    return canon_smiles_unique_sorted, smiles_to_drug_map
 
 
 def load_model(config, canon_smiles_unique_sorted):
@@ -99,7 +100,25 @@ def load_model(config, canon_smiles_unique_sorted):
             data_dir=config["model"]["embedding"]["directory"],
             device="cuda",
         )
-    state_dict, cov_state_dicts, init_args, history = torch.load(model_checkp)
+    dumped_model = torch.load(model_checkp)
+    if len(dumped_model) == 3:
+        print("This model does not contain the covariate embeddings or adversaries.")
+        state_dict, init_args, history = dumped_model
+        COV_EMB_AVAILABLE = False
+    elif len(dumped_model) == 4:
+        print("This model does not contain the covariate embeddings.")
+        state_dict, cov_adv_state_dicts, init_args, history = dumped_model
+        COV_EMB_AVAILABLE = False
+    elif len(dumped_model) == 5:
+        (
+            state_dict,
+            cov_adv_state_dicts,
+            cov_emb_state_dicts,
+            init_args,
+            history,
+        ) = dumped_model
+        COV_EMB_AVAILABLE = True
+        assert len(cov_emb_state_dicts) == 1
     append_layer_width = (
         config["dataset"]["n_vars"]
         if (config["model"]["append_ae_layer"] and config["model"]["load_pretrained"])
@@ -112,6 +131,11 @@ def load_model(config, canon_smiles_unique_sorted):
         **init_args, drug_embeddings=embedding, append_layer_width=append_layer_width
     )
     model = model.eval()
+    if COV_EMB_AVAILABLE:
+        for embedding, state_dict in zip(
+            model.covariates_embeddings, cov_emb_state_dicts
+        ):
+            embedding.load_state_dict(state_dict)
 
     incomp_keys = model.load_state_dict(state_dict, strict=False)
     if embedding_model == "vanilla":
