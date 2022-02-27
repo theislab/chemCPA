@@ -175,12 +175,22 @@ class ExperimentWrapper:
             f"Loading pretrained {self.embedding_model_type} model from: {filepath}"
         )
         dumped_model = torch.load(filepath)
+        COVARIATE_AVAILABLE = False
         if len(dumped_model) == 3:
             # old version
             state_dict, model_config, history = dumped_model
+        elif len(dumped_model) == 4:
+            logging.info(f"Loading model without covariate embedding.")
+            (
+                state_dict,
+                adversary_cov_state_dicts,
+                model_config,
+                history,
+            ) = dumped_model
         else:
             # new version
             assert len(dumped_model) == 5
+            COVARIATE_AVAILABLE = True
             (
                 state_dict,
                 adversary_cov_state_dicts,
@@ -207,7 +217,9 @@ class ExperimentWrapper:
             for key in keys:
                 if key.startswith("dosers") or key.startswith("drug_embedding_encoder"):
                     state_dict.pop(key)
-        return state_dict, cov_embeddings_state_dicts, model_config
+        if COVARIATE_AVAILABLE:
+            return state_dict, cov_embeddings_state_dicts, model_config
+        return state_dict, model_config
 
     def update_datasets(self):
         """
