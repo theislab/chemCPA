@@ -86,6 +86,13 @@ def evaluate_logfold_r2(
         if category_count <= 5:
             continue
 
+        # doesn't make sense to evaluate DMSO (=control) as a perturbation
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+        ):
+            continue
+
         covariate = cell_drug_dose_comb.split("_")[0]
 
         bool_pert_categoy = treated_pert_cat_index.get_loc(cell_drug_dose_comb)

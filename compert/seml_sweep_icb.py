@@ -343,11 +343,11 @@ class ExperimentWrapper:
                         self.datasets["test_treated"],
                         self.datasets["test_control"].genes,
                     )
-                    evaluation_stats["test_sc"] = evaluate_r2_sc(
-                        self.autoencoder,
-                        self.datasets["test_treated"],
-                    )
-                    self.autoencoder.train()
+                    # evaluation_stats["test_sc"] = evaluate_r2_sc(
+                    #     self.autoencoder,
+                    #     self.datasets["test_treated"],
+                    # )
+                    # self.autoencoder.train()
                 # test_score = (
                 #     np.mean(evaluation_stats["test"])
                 #     if evaluation_stats["test"]
