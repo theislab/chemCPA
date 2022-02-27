@@ -7,7 +7,7 @@ seml:
   project_root_dir: ../..
 
 slurm:
-  max_simultaneous_jobs: 17
+  max_simultaneous_jobs: 18
   experiments_per_job: 3
   sbatch_options_template: GPU
   sbatch_options:
@@ -23,7 +23,7 @@ fixed:
   profiling.outdir: "./"
 
   training.checkpoint_freq: 50 # checkpoint frequency to run evaluate, and maybe save checkpoint
-  training.num_epochs: 50 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
+  training.num_epochs: 200 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
   training.max_minutes: 1200 # maximum computation time
   training.full_eval_during_train: False
   training.run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
@@ -74,7 +74,7 @@ fixed:
   # model.hparams.batch_size: 128
 
 random: 
-  samples: 5
+  samples: 10
   seed: 42
   model.hparams.batch_size:
     type: choice
@@ -93,9 +93,9 @@ random:
   model.hparams.adversary_width:
     type: choice
     options:
-      - 64
-      - 128
-      - 256
+      - 64 # results in b:4 indicate that 256 is best for grover and rdkit  
+      - 128  
+      - 256 # results in b:4 indicate that 256 is best for grover and rdkit
   model.hparams.adversary_depth:
     type: choice
     options:
@@ -143,7 +143,7 @@ grid:
     options: 
       - split_ho_pathway # necessary field for train, test, ood splits.
       - split_ood_finetuning # necessary field for train, test, ood splits.
-      - split_random
+      # - split_random
       # - split_ho_epigenetic
       # - split_ho_epigenetic_all
 
@@ -157,6 +157,7 @@ rdkit_all_genes:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 128
     model.hparams.embedding_encoder_depth: 4
+    # model.hparams.adversary_width: 256  
 
     model.append_ae_layer: True
     dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_middle_subset.h5ad # full path to the anndata dataset
@@ -172,6 +173,7 @@ rdkit_lincs_genes:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 128
     model.hparams.embedding_encoder_depth: 4
+    # model.hparams.adversary_width: 256  
   
     model.append_ae_layer: False
     dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_middle_subset_lincs_genes.h5ad # full path to the anndata dataset
@@ -187,6 +189,7 @@ grover_base_all_genes:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 512
     model.hparams.embedding_encoder_depth: 3
+    # model.hparams.adversary_width: 256  
     
     model.append_ae_layer: True
     dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_middle_subset.h5ad # full path to the anndata dataset
@@ -202,6 +205,7 @@ grover_base_lincs_genes:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 512
     model.hparams.embedding_encoder_depth: 3
+    # model.hparams.adversary_width: 256  
 
     model.append_ae_layer: False
     dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_middle_subset_lincs_genes.h5ad # full path to the anndata dataset
@@ -217,6 +221,7 @@ jtvae_all_genes:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 256
     model.hparams.embedding_encoder_depth: 4
+    # model.hparams.adversary_width: 64  
 
     model.append_ae_layer: True
     dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_middle_subset.h5ad # full path to the anndata dataset
@@ -232,10 +237,14 @@ jtvae_lincs_genes:
     model.hparams.step_size_lr: 50 # this applies to all optimizers (AE, ADV, DRUG)
     model.hparams.embedding_encoder_width: 256
     model.hparams.embedding_encoder_depth: 4
+    # model.hparams.adversary_width: 64  
     
     model.append_ae_layer: False
     dataset.data_params.dataset_path: /storage/groups/ml01/projects/2021_chemicalCPA_leon.hetzel/datasets/sciplex_complete_middle_subset_lincs_genes.h5ad # full path to the anndata dataset
     dataset.data_params.degs_key: lincs_DEGs # `uns` column name
+
+
+
 # vanilla:
 #   fixed:
 #     model.embedding.model: vanilla
