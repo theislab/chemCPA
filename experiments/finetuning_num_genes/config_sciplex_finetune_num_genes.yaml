@@ -8,7 +8,7 @@ seml:
 
 slurm:
   max_simultaneous_jobs: 17
-  experiments_per_job: 2
+  experiments_per_job: 3
   sbatch_options_template: GPU
   sbatch_options:
     gres: gpu:1       # num GPUs
@@ -23,7 +23,7 @@ fixed:
   profiling.outdir: "./"
 
   training.checkpoint_freq: 50 # checkpoint frequency to run evaluate, and maybe save checkpoint
-  training.num_epochs: 250 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
+  training.num_epochs: 50 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
   training.max_minutes: 1200 # maximum computation time
   training.full_eval_during_train: False
   training.run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
