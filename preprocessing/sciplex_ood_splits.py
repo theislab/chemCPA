@@ -950,10 +950,14 @@ sc.write(
 # ______
 
 # %%
-sc.read(PROJECT_DIR / "datasets" / "sciplex_complete.h5ad")
+adata_sciplex = sc.read(PROJECT_DIR / "datasets" / "sciplex_complete.h5ad")
+adata_sciplex
 
 # %%
-sc.read(PROJECT_DIR / "datasets" / "sciplex_complete_lincs_genes.h5ad")
+adata_sciplex_lincs_genes = sc.read(
+    PROJECT_DIR / "datasets" / "sciplex_complete_lincs_genes.h5ad"
+)
+adata_sciplex_lincs_genes
 
 # %% [markdown]
 # _________
@@ -1006,5 +1010,59 @@ sc.write(
 
 # %% [markdown]
 # ____
+
+# %% [markdown]
+# ## Create middle sized sci-Plex subset
+
+# %%
+delete_idx = []
+for drug, df in adata_sciplex.obs.groupby("condition"):
+    # Low dose
+    cond = df.dose.isin([10])
+    idx = df[cond].sample(frac=0.6).index
+    delete_idx.extend(idx)
+    # Small dose
+    cond = df.dose.isin([100])
+    idx = df[cond].sample(frac=0.5).index
+    delete_idx.extend(idx)
+    # Middle dose
+    cond = df.dose.isin([1000])
+    idx = df[cond].sample(frac=0.3).index
+    delete_idx.extend(idx)
+    # High dose
+    cond = df.dose.isin([10000])
+    idx = df[cond].sample(frac=0.15).index
+    delete_idx.extend(idx)
+
+# %%
+cond = ~pd.Series(adata_sciplex.obs.index).isin(delete_idx)
+
+# %%
+cond.sum()
+
+# %%
+cond = cond.to_list()
+
+# %%
+assert (adata_sciplex.obs.index == adata_sciplex_lincs_genes.obs.index).all()
+
+# %%
+adata = adata_sciplex[cond].copy()
+adata_lincs_genes = adata_sciplex_lincs_genes[cond].copy()
+
+# %%
+pd.crosstab(adata.obs.split_ood_finetuning, adata.obs.control)
+
+# %%
+pd.crosstab(adata.obs.split_ho_pathway, adata.obs.control)
+
+# %%
+sc.write(PROJECT_DIR / "datasets" / "sciplex_complete_middle_subset.h5ad", adata)
+
+# %%
+sc.write(
+    PROJECT_DIR / "datasets" / "sciplex_complete_middle_subset_lincs_genes.h5ad",
+    adata_lincs_genes,
+)
 
 # %%
