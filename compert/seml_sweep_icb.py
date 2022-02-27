@@ -121,7 +121,12 @@ class ExperimentWrapper:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         if load_pretrained:
-            state_dict, cov_embeddings_state_dicts, model_config = self.load_state_dict(
+            (
+                state_dict,
+                cov_embeddings_state_dicts,
+                model_config,
+                COVARIATE_AVAILABLE,
+            ) = self.load_state_dict(
                 pretrained_model_hashes, pretrained_model_path, append_ae_layer
             )
             append_layer_width = (
@@ -146,10 +151,11 @@ class ExperimentWrapper:
                 append_layer_width=append_layer_width,
             )
             incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
-            for embedding, state_dict in zip(
-                self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts
-            ):
-                embedding.load_state_dict(state_dict)
+            if COVARIATE_AVAILABLE:
+                for embedding, state_dict in zip(
+                    self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts
+                ):
+                    embedding.load_state_dict(state_dict)
             logging.info(
                 f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}"
             )
@@ -187,6 +193,7 @@ class ExperimentWrapper:
                 model_config,
                 history,
             ) = dumped_model
+            cov_embeddings_state_dicts = []
         else:
             # new version
             assert len(dumped_model) == 5
@@ -217,9 +224,8 @@ class ExperimentWrapper:
             for key in keys:
                 if key.startswith("dosers") or key.startswith("drug_embedding_encoder"):
                     state_dict.pop(key)
-        if COVARIATE_AVAILABLE:
-            return state_dict, cov_embeddings_state_dicts, model_config
-        return state_dict, model_config
+
+        return state_dict, cov_embeddings_state_dicts, model_config, COVARIATE_AVAILABLE
 
     def update_datasets(self):
         """
