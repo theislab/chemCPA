@@ -697,7 +697,7 @@ class ComPert(torch.nn.Module):
             (
                 reconstruction_loss
                 - self.hparams["reg_adversary"] * adversary_drugs_loss
-                - self.hparams["reg_adversary"] * adversary_covariates_loss
+                - self.hparams["reg_adversary_cov"] * adversary_covariates_loss
             ).backward()
             self.optimizer_autoencoder.step()
             if self.num_drugs > 0:
