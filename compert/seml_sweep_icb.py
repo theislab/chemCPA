@@ -267,6 +267,9 @@ class ExperimentWrapper:
         run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
+        run_eval_r2: bool = True,
+        run_eval_r2_sc: bool = True,
+        run_eval_logfold: bool = True,
     ):
 
         print(f"CWD: {os.getcwd()}")
@@ -375,7 +378,10 @@ class ExperimentWrapper:
                         self.autoencoder,
                         self.datasets,
                         eval_stats=evaluation_stats,
-                        disentangle=run_eval_disentangle,
+                        run_disentangle=run_eval_disentangle,
+                        run_r2=run_eval_r2,
+                        run_r2_sc=run_eval_r2_sc,
+                        run_logfold=run_eval_logfold,
                     )
                     for key, val in evaluation_stats.items():
                         if key not in self.autoencoder.history:

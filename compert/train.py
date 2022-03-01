@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+import logging
 import time
 
 import numpy as np
@@ -322,7 +323,6 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         var_score.append(r2_v)
         mean_score_de.append(r2_m_de)
         var_score_de.append(r2_v_de)
-    print(f"Number of different r2 computations: {len(mean_score)}")
     if len(mean_score) > 0:
         return [
             np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]
@@ -427,7 +427,6 @@ def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
         var_score_de.append(r2_v_de) if not r2_v_de == float(
             "-inf"
         ) else inf_combinations.add(cell_drug_dose_comb)
-    print(f"Number of different r2 computations: {len(mean_score)}")
     print(
         f"{len(inf_combinations)} combinations had '-inf' R2 scores:\n\t {inf_combinations}"
     )
@@ -440,7 +439,15 @@ def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
         return []
 
 
-def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
+def evaluate(
+    autoencoder,
+    datasets,
+    eval_stats,
+    run_disentangle=False,
+    run_r2=True,
+    run_r2_sc=False,
+    run_logfold=False,
+):
     """
     Measure quality metrics using `evaluate()` on the training, test, and
     out-of-distributiion (ood) splits.
@@ -449,7 +456,8 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
     """
     start_time = time.time()
     autoencoder.eval()
-    if disentangle:
+    if run_disentangle:
+        logging.info("Running disentanglement evaluation")
         drug_names, drug_counts = np.unique(
             datasets["test"].drugs_names, return_counts=True
         )
@@ -464,35 +472,7 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
         stats_disent_cov = [0]
 
     with torch.no_grad():
-
         evaluation_stats = {
-            "training": evaluate_r2(
-                autoencoder,
-                datasets["training_treated"],
-                datasets["training_control"].genes,
-            ),
-            "test": eval_stats["test"]
-            if "test" in eval_stats
-            else evaluate_r2(
-                autoencoder, datasets["test_treated"], datasets["test_control"].genes
-            ),
-            "ood": evaluate_r2(
-                autoencoder, datasets["ood"], datasets["test_control"].genes
-            ),
-            "training_sc": evaluate_r2_sc(autoencoder, datasets["training_treated"]),
-            "test_sc": eval_stats["test_sc"]
-            if "test_sc" in eval_stats
-            else evaluate_r2_sc(autoencoder, datasets["test_treated"]),
-            "ood_sc": evaluate_r2_sc(autoencoder, datasets["ood"]),
-            "training_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["training_treated"], datasets["training_control"]
-            ),
-            "test_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["test_treated"], datasets["test_control"]
-            ),
-            "ood_logfold": evaluate_logfold_r2(
-                autoencoder, datasets["ood"], datasets["test_control"]
-            ),
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": optimal_disent_score,
             "covariate disentanglement": stats_disent_cov,
@@ -502,6 +482,59 @@ def evaluate(autoencoder, datasets, eval_stats, disentangle=False):
             if datasets["test"].num_covariates[0] > 0
             else None,
         }
+
+        if run_r2:
+            logging.info("Running R2 evaluation")
+            evaluation_stats["training"] = evaluate_r2(
+                autoencoder,
+                datasets["training_treated"],
+                datasets["training_control"].genes,
+            )
+            if "test" in eval_stats:
+                evaluation_stats["test"] = eval_stats["test"]
+            else:
+                evaluation_stats["test"] = evaluate_r2(
+                    autoencoder,
+                    datasets["test_treated"],
+                    datasets["test_control"].genes,
+                )
+            evaluation_stats["ood"] = evaluate_r2(
+                autoencoder,
+                datasets["ood"],
+                datasets["test_control"].genes,
+            )
+
+        if run_r2_sc:
+            logging.info("Running single-cell R2 evaluation")
+            evaluation_stats["training_sc"] = evaluate_r2_sc(
+                autoencoder, datasets["training_treated"]
+            )
+            if "test_sc" in eval_stats:
+                evaluation_stats["test_sc"] = eval_stats["test_sc"]
+            else:
+                evaluation_stats["test_sc"] = evaluate_r2_sc(
+                    autoencoder, datasets["test_treated"]
+                )
+            evaluation_stats["ood_sc"] = (evaluate_r2_sc(autoencoder, datasets["ood"]),)
+
+        if run_logfold:
+            logging.info("Running logfold evaluation")
+            evaluation_stats["training_logfold"] = evaluate_logfold_r2(
+                autoencoder,
+                datasets["training_treated"],
+                datasets["training_control"],
+            )
+            evaluation_stats["test_logfold"] = evaluate_logfold_r2(
+                autoencoder,
+                datasets["test_treated"],
+                datasets["test_control"],
+            )
+            evaluation_stats["ood_logfold"] = evaluate_logfold_r2(
+                autoencoder,
+                datasets["ood"],
+                datasets["test_control"],
+            )
+
     autoencoder.train()
     ellapsed_minutes = (time.time() - start_time) / 60
     print(f"\nTook {ellapsed_minutes:.1f} min for evaluation.\n")
