@@ -351,17 +351,17 @@ class ExperimentWrapper:
                     #     self.datasets["test_treated"],
                     # )
                     self.autoencoder.train()
-                # test_score = (
-                #     np.mean(evaluation_stats["test"])
-                #     if evaluation_stats["test"]
-                #     else None
-                # )
-
                 test_score = (
-                    evaluation_stats["test"][1]  # DE genes
+                    np.mean(evaluation_stats["test"])
                     if evaluation_stats["test"]
                     else None
                 )
+
+                # test_score = (
+                #     evaluation_stats["test"][1]  # DE genes
+                #     if evaluation_stats["test"]
+                #     else None
+                # )
 
                 test_score_is_nan = test_score is not None and math.isnan(test_score)
                 autoenc_early_stop = self.autoencoder.early_stopping(test_score)
@@ -405,7 +405,8 @@ class ExperimentWrapper:
 
                 # Cmp using == is fine, since if we improve we'll have updated this in `early_stopping`
                 improved_model = self.autoencoder.best_score == test_score
-                if save_checkpoints and improved_model:
+                # Ignore early stopping and save results at the end -> match data in mongoDB
+                if save_checkpoints and stop:
                     logging.info(f"Updating checkpoint at epoch {epoch}")
                     file_name = f"{ex.observers[0].run_entry['config_hash']}.pt"
                     torch.save(
