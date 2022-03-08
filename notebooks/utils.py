@@ -132,10 +132,10 @@ def load_model(config, canon_smiles_unique_sorted):
     )
     model = model.eval()
     if COV_EMB_AVAILABLE:
-        for embedding, state_dict in zip(
+        for embedding_cov, state_dict_cov in zip(
             model.covariates_embeddings, cov_emb_state_dicts
         ):
-            embedding.load_state_dict(state_dict)
+            embedding_cov.load_state_dict(state_dict_cov)
 
     incomp_keys = model.load_state_dict(state_dict, strict=False)
     if embedding_model == "vanilla":
