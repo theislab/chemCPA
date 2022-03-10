@@ -125,7 +125,7 @@ random:
   model.hparams.reg_adversary_cov:
     type: loguniform
     min: 3
-    max: 25
+    max: 50
   model.hparams.penalty_adversary:
     type: loguniform
     min: 0.05
@@ -148,10 +148,10 @@ grid:
   dataset.data_params.split_key: 
     type: choice 
     options: 
-      - split_ho_pathway # necessary field for train, test, ood splits.
+      # - split_ho_pathway # necessary field for train, test, ood splits.
       - split_ood_finetuning # necessary field for train, test, ood splits.
       # - split_random
-      # - split_ho_epigenetic
+      - split_ho_epigenetic
       # - split_ho_epigenetic_all
 
 rdkit_all_genes:
