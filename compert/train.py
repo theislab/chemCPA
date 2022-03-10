@@ -319,10 +319,10 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
             continue
 
-        mean_score.append(r2_m)
-        var_score.append(r2_v)
-        mean_score_de.append(r2_m_de)
-        var_score_de.append(r2_v_de)
+        mean_score.append(max(r2_m, 0.0))
+        var_score.append(max(r2_v, 0.0))
+        mean_score_de.append(max(r2_m_de, 0.0))
+        var_score_de.append(max(r2_v_de, 0.0))
     if len(mean_score) > 0:
         return [
             np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]
