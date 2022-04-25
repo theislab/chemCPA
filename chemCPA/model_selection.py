@@ -21,16 +21,16 @@ import pandas as pd
 import scanpy as sc
 import torch
 
-import compert.plotting as pl
-from compert.api import *
-from compert.data import Dataset, load_dataset_splits
-from compert.model import ComPert
-from compert.plotting import *
-from compert.train import evaluate, prepare_compert
+import chemCPA.plotting as pl
+from chemCPA.api import *
+from chemCPA.data import Dataset, load_dataset_splits
+from chemCPA.model import ComPert
+from chemCPA.plotting import *
+from chemCPA.train import evaluate, prepare_compert
 
 # sys.path.append("/private/home/klanna/pretty-plots/")
 # sys.path.append("/private/home/klanna/CPI/")
-# sys.path.append("/private/home/klanna/test_AdvAE/compert/")
+# sys.path.append("/private/home/klanna/test_AdvAE/chemCPA/")
 
 
 class DatasetSpecs:

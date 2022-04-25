@@ -19,7 +19,7 @@ import pandas as pd
 import scanpy as sc
 
 os.chdir("./../")
-from compert.helper import rank_genes_groups_by_cov
+from chemCPA.helper import rank_genes_groups_by_cov
 
 # %%
 adatas = []
@@ -57,7 +57,7 @@ adata.obs["cov_drug"] = (
 )
 
 # %%
-from compert.helper import rank_genes_groups_by_cov
+from chemCPA.helper import rank_genes_groups_by_cov
 
 rank_genes_groups_by_cov(
     adata, groupby="cov_drug", covariate="cell_type", control_group="control"

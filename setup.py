@@ -1,19 +1,12 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
 from distutils.core import setup
 
-ext_modules = []
-cmdclass = {}
-
 setup(
-    name="compert",
+    name="chemCPA",
     version="1.0.0",
     description="",
-    url="http://github.com/facebookresearch",
+    url="http://github.com/theislab/chemCPA",
     author="See README.md",
-    author_email="dlp@fb.com",
+    author_email="See paper",
     license="MIT",
-    packages=["compert"],
-    cmdclass=cmdclass,
-    ext_modules=ext_modules,
+    packages=["chemCPA"],
 )

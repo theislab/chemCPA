@@ -5,15 +5,15 @@ import seml
 import torch
 from tqdm.auto import tqdm
 
-from compert.data import (
+from chemCPA.data import (
     SubDataset,
     canonicalize_smiles,
     drug_names_to_once_canon_smiles,
 )
-from compert.embedding import get_chemical_representation
-from compert.model import ComPert
-from compert.paths import CHECKPOINT_DIR
-from compert.train import bool2idx, compute_prediction, compute_r2, repeat_n
+from chemCPA.embedding import get_chemical_representation
+from chemCPA.model import ComPert
+from chemCPA.paths import CHECKPOINT_DIR
+from chemCPA.train import bool2idx, compute_prediction, compute_r2, repeat_n
 
 
 def load_config(seml_collection, model_hash):
@@ -57,7 +57,7 @@ def load_smiles(config, dataset, key_dict):
     perturbation_key = key_dict["perturbation_key"]
     smiles_key = key_dict["smiles_key"]
 
-    # this is how the `canon_smiles_unique_sorted` is generated inside compert.data.Dataset
+    # this is how the `canon_smiles_unique_sorted` is generated inside chemCPA.data.Dataset
     # we need to have the same ordering of SMILES, else the mapping to pathways will be off
     # when we load the Vanilla embedding. For the other embeddings it's not as important.
     drugs_names = np.array(dataset.obs[perturbation_key].values)

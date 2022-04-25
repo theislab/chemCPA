@@ -35,7 +35,7 @@ from utils import (
     load_smiles,
 )
 
-from compert.paths import FIGURE_DIR
+from chemCPA.paths import FIGURE_DIR
 
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
@@ -242,7 +242,7 @@ plt.savefig(
 )
 
 # %%
-# from compert.data import load_dataset_splits
+# from chemCPA.data import load_dataset_splits
 
 # data_params = config['dataset']['data_params']
 # data_params['split_key'] = 'split_ho_epigenetic'

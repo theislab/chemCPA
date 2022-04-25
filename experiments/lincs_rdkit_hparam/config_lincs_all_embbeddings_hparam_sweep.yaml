@@ -1,7 +1,7 @@
 # Config for hyperparameter-tuning CCPA on LINCS, using all embeddings, while keeping AE hparams fixed
 # (part 2 of lincs_rdkit_hparam)
 seml:
-  executable: compert/seml_sweep_icb.py
+  executable: chemCPA/seml_sweep_icb.py
   name: lincs_all_emb_hparam
   output_dir: sweeps/logs
   conda_environment: chemical_CPA

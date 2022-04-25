@@ -34,7 +34,7 @@ from rdkit import Chem, DataStructs
 from rdkit.Chem import Draw
 from rdkit.Chem.Draw import IPythonConsole
 
-from compert.paths import DATA_DIR, PROJECT_DIR
+from chemCPA.paths import DATA_DIR, PROJECT_DIR
 
 IPythonConsole.ipython_useSVG = False
 matplotlib.style.use("fivethirtyeight")

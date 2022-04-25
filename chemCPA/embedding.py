@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 import torch
 
-from compert.paths import EMBEDDING_DIR
+from chemCPA.paths import EMBEDDING_DIR
 
 
 def get_chemical_representation(

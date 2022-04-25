@@ -10,7 +10,7 @@ import torch
 from sklearn.metrics import r2_score
 from sklearn.metrics.pairwise import cosine_distances, euclidean_distances
 
-from compert.data import SubDataset
+from chemCPA.data import SubDataset
 
 
 class ComPertAPI:

@@ -7,9 +7,9 @@ import torch
 from torch import nn
 from torchmetrics import R2Score
 
-import compert.data
-from compert.data import SubDataset
-from compert.model import MLP, ComPert
+import chemCPA.data
+from chemCPA.data import SubDataset
+from chemCPA.model import MLP, ComPert
 
 
 def bool2idx(x):
@@ -148,7 +148,7 @@ def evaluate_logfold_r2(
     return mean(logfold_score), mean(signs_score)
 
 
-def evaluate_disentanglement(autoencoder, data: compert.data.Dataset):
+def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
     """
     Given a ComPert model, this function measures the correlation between
     its latent space and 1) a dataset's drug vectors 2) a datasets covariate

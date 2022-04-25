@@ -35,7 +35,7 @@ from utils import (
     load_smiles,
 )
 
-from compert.data import load_dataset_splits
+from chemCPA.data import load_dataset_splits
 
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
@@ -208,7 +208,7 @@ evaluate_r2(model_pretrained, datasets["ood"], datasets["test_control"].genes)
 import torch
 
 # %%
-from compert.paths import CHECKPOINT_DIR
+from chemCPA.paths import CHECKPOINT_DIR
 
 model_checkp = CHECKPOINT_DIR / (model_hash_pretrained + ".pt")
 

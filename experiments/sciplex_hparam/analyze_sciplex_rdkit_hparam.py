@@ -25,7 +25,7 @@ import seaborn as sns
 import seml
 from matplotlib import pyplot as plt
 
-from compert.paths import FIGURE_DIR
+from chemCPA.paths import FIGURE_DIR
 
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")

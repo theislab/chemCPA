@@ -34,7 +34,7 @@ sc.set_figure_params(dpi=80, frameon=False)
 sc.logging.print_header()
 os.getcwd()
 
-from compert.paths import DATA_DIR, PROJECT_DIR
+from chemCPA.paths import DATA_DIR, PROJECT_DIR
 
 pd.set_option("display.max_columns", 100)
 
@@ -191,7 +191,7 @@ adata.obs["control"] = [
 # ## Compute DE genes
 
 # %%
-from compert.helper import rank_genes_groups_by_cov
+from chemCPA.helper import rank_genes_groups_by_cov
 
 rank_genes_groups_by_cov(
     adata,

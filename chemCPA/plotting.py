@@ -17,7 +17,7 @@ from sklearn.decomposition import KernelPCA
 from sklearn.metrics import r2_score
 from sklearn.metrics.pairwise import cosine_similarity
 
-from compert.api import ComPertAPI, get_reference_from_combo
+from chemCPA.api import ComPertAPI, get_reference_from_combo
 
 FONT_SIZE = 13
 # font = {'family': 'Arial', 'size': FONT_SIZE}

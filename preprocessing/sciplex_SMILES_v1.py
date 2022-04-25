@@ -33,7 +33,7 @@ import rdkit
 import scanpy as sc
 from rdkit import Chem
 
-from compert.paths import DATA_DIR, PROJECT_DIR
+from chemCPA.paths import DATA_DIR, PROJECT_DIR
 
 sc.set_figure_params(dpi=100, frameon=False)
 sc.logging.print_header()
