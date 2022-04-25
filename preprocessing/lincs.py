@@ -23,7 +23,7 @@ os.chdir("./../")
 # %%
 import warnings
 
-from compert.helper import rank_genes_groups_by_cov
+from chemCPA.helper import rank_genes_groups_by_cov
 
 warnings.filterwarnings("ignore")
 

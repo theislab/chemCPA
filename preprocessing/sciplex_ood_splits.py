@@ -34,7 +34,7 @@ from rdkit import Chem, DataStructs
 from rdkit.Chem import Draw
 from rdkit.Chem.Draw import IPythonConsole
 
-from compert.paths import DATA_DIR, PROJECT_DIR
+from chemCPA.paths import DATA_DIR, PROJECT_DIR
 
 IPythonConsole.ipython_useSVG = False
 matplotlib.style.use("fivethirtyeight")
@@ -753,15 +753,189 @@ pd.crosstab(
     ],
 )
 
+# %% [markdown]
+# ## Add epigenetic holdout split
+
+# %%
+# train
+adata_sciplex.obs["split_ood_finetuning"] = "train"
+
+# ood
+adata_sciplex.obs.loc[
+    adata_sciplex.obs.condition.isin(ood_drugs), "split_ood_finetuning"
+] = "ood"
+
+
+validation_cond = adata_sciplex.obs.split_ood_finetuning == "train"
+val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.04, copy=True).obs.index
+adata_sciplex.obs.loc[val_idx, "split_ood_finetuning"] = "test"
+
+validation_cond = (adata_sciplex.obs.split_ood_finetuning == "train") & (
+    adata_sciplex.obs.control.isin([1])
+)
+val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.05, copy=True).obs.index
+adata_sciplex.obs.loc[val_idx, "split_ood_finetuning"] = "test"
+
+# %%
+adata_sciplex.obs.condition.isin(epigenetic_drugs_all).sum()
+
+# %%
+from sklearn.model_selection import train_test_split
+
+epigenetic_drugs_all = adata_sciplex.obs.condition[
+    adata_sciplex.obs.pathway_level_1 == "Epigenetic regulation"
+].unique()
+
+epigenetic_drugs = [
+    "Dacinostat",
+    "Quisinostat",
+    "CUDC-907",
+    "Abexinostat",
+    "Panobinostat",
+    "Belinostat",
+    "Givinostat",
+    "AR-42",
+    "Trichostatin",
+    "CUDC-101",
+    "M344",
+    "Resminostat",
+    "Entinostat",  # no_ood
+    "Tucidinostat",  # no_ood
+    "Tacedinaline",  # no_ood
+    "Mocetinostat",  # no_ood
+    "Pracinostat",  # no_ood
+]
+
+ood_epi_drugs = [
+    "Dacinostat",
+    "Quisinostat",
+    "CUDC-907",
+    "Abexinostat",
+    "Panobinostat",
+    "Belinostat",
+    "Givinostat",
+    "AR-42",
+]
+
+val_epi_drugs = [
+    "Trichostatin",
+    "CUDC-101",
+    "M344",
+    "Resminostat",
+    "Entinostat",  # no_ood
+    "Tucidinostat",  # no_ood
+    "Tacedinaline",  # no_ood
+    "Mocetinostat",  # no_ood
+    "Pracinostat",  # no_ood
+]
+
+
+# %%
+if "split_ho_epigenetic" not in list(adata_sciplex.obs):
+    print("Addig 'split_ho_epigenetic' to 'adata_sciplex.obs'.")
+    obs_train, obs_val = train_test_split(adata_sciplex.obs.index, test_size=0.05)
+    #     obs_val, obs_test = train_test_split(obs_tmp, test_size=0.5)
+
+    adata_sciplex.obs["split_ho_epigenetic"] = "train"
+    adata_sciplex.obs.loc[
+        adata_sciplex.obs.index.isin(obs_val), "split_ho_epigenetic"
+    ] = "test"
+
+    # test
+    validation_cond = (adata_sciplex.obs.condition.isin(val_epi_drugs)) & (
+        adata_sciplex.obs.dose.isin([1e3, 1e4])
+    )
+    val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.4, copy=True).obs.index
+    adata_sciplex.obs.loc[val_idx, "split_ho_epigenetic"] = "test"
+
+    validation_cond = (adata_sciplex.obs.condition.isin(val_epi_drugs)) & (
+        adata_sciplex.obs.dose.isin([1e1, 1e2])
+    )
+    val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.4, copy=True).obs.index
+    adata_sciplex.obs.loc[val_idx, "split_ho_epigenetic"] = "test"
+
+    validation_cond = adata_sciplex.obs.condition.isin(
+        epigenetic_drugs_all[~epigenetic_drugs_all.isin(epigenetic_drugs)]
+    )
+    val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.4, copy=True).obs.index
+    adata_sciplex.obs.loc[val_idx, "split_ho_epigenetic"] = "test"
+
+    validation_cond = adata_sciplex.obs.control.isin([True])
+    val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.4, copy=True).obs.index
+    adata_sciplex.obs.loc[val_idx, "split_ho_epigenetic"] = "test"
+
+    adata_sciplex.obs.loc[
+        adata_sciplex.obs.condition.isin(ood_epi_drugs), "split_ho_epigenetic"
+    ] = "ood"
+
+# %%
+if "split_ho_epigenetic_all" not in list(adata_sciplex.obs):
+    print("Addig 'split_ho_epigenetic_all' to 'adata_sciplex.obs'.")
+    obs_train, obs_val = train_test_split(adata_sciplex.obs.index, test_size=0.05)
+    #     obs_val, obs_test = train_test_split(obs_tmp, test_size=0.5)
+
+    adata_sciplex.obs["split_ho_epigenetic_all"] = "train"
+    adata_sciplex.obs.loc[
+        adata_sciplex.obs.index.isin(obs_val), "split_ho_epigenetic_all"
+    ] = "test"
+
+    validation_cond = adata_sciplex.obs.condition.isin(
+        epigenetic_drugs_all[~epigenetic_drugs_all.isin(epigenetic_drugs)]
+    )
+    val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.5, copy=True).obs.index
+    adata_sciplex.obs.loc[val_idx, "split_ho_epigenetic_all"] = "test"
+
+    validation_cond = adata_sciplex.obs.control.isin([True])
+    val_idx = sc.pp.subsample(adata_sciplex[validation_cond], 0.4, copy=True).obs.index
+    adata_sciplex.obs.loc[val_idx, "split_ho_epigenetic_all"] = "test"
+
+    adata_sciplex.obs.loc[
+        adata_sciplex.obs.condition.isin(epigenetic_drugs), "split_ho_epigenetic_all"
+    ] = "ood"
+
+
+# %%
+pd.crosstab(adata_sciplex.obs.split_ho_epigenetic, adata_sciplex.obs.control)
+
+# %%
+pd.crosstab(adata_sciplex.obs.split_ho_epigenetic_all, adata_sciplex.obs.control)
+
+# %% [markdown]
+# ## Add random split
+
+# %%
+if "split_random" not in list(adata_sciplex.obs):
+    print("Addig 'split_random' to 'adata_sciplex.obs'.")
+    obs_train, obs_tmp = train_test_split(adata_sciplex.obs.index, test_size=0.3)
+    obs_val, obs_test = train_test_split(obs_tmp, test_size=0.5)
+
+    adata_sciplex.obs["split_random"] = "train"
+    adata_sciplex.obs.loc[
+        adata_sciplex.obs.index.isin(obs_val), "split_random"
+    ] = "test"
+    adata_sciplex.obs.loc[
+        adata_sciplex.obs.index.isin(obs_test), "split_random"
+    ] = "ood"
+
+# %%
+pd.crosstab(adata_sciplex.obs.split_random, adata_sciplex.obs.control)
+
+# %% [markdown]
+# ## Save `adata_sciplex` and `adata_sciplex_lincs_genes`
+
 # %%
 assert (adata_sciplex.obs.index == adata_sciplex_lincs_genes.obs.index).all()
 
 adata_sciplex_lincs_genes.obs["split_ood_finetuning"] = adata_sciplex.obs[
     "split_ood_finetuning"
 ]
-
-# %% [markdown]
-# ## Save `adata_sciplex` and `adata_sciplex_lincs_genes`
+adata_sciplex_lincs_genes.obs["split_ho_epigenetic"] = adata_sciplex.obs[
+    "split_ho_epigenetic"
+]
+adata_sciplex_lincs_genes.obs["split_ho_epigenetic_all"] = adata_sciplex.obs[
+    "split_ho_epigenetic_all"
+]
+adata_sciplex_lincs_genes.obs["split_random"] = adata_sciplex.obs["split_random"]
 
 # %%
 sc.write(PROJECT_DIR / "datasets" / "sciplex_complete.h5ad", adata_sciplex)
@@ -813,8 +987,6 @@ adata_subset.uns = adata.uns.copy()
 adata_subset
 
 # %%
-from sklearn.model_selection import train_test_split
-
 if "split" not in list(adata_subset.obs):
     print("Addig 'split' to 'adata_subset.obs'.")
     obs_train, obs_tmp = train_test_split(adata_subset.obs.index, test_size=0.3)

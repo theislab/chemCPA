@@ -24,6 +24,8 @@ import seaborn as sns
 import seml
 from matplotlib import pyplot as plt
 
+from chemCPA.paths import FIGURE_DIR
+
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
 matplotlib.rcParams["font.family"] = "monospace"
@@ -115,6 +117,9 @@ results_clean["result.test_mean_de"] = results_clean["result.ood"].apply(get_mea
 results_clean["result.perturbation disentanglement"] = results_clean[
     "result.perturbation disentanglement"
 ].apply(lambda x: x[0])
+results_clean["result.covariate disentanglement"] = results_clean[
+    "result.covariate disentanglement"
+].apply(lambda x: x[0][0])
 
 
 results_clean
@@ -146,6 +151,7 @@ for i, y in enumerate(
         y=y,
         inner="point",
         ax=ax[i],
+        scale="width",
     )
     ax[i].set_ylim([0.39, 1])
     ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=45, ha="right")
@@ -168,6 +174,7 @@ for i, y in enumerate(("result.training_mean", "result.val_mean", "result.test_m
         y=y,
         inner="point",
         ax=ax[i],
+        scale="width",
     )
     ax[i].set_ylim([0.82, 1])
     ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
@@ -179,36 +186,47 @@ for i, y in enumerate(("result.training_mean", "result.val_mean", "result.test_m
 # ## Look at disentanglement scores
 
 # %%
-rows = 1
+rows = 2
 cols = 1
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 7 * rows), sharex=True)
 
-for y in ["result.perturbation disentanglement"]:
+max_entangle = [0.2, 0.25]
+for i, y in enumerate(
+    ["result.perturbation disentanglement", "result.covariate disentanglement"]
+):
     sns.violinplot(
-        data=results_clean, x="config.model.embedding.model", y=y, inner="point", ax=ax
+        data=results_clean,
+        x="config.model.embedding.model",
+        y=y,
+        inner="point",
+        ax=ax[i],
     )
     # ax[i].set_ylim([0,1])
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=75, ha="right")
-    ax.axhline(0.18, color="orange")
-    ax.set_xlabel("")
-    ax.set_ylabel(y.split(".")[-1])
-    plt.tight_layout()
+    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
+    ax[i].axhline(max_entangle[i], color="orange")
+    ax[i].set_xlabel("")
+    ax[i].set_ylabel(y.split(".")[-1])
+plt.tight_layout()
 
 # %% [markdown]
 # ## Subselect to disentangled models
 
 # %%
-n_top = 5
+n_top = 3
 
-performance_condition = lambda emb, max_entangle: (
-    results_clean["config.model.embedding.model"] == emb
-) & (results_clean["result.perturbation disentanglement"] < max_entangle)
+
+def performance_condition(emb, max_entangle, max_entangle_cov):
+    cond = results_clean["config.model.embedding.model"] == emb
+    cond = cond & (results_clean["result.perturbation disentanglement"] < max_entangle)
+    cond = cond & (results_clean["result.covariate disentanglement"] < max_entangle_cov)
+    return cond
+
 
 best = []
 top_one = []
 best_disentangled = []
 for embedding in list(results_clean["config.model.embedding.model"].unique()):
-    df = results_clean[performance_condition(embedding, 0.15)]
+    df = results_clean[performance_condition(embedding, 0.2, 0.2)]
     print(embedding, len(df))
     best.append(df.sort_values(by="result.val_mean_de", ascending=False).head(n_top))
     top_one.append(df.sort_values(by="result.val_mean_de", ascending=False).head(1))
@@ -224,26 +242,43 @@ best_disentangled = pd.concat(best_disentangled)
 
 # %%
 # All genes, DE genes, disentanglement
-rows, cols = 1, 3
+rows, cols = 2, 2
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
 
 for i, y in enumerate(
-    ["result.test_mean", "result.test_mean_de", "result.perturbation disentanglement"]
+    [
+        "result.test_mean",
+        "result.test_mean_de",
+        "result.perturbation disentanglement",
+        "result.covariate disentanglement",
+    ]
 ):
     sns.violinplot(
         data=best,
         x="config.model.embedding.model",
         y=y,
         inner="points",
-        ax=ax[i],
+        ax=ax[i // cols, i % cols],
         scale="width",
     )
-    ax[i].set_xticklabels(ax[i].get_xticklabels(), rotation=75, ha="right")
-    ax[i].set_xlabel("")
-    ax[i].set_ylabel(y.split(".")[-1])
-
+    ax[i // cols, i % cols].set_xticklabels(
+        ax[i // cols, i % cols].get_xticklabels(), rotation=75, ha="right"
+    )
+    ax[i // cols, i % cols].set_xlabel("")
+    ax[i // cols, i % cols].set_ylabel(y.split(".")[-1])
+ax[0, 0].set_ylabel("$\mathbb{E}\,[R^2]$ on all genes")
+ax[0, 0].set_ylim([0.89, 0.96])
+ax[0, 1].set_ylabel("$\mathbb{E}\,[R^2]$ on DE genes")
+ax[0, 1].set_ylim([0.69, 0.92])
+ax[1, 0].set_ylabel("Drug entanglement")
+ax[1, 0].axhline(0.2, ls=":", color="black")
+ax[1, 0].text(6.65, 0.215, "max entangled", fontsize=15, va="center", ha="center")
+ax[1, 1].set_ylabel("Covariate entanglement")
+ax[1, 1].text(6.65, 0.215, "max entangled", fontsize=15, va="center", ha="center")
+ax[1, 1].axhline(0.2, ls=":", color="black")
 plt.tight_layout()
 
+plt.savefig(FIGURE_DIR / "lincs_pretraining.eps", format="eps", bbox_inches="tight")
 
 # %% [markdown]
 # Top 3 best disentangled models per embedding type

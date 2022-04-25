@@ -1,7 +1,7 @@
 # Config for fine-tuning CCPA on Trapnell from LINCS pre-training with identical gene sets 
 # This leads direclty to part 1 and 3 of `finetuning_num_genes` and also o `finetuning_OOD_prediction`
 seml:
-  executable: compert/seml_sweep_icb.py
+  executable: chemCPA/seml_sweep_icb.py
   name: ft_sciplex_hparam
   output_dir: sweeps/logs
   conda_environment: chemical_CPA

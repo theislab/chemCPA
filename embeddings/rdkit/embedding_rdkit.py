@@ -28,7 +28,7 @@ import numpy as np
 from joblib import Parallel, delayed
 from tqdm.notebook import tqdm
 
-from compert.paths import DATA_DIR, EMBEDDING_DIR
+from chemCPA.paths import DATA_DIR, EMBEDDING_DIR
 
 # %% [markdown]
 # ## Load Smiles list

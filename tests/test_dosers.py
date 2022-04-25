@@ -2,7 +2,7 @@ import pytest
 import torch.nn
 import torch.nn.functional as F
 
-from compert.model import ComPert, GeneralizedSigmoid
+from chemCPA.model import ComPert, GeneralizedSigmoid
 
 
 @pytest.mark.parametrize("nonlin", ["sigm", "logsigm", None])
