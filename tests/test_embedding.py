@@ -1,9 +1,9 @@
 import pandas as pd
 import torch.testing
 
-from compert.data import Dataset
-from compert.embedding import get_chemical_representation
-from compert.model import ComPert
+from chemCPA.data import Dataset
+from chemCPA.embedding import get_chemical_representation
+from chemCPA.model import ComPert
 
 
 def test_embedding_idx_roundtrip():

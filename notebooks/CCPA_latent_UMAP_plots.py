@@ -28,9 +28,9 @@ import seml
 import torch
 import umap.plot
 
-from compert.data import Dataset, canonicalize_smiles, drug_names_to_once_canon_smiles
-from compert.embedding import get_chemical_representation
-from compert.model import ComPert
+from chemCPA.data import Dataset, canonicalize_smiles, drug_names_to_once_canon_smiles
+from chemCPA.embedding import get_chemical_representation
+from chemCPA.model import ComPert
 
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
@@ -85,7 +85,7 @@ perturbation_key = config["dataset"]["data_params"]["perturbation_key"]
 smiles_key = config["dataset"]["data_params"]["smiles_key"]
 dataset = sc.read(config["dataset"]["data_params"]["dataset_path"])
 
-# this is how the `canon_smiles_unique_sorted` is generated inside compert.data.Dataset
+# this is how the `canon_smiles_unique_sorted` is generated inside chemCPA.data.Dataset
 # we need to have the same ordering of SMILES, else the mapping to pathways will be off
 # when we load the Vanilla embedding. For the other embeddings it's not as important.
 drugs_names = np.array(dataset.obs[perturbation_key].values)

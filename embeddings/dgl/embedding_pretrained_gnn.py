@@ -26,7 +26,7 @@ from dgllife.utils import (
     smiles_to_bigraph,
 )
 
-from compert.paths import DATA_DIR, EMBEDDING_DIR
+from chemCPA.paths import DATA_DIR, EMBEDDING_DIR
 
 # %% [markdown]
 # ## Load Smiles list

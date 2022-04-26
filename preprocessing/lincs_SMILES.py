@@ -23,7 +23,7 @@
 # %%
 import scanpy as sc
 
-from compert.paths import DATA_DIR, PROJECT_DIR
+from chemCPA.paths import DATA_DIR, PROJECT_DIR
 
 sc.set_figure_params(dpi=80, frameon=False)
 sc.logging.print_header()

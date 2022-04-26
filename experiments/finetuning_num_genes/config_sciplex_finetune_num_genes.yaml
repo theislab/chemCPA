@@ -1,6 +1,6 @@
 # Config for finetuning-tuning (on Trapnell) a CPA model that was petrained on LINCS
 seml:
-  executable: compert/seml_sweep_icb.py
+  executable: chemCPA/seml_sweep_icb.py
   name: ft_trapnell_num_genes
   output_dir: sweeps/logs
   conda_environment: chemical_CPA

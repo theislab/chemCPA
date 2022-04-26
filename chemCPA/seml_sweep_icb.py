@@ -11,11 +11,11 @@ import seml
 import torch
 from sacred import Experiment
 
-from compert.data import load_dataset_splits
-from compert.embedding import get_chemical_representation
-from compert.model import ComPert
-from compert.profiling import Profiler
-from compert.train import custom_collate, evaluate, evaluate_r2, evaluate_r2_sc
+from chemCPA.data import load_dataset_splits
+from chemCPA.embedding import get_chemical_representation
+from chemCPA.model import ComPert
+from chemCPA.profiling import Profiler
+from chemCPA.train import custom_collate, evaluate, evaluate_r2, evaluate_r2_sc
 
 ex = Experiment()
 seml.setup_logger(ex)

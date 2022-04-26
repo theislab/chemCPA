@@ -222,7 +222,7 @@ plot_umap(
 )
 
 # %%
-# from compert.data import load_dataset_splits
+# from chemCPA.data import load_dataset_splits
 
 # data_params = config['dataset']['data_params']
 # data_params['split_key'] = 'split_ho_epigenetic'

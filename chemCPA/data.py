@@ -1,4 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import logging
 import warnings
 
@@ -12,7 +11,7 @@ import pandas as pd
 import scanpy as sc
 from sklearn.preprocessing import OneHotEncoder
 
-from compert.helper import canonicalize_smiles
+from chemCPA.helper import canonicalize_smiles
 
 
 def ranks_to_df(data, key="rank_genes_groups"):
