@@ -5,8 +5,8 @@ Main authors: Leon Hetzel, Simon Boehm (equal contribution).
 ![architecture of CCPA](docs/chemical_CPA.png)
 
 ## Codebase overview
-Disclaimer: this is not a super readable codebase. Various people are working on more maintainable implementations of
-(chem)CPA, and it be worth waiting until CPA lands in [scvi-tools](https://github.com/scverse/scvi-tools).
+Disclaimer: Various people are working on more maintainable implementations of
+(chem)CPA, and it may be worth waiting until CPA lands in [scvi-tools](https://github.com/scverse/scvi-tools).
 However, this current version implements many performance optimizations (careful data-movement, disentanglement on GPU,
 numerically stable losses, ...) that allow for training on large datasets, like L1000.
 
@@ -26,4 +26,4 @@ python setup.py install -e .
 - `preprocessing`: Notebooks for processing the data. For each dataset there is one notebook that loads the raw data.
 - `tests`: A few very basic tests.
 
-All notebooks are converted to Python scripts using [jupytext](https://github.com/mwouts/jupytext) to make them easier to review.
+All notebooks also exist as Python scripts (converted through [jupytext](https://github.com/mwouts/jupytext)) to make them easier to review.
