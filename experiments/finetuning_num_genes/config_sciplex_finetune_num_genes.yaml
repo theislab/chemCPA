@@ -16,6 +16,7 @@ slurm:
     cpus-per-task: 6  # num cores
     # speeds is roughly 3 epochs / minute
     time: 1-00:01     # max time, D-HH:MM
+    nice: 10000
 ###### BEGIN PARAMETER CONFIGURATION ######
 
 fixed:
