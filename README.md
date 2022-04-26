@@ -2,7 +2,7 @@
 Code accompanying the ICLR 2022 MLDD paper.
 Main authors: Leon Hetzel, Simon Boehm (equal contribution).
 
-![architecture of CCPA](docs/chemical_CPA.png)
+![architecture of CCPA](docs/chemCPA.png)
 
 ## Codebase overview
 Disclaimer: Various people are working on more maintainable implementations of
@@ -10,7 +10,7 @@ Disclaimer: Various people are working on more maintainable implementations of
 However, this current version implements many performance optimizations (careful data-movement, disentanglement on GPU,
 numerically stable losses, ...) that allow for training on large datasets, like L1000.
 
-For the final models, we provide [weight checkpoints](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip) as well as the [hyperparameter configuration & loss curves](https://f003.backblazeb2.com/file/chemCPA-models/finetuning_num_genes.json).
+For the final models, we provide [weight checkpoints](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip) as well as the [hyperparameter configuration](https://f003.backblazeb2.com/file/chemCPA-models/finetuning_num_genes.json).
 The raw datasets can be downloaded from a [FAIR server](https://dl.fbaipublicfiles.com/dlp/cpa_binaries.tar).
 
 To setup the environment, install conda and run:
