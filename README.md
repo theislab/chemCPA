@@ -29,3 +29,14 @@ python setup.py install -e .
 - `tests`: A few very basic tests.
 
 All notebooks also exist as Python scripts (converted through [jupytext](https://github.com/mwouts/jupytext)) to make them easier to review.
+
+
+You can cite our work as:
+```
+@inproceedings{hetzel2022predicting,
+  title={Predicting single-cell perturbation responses for unseen drugs},
+  author={Hetzel, Leon and B{\"o}hm, Simon and Kilbertus, Niki and G{\"u}nnemann, Stephan and Lotfollahi, Mohammad and Theis, Fabian J},
+  booktitle={ICLR2022 Machine Learning for Drug Discovery},
+  year={2022}
+}
+```
