@@ -13,6 +13,8 @@ numerically stable losses, ...) that allow for training on large datasets, like 
 All experiments where run through [seml](https://github.com/TUM-DAML/seml).
 The entry function is `ExperimentWrapper.__init__` in `chemCPA/seml_sweep_icb.py`.
 
+You can download checkpoints for the final models from [this link](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip).
+
 To setup the environment, install conda and run:
 ```python
 conda env create -f environment.yml
