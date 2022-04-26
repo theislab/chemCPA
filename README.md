@@ -30,7 +30,7 @@ python setup.py install -e .
 
 All notebooks also exist as Python scripts (converted through [jupytext](https://github.com/mwouts/jupytext)) to make them easier to review.
 
-
+## Citation
 You can cite our work as:
 ```
 @inproceedings{hetzel2022predicting,
