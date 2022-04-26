@@ -9,7 +9,7 @@
 #       jupytext_version: 1.13.6
 # ---
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # **Requirements:**
 # * Trained models
 #
@@ -18,7 +18,7 @@
 # ___
 # # Imports
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,6 +26,7 @@ import pandas as pd
 import scanpy as sc
 import seaborn as sn
 import umap.plot
+from compert.data import load_dataset_splits
 from utils import (
     compute_drug_embeddings,
     compute_pred,
@@ -35,8 +36,6 @@ from utils import (
     load_smiles,
 )
 
-from chemCPA.data import load_dataset_splits
-
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
 matplotlib.rcParams["font.family"] = "monospace"
@@ -44,22 +43,23 @@ matplotlib.rcParams["figure.dpi"] = 60
 matplotlib.pyplot.rcParams["savefig.facecolor"] = "white"
 sn.set_context("poster")
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # %load_ext autoreload
 # %autoreload 2
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # # Load and analyse model
 # * Define `seml_collection` and `model_hash` to load data and model
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 seml_collection = "finetuning_num_genes"
+
 # split_ho_pathway, append_ae_layer: true
 model_hash_pretrained = (
     "70290e4f42ac4cb19246fafa0b75ccb6"  # "config.model.load_pretrained": true,
 )
 model_hash_scratch = (
-    "00e7e9c7979f90d1325f25f9ff4e3fcb"  # "config.model.load_pretrained": false,
+    "ed3bc586a5fcfe3c4dbb0157cd67d0d9"  # "config.model.load_pretrained": false,
 )
 
 # split_ood_finetuning, append_ae_layer: true
@@ -70,45 +70,26 @@ model_hash_scratch = (
     "6e9d00880375aa450a8e5de60250659f"  # "config.model.load_pretrained": false,
 )
 
-seml_collection = "sciplex_hparam"
-# rdkit
-# split_ood_finetuning, append_ae_layer: false
-model_hash_pretrained = (
-    "d9ee464c93a0d2d947e9115f8d834f22"  # "config.model.load_pretrained": true,
-)
-model_hash_scratch = (
-    "0a929eab639127e304271036fe478e0b"  # "config.model.load_pretrained": false,
-)
-
-# grover
-# split_ood_finetuning, append_ae_layer: false
-model_hash_pretrained = (
-    "bacf2e0b3f9dee9078a97c5216bf7f1c"  # "config.model.load_pretrained": true,
-)
-model_hash_scratch = (
-    "d635df7c184dfff217e09ca93395604b"  # "config.model.load_pretrained": false,
-)
-
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Load config
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 config = load_config(seml_collection, model_hash_pretrained)
 dataset, key_dict = load_dataset(config)
 config["dataset"]["n_vars"] = dataset.n_vars
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ### Load smiles info
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 canon_smiles_unique_sorted, smiles_to_pathway_map, smiles_to_drug_map = load_smiles(
     config, dataset, key_dict
 )
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # #### Define which drugs should be annotaded with list `ood_drugs`
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 ood_drugs = (
     dataset.obs.condition[
         dataset.obs[config["dataset"]["data_params"]["split_key"]].isin(["ood"])
@@ -117,10 +98,10 @@ ood_drugs = (
     .to_list()
 )
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # #### Get pathway level 2 annotation for clustering of drug embeddings
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 smiles_to_pw_level2_map = {}
 pw1_to_pw2 = {}
 
@@ -133,19 +114,19 @@ for (drug, pw1, pw2), df in dataset.obs.groupby(
     else:
         pw1_to_pw2[pw1] = {pw2}
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 groups = ["Epigenetic regulation"]
 
 groups_pw2 = [pw2 for pw in groups for pw2 in pw1_to_pw2[pw]]
 groups_pw2
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Load dataset splits
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 config["dataset"]["data_params"]
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 data_params = config["dataset"]["data_params"]
 
 # #Overwrite split_key
@@ -153,77 +134,146 @@ data_params = config["dataset"]["data_params"]
 
 datasets = load_dataset_splits(**data_params, return_dataset=False)
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ___
 # ## Pretrained model
 
-# %%
-dosages = [1e3, 1e4]
-cell_lines = ["A549", "K562", "MCF7"]  # ["A549", "K562", "MCF7"]
-# cell_lines = ['MCF7']
+# %% pycharm={"name": "#%%\n"}
+dosages = [1e1, 1e2, 1e3, 1e4]
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 config = load_config(seml_collection, model_hash_pretrained)
 config["dataset"]["n_vars"] = dataset.n_vars
 model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_sorted)
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 drug_r2_pretrained, _ = compute_pred(
     model_pretrained,
     datasets["ood"],
     genes_control=datasets["test_control"].genes,
-    cell_lines=cell_lines,
     dosages=dosages,
 )
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Non-pretrained model
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 config = load_config(seml_collection, model_hash_scratch)
 config["dataset"]["n_vars"] = dataset.n_vars
 model_scratch, embedding_scratch = load_model(config, canon_smiles_unique_sorted)
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 drug_r2_scratch, _ = compute_pred(
     model_scratch,
     datasets["ood"],
     genes_control=datasets["test_control"].genes,
     dosages=dosages,
-    cell_lines=cell_lines,
 )  # non-pretrained
 
 # %%
+dataset.obs.loc[
+    dataset.obs.split_ood_finetuning == "ood", "condition"
+].unique().to_list()
+
+# %% pycharm={"name": "#%%\n"}
 np.mean([max(v, 0) for v in drug_r2_scratch.values()])
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 np.mean([max(v, 0) for v in drug_r2_pretrained.values()])
 
-# %%
-from utils import evaluate_r2
+# %% pycharm={"name": "#%%\n"}
+____
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 evaluate_r2(model_pretrained, datasets["ood"], datasets["test_control"].genes)
+
+import json
 
 import torch
 
-# %%
-from chemCPA.paths import CHECKPOINT_DIR
+# %% pycharm={"name": "#%%\n"}
+from compert.paths import CHECKPOINT_DIR
 
-model_checkp = CHECKPOINT_DIR / (model_hash_pretrained + ".pt")
+file_name = "test.pt"
+torch.save(
+    (
+        model_scratch.state_dict(),
+        # adversary covariates are saved as a list attr on the autoencoder
+        # which PyTorch doesn't include in the autoencoder's state dict
+        [
+            adversary_covariates.state_dict()
+            for adversary_covariates in model_scratch.adversary_covariates
+        ],
+        #                 TODO I haven't checked that this actually works
+        [
+            covariate_embedding.state_dict()
+            for covariate_embedding in model_scratch.covariates_embeddings
+        ],
+        model_scratch.init_args,
+        model_scratch.history,
+    ),
+    file_name,
+)
+pjson = lambda s: print(json.dumps(s), flush=True)
+pjson({"model_saved": file_name})
 
-state_dict, cov_state_dicts, init_args, history = torch.load(model_checkp)
 
-# %%
-model_pretrained
+# %% pycharm={"name": "#%%\n"}
+def load_torch_model(file_path, append_ae_layer=False):
+    dumped_model = torch.load(file_path)
+    if len(dumped_model) == 3:
+        # old version
+        state_dict, model_config, history = dumped_model
+    else:
+        # new version
+        assert len(dumped_model) == 5
+        (
+            state_dict,
+            adversary_cov_state_dicts,
+            cov_embeddings_state_dicts,
+            model_config,
+            history,
+        ) = dumped_model
+        assert len(cov_embeddings_state_dicts) == 1
+        print("hi")
+    #     # sanity check
+    #     if append_ae_layer:
+    #         assert model_config["num_genes"] < self.datasets["training"].num_genes
+    #     else:
+    #         assert model_config["num_genes"] == self.datasets["training"].num_genes
+    #     assert model_config["use_drugs_idx"]
+    #     keys = list(state_dict.keys())
+    #     for key in keys:
+    #         # remove all components which we will train from scratch
+    #         # the drug embedding is saved in the state_dict for some reason, but we don't need it
+    #         if key.startswith("adversary_drugs") or key == "drug_embeddings.weight":
+    #             state_dict.pop(key)
+    #     if self.embedding_model_type == "vanilla":
+    #         # for Vanilla CPA, we also train the amortized doser & drug_embedding_encoder anew
+    #         keys = list(state_dict.keys())
+    #         for key in keys:
+    #             if key.startswith("dosers") or key.startswith("drug_embedding_encoder"):
+    #                 state_dict.pop(key)
+    return state_dict, cov_embeddings_state_dicts, model_config
 
-# %%
+
+# %% pycharm={"name": "#%%\n"}
 cov_state_dicts
 
-# %%
-model_pretrained.covariates_embeddings[0].weight
+# %% pycharm={"name": "#%%\n"}
+model_scratch.drug_embeddings.weight
+
+# %% pycharm={"name": "#%%\n"}
+x = torch.randn((3, 2000))
+
+(model_scratch.encoder.network[0](x) == autoencoder.encoder.network[0](x)).all()
 
 # %%
-[k for k in state_dict.keys() if "emb" in k]
+drug_r2_scratch, _ = compute_pred(
+    autoencoder,
+    datasets["ood"],
+    genes_control=datasets["test_control"].genes,
+    dosages=dosages,
+)  # non-pretrained
 
-# %%
+# %% pycharm={"name": "#%%\n"}

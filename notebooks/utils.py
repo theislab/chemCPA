@@ -53,7 +53,7 @@ def load_dataset(config):
     return dataset, key_dict
 
 
-def load_smiles(config, dataset, key_dict):
+def load_smiles(config, dataset, key_dict, return_pathway_map=False):
     perturbation_key = key_dict["perturbation_key"]
     smiles_key = key_dict["smiles_key"]
 
@@ -69,20 +69,21 @@ def load_smiles(config, dataset, key_dict):
         list(drugs_names_unique_sorted), dataset, perturbation_key, smiles_key
     )
 
-    smiles_to_pathway_map = {
-        canonicalize_smiles(smiles): pathway
-        for smiles, pathway in dataset.obs.groupby(
-            [config["dataset"]["data_params"]["smiles_key"], "pathway_level_1"]
-        ).groups.keys()
-    }
     smiles_to_drug_map = {
         canonicalize_smiles(smiles): drug
         for smiles, drug in dataset.obs.groupby(
             [config["dataset"]["data_params"]["smiles_key"], perturbation_key]
         ).groups.keys()
     }
-
-    return canon_smiles_unique_sorted, smiles_to_pathway_map, smiles_to_drug_map
+    if return_pathway_map:
+        smiles_to_pathway_map = {
+            canonicalize_smiles(smiles): pathway
+            for smiles, pathway in dataset.obs.groupby(
+                [config["dataset"]["data_params"]["smiles_key"], "pathway_level_1"]
+            ).groups.keys()
+        }
+        return canon_smiles_unique_sorted, smiles_to_pathway_map, smiles_to_drug_map
+    return canon_smiles_unique_sorted, smiles_to_drug_map
 
 
 def load_model(config, canon_smiles_unique_sorted):
@@ -99,7 +100,25 @@ def load_model(config, canon_smiles_unique_sorted):
             data_dir=config["model"]["embedding"]["directory"],
             device="cuda",
         )
-    state_dict, cov_state_dicts, init_args, history = torch.load(model_checkp)
+    dumped_model = torch.load(model_checkp)
+    if len(dumped_model) == 3:
+        print("This model does not contain the covariate embeddings or adversaries.")
+        state_dict, init_args, history = dumped_model
+        COV_EMB_AVAILABLE = False
+    elif len(dumped_model) == 4:
+        print("This model does not contain the covariate embeddings.")
+        state_dict, cov_adv_state_dicts, init_args, history = dumped_model
+        COV_EMB_AVAILABLE = False
+    elif len(dumped_model) == 5:
+        (
+            state_dict,
+            cov_adv_state_dicts,
+            cov_emb_state_dicts,
+            init_args,
+            history,
+        ) = dumped_model
+        COV_EMB_AVAILABLE = True
+        assert len(cov_emb_state_dicts) == 1
     append_layer_width = (
         config["dataset"]["n_vars"]
         if (config["model"]["append_ae_layer"] and config["model"]["load_pretrained"])
@@ -112,6 +131,11 @@ def load_model(config, canon_smiles_unique_sorted):
         **init_args, drug_embeddings=embedding, append_layer_width=append_layer_width
     )
     model = model.eval()
+    if COV_EMB_AVAILABLE:
+        for embedding_cov, state_dict_cov in zip(
+            model.covariates_embeddings, cov_emb_state_dicts
+        ):
+            embedding_cov.load_state_dict(state_dict_cov)
 
     incomp_keys = model.load_state_dict(state_dict, strict=False)
     if embedding_model == "vanilla":
@@ -144,7 +168,15 @@ def compute_drug_embeddings(model, embedding, dosage=1e4):
     return transf_embeddings
 
 
-def compute_pred(model, dataset, dosages=[1e4], cell_lines=None, genes_control=None):
+def compute_pred(
+    model,
+    dataset,
+    dosages=[1e4],
+    cell_lines=None,
+    genes_control=None,
+    use_DEGs=True,
+    verbose=True,
+):
     # dataset.pert_categories contains: 'celltype_perturbation_dose' info
     pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
 
@@ -196,6 +228,11 @@ def compute_pred(model, dataset, dosages=[1e4], cell_lines=None, genes_control=N
         idx_all = bool2idx(bool_category)
         idx = idx_all[0]
         y_true = dataset.genes[idx_all, :].to(device="cuda")
+
+        # cov_name = cell_drug_dose_comb.split("_")[0]
+        # cond = dataset_ctrl.covariate_names["cell_type"] == cov_name
+        # genes_control = dataset_ctrl.genes[cond]
+
         if genes_control is None:
             n_obs = y_true.size(0)
         else:
@@ -245,10 +282,122 @@ def compute_pred(model, dataset, dosages=[1e4], cell_lines=None, genes_control=N
 
         y_pred = mean_pred.mean(0)
         y_true = y_true.mean(0)
-        r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
-        print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}")
+        if use_DEGs:
+            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
+            drug_r2[cell_drug_dose_comb] = r2_m_de
+        else:
+            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
+            drug_r2[cell_drug_dose_comb] = r2_m
+
         predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
-        drug_r2[cell_drug_dose_comb] = r2_m_de
+    return drug_r2, predictions_dict
+
+
+def compute_pred_ctrl(
+    dataset,
+    dosages=[1e4],
+    cell_lines=None,
+    dataset_ctrl=None,
+    use_DEGs=True,
+    verbose=True,
+):
+    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
+
+    allowed_cell_lines = []
+
+    cl_dict = {
+        torch.Tensor([1, 0, 0]): "A549",
+        torch.Tensor([0, 1, 0]): "K562",
+        torch.Tensor([0, 0, 1]): "MCF7",
+    }
+
+    if cell_lines is None:
+        cell_lines = ["A549", "K562", "MCF7"]
+
+    print(cell_lines)
+
+    predictions_dict = {}
+    drug_r2 = {}
+    for cell_drug_dose_comb, category_count in tqdm(
+        zip(*np.unique(dataset.pert_categories, return_counts=True))
+    ):
+        if dataset.perturbation_key is None:
+            break
+
+        # estimate metrics only for reasonably-sized drug/cell-type combos
+        if category_count <= 5:
+            continue
+
+        # doesn't make sense to evaluate DMSO (=control) as a perturbation
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+        ):
+            continue
+
+        # dataset.var_names is the list of gene names
+        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
+        # genes for every cell_drug_dose combination.
+        bool_de = dataset.var_names.isin(
+            np.array(dataset.de_genes[cell_drug_dose_comb])
+        )
+        idx_de = bool2idx(bool_de)
+
+        # need at least two genes to be able to calc r2 score
+        if len(idx_de) < 2:
+            continue
+
+        bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
+        idx_all = bool2idx(bool_category)
+        idx = idx_all[0]
+        y_true = dataset.genes[idx_all, :].to(device="cuda")
+
+        cov_name = cell_drug_dose_comb.split("_")[0]
+        cond = dataset_ctrl.covariate_names["cell_type"] == cov_name
+        genes_control = dataset_ctrl.genes[cond]
+
+        if genes_control is None:
+            n_obs = y_true.size(0)
+        else:
+            assert isinstance(genes_control, torch.Tensor)
+            n_obs = genes_control.size(0)
+
+        emb_covs = [repeat_n(cov[idx], n_obs) for cov in dataset.covariates]
+
+        if dataset.dosages[idx] not in dosages:
+            continue
+
+        stop = False
+        for tensor, cl in cl_dict.items():
+            if (tensor == dataset.covariates[0][idx]).all():
+                if cl not in cell_lines:
+                    stop = True
+        if stop:
+            continue
+
+        if dataset.use_drugs_idx:
+            emb_drugs = (
+                repeat_n(dataset.drugs_idx[idx], n_obs).squeeze(),
+                repeat_n(dataset.dosages[idx], n_obs).squeeze(),
+            )
+        else:
+            emb_drugs = repeat_n(dataset.drugs[idx], n_obs)
+
+        y_pred = genes_control.mean(0)
+        y_true = y_true.mean(0)
+        if use_DEGs:
+            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
+            drug_r2[cell_drug_dose_comb] = r2_m_de
+        else:
+            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
+            drug_r2[cell_drug_dose_comb] = r2_m
+
+        predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
     return drug_r2, predictions_dict
 
 

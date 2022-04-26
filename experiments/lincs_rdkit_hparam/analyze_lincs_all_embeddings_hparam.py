@@ -14,7 +14,7 @@
 #
 # This is part 2, the results of sweeping the drug-embedding related hyperparameters for all other embeddings
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 from pathlib import Path
 
 import matplotlib
@@ -33,7 +33,7 @@ plt.rcParams["savefig.facecolor"] = "white"
 sns.set_context("poster")
 pd.set_option("display.max_columns", 100)
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 results = seml.get_results(
     "lincs_rdkit_hparam",
     to_data_frame=True,
@@ -42,15 +42,15 @@ results = seml.get_results(
     # filter_dict={"batch_id": 6}
 )
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 # filter out the non-relevant rdkit runs
 results = results[(results["config.model.hparams.dim"] == 32)]
 results["config.model.embedding.model"].value_counts()
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 results.loc[:, [c for c in results.columns if "disentanglement" in c]]
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 good_disentanglement = (
     results["result.perturbation disentanglement"].apply(lambda x: x[0]) < 0.2
 )
@@ -212,7 +212,7 @@ plt.tight_layout()
 # ## Subselect to disentangled models
 
 # %%
-n_top = 3
+n_top = 5
 
 
 def performance_condition(emb, max_entangle, max_entangle_cov):
@@ -226,12 +226,12 @@ best = []
 top_one = []
 best_disentangled = []
 for embedding in list(results_clean["config.model.embedding.model"].unique()):
-    df = results_clean[performance_condition(embedding, 0.2, 0.2)]
+    df = results_clean[performance_condition(embedding, 0.2, 1)]
     print(embedding, len(df))
     best.append(df.sort_values(by="result.val_mean_de", ascending=False).head(n_top))
     top_one.append(df.sort_values(by="result.val_mean_de", ascending=False).head(1))
     best_disentangled.append(
-        df.sort_values(by="result.perturbation disentanglement", ascending=True).head(
+        df.sort_values(by="result.covariate disentanglement", ascending=True).head(
             n_top
         )
     )
@@ -430,5 +430,130 @@ sns.scatterplot(
     style="config.model.embedding.model",
     hue="config.model.embedding.model",
 )
+
+# %% [markdown]
+# _____
+
+# %%
+dis_drug = []
+dis_cov = []
+r2_all = []
+r2_degs = []
+r2_val_all = []
+r2_val_degs = []
+model = []
+
+for _model, _df in best_disentangled.groupby("config.model.embedding.model"):
+    if _model not in ["zeros", "vanilla", "seq2seq"]:
+        model.append(_model)
+        dis_drug.append(
+            f'${_df["result.perturbation disentanglement"].mean():.2f} \pm {_df["result.perturbation disentanglement"].std():.2f}$'
+        )
+        dis_cov.append(
+            f'${_df["result.covariate disentanglement"].mean():.2f} \pm {_df["result.covariate disentanglement"].std():.2f}$'
+        )
+        r2_all.append(
+            f'${_df["result.test_mean"].mean():.2f} \pm {_df["result.test_mean"].std():.2f}$'
+        )
+        r2_degs.append(
+            f'${_df["result.test_mean_de"].mean():.2f} \pm {_df["result.test_mean_de"].std():.2f}$'
+        )
+        #     r2_val_all.append(_df["result.val_mean"].mean())
+        #     r2_val_degs.append(_df["result.val_mean_de"].mean())
+
+
+# %%
+df_dict = {
+    "Model": model,
+    "Drug": dis_drug,
+    "Cell line": dis_cov,
+    "Mean $r^2$ all": r2_all,
+    "Mean $r^2$ DEGs": r2_degs,
+}
+
+df = pd.DataFrame.from_dict(df_dict)
+df = df.set_index("Model")
+
+# %%
+print(df.to_latex())
+
+# %%
+dis_drug = []
+dis_cov = []
+r2_all = []
+r2_degs = []
+r2_val_all = []
+r2_val_degs = []
+model = []
+
+for _model, _df in best_disentangled.groupby("config.model.embedding.model"):
+    _df = _df.sort_values("result.val_mean_de", ascending=False).head(1)
+    if _model not in ["zeros", "vanilla", "seq2seq"]:
+        model.append(_model)
+        dis_drug.append(_df["result.perturbation disentanglement"].mean())
+        dis_cov.append(_df["result.covariate disentanglement"].mean())
+        r2_all.append(_df["result.test_mean"].mean())
+        r2_degs.append(_df["result.test_mean_de"].mean())
+        r2_val_degs.append(_df["result.val_mean_de"].mean())
+
+# %%
+df_dict = {
+    "Model": model,
+    "Drug": dis_drug,
+    "Cell line": dis_cov,
+    "Mean $r^2$ all": r2_all,
+    "Mean $r^2$ DEGs": r2_degs,
+    "Mean $r^2$ DEGs [val]": r2_val_degs,
+}
+
+df = pd.DataFrame.from_dict(df_dict)
+df = df.set_index("Model")
+
+df
+
+# %%
+print(df.to_latex(float_format="%.2f"))
+
+# %%
+models = [
+    "RDKit",
+    "GROVER",
+    "JT-VAE",
+    "GCN",
+    "MPNN",
+    "weave",
+]
+
+dim = [
+    200,
+    3400,
+    56,
+    128,
+    128,
+    128,
+]
+
+pretrained = [
+    "na",
+    "authors",
+    "ZINC, L1000, sci-Plex3",
+    "PCBA",
+    "PCBA",
+    "PCBA",
+]
+
+df_dict = {
+    "Molecule encoder $G$": models,
+    "Embedding dim of $h_\text{drug}$": dim,
+    "Pretrained": pretrained,
+}
+
+df = pd.DataFrame.from_dict(df_dict)
+df = df.set_index("Molecule encoder $G$")
+
+df
+
+# %%
+print(df.to_latex(float_format="%.2f"))
 
 # %%

@@ -6,10 +6,10 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.13.6
 # ---
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": true} pycharm={"name": "#%%\n"}
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -27,7 +27,7 @@ sn.set_context("poster")
 IPythonConsole.ipython_useSVG = False
 
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 trapnell_df = pd.read_csv(
     "../embeddings/trapnell_drugs_smiles.csv", names=["drug", "smiles", "pathway"]
 )
@@ -36,7 +36,7 @@ lincs_df = pd.read_csv("../embeddings/lincs_drugs_smiles.csv", names=["drug", "s
 lincs_df["smiles"] = lincs_df.smiles.str.strip()
 
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 def tanimoto_score(input_smiles, target_smiles):
     input_fp = Chem.RDKFingerprint(Chem.MolFromSmiles(input_smiles))
     target_fp = Chem.RDKFingerprint(Chem.MolFromSmiles(target_smiles))
@@ -47,13 +47,13 @@ def tanimoto_score(input_smiles, target_smiles):
 # ## Checking 3 hold out drugs
 # Looking for the most similar drugs in LINCS to our 3 hold out drug in Trapnell
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 loo_drugs = trapnell_df[
     trapnell_df.drug.isin(["Quisinostat", "Flavopiridol", "BMS-754807"])
 ]
 loo_drugs
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 smiles_orig = []
 smiles_lincs = []
 for i, (drug, smiles, pathway) in loo_drugs.iterrows():
@@ -76,7 +76,7 @@ for i, (drug, smiles, pathway) in loo_drugs.iterrows():
         ]
     )
 
-# %% pycharm={"name": "#%%\n"}
+# %% jupyter={"outputs_hidden": false} pycharm={"name": "#%%\n"}
 for orig, lincs in zip(smiles_orig, smiles_lincs):
     im = Draw.MolsToGridImage(
         [Chem.MolFromSmiles(orig), Chem.MolFromSmiles(lincs)],

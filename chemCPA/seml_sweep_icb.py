@@ -121,7 +121,12 @@ class ExperimentWrapper:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         if load_pretrained:
-            state_dict, cov_embeddings_state_dicts, model_config = self.load_state_dict(
+            (
+                state_dict,
+                cov_embeddings_state_dicts,
+                model_config,
+                COVARIATE_AVAILABLE,
+            ) = self.load_state_dict(
                 pretrained_model_hashes, pretrained_model_path, append_ae_layer
             )
             append_layer_width = (
@@ -146,10 +151,11 @@ class ExperimentWrapper:
                 append_layer_width=append_layer_width,
             )
             incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
-            for embedding, state_dict in zip(
-                self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts
-            ):
-                embedding.load_state_dict(state_dict)
+            if COVARIATE_AVAILABLE:
+                for embedding, state_dict in zip(
+                    self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts
+                ):
+                    embedding.load_state_dict(state_dict)
             logging.info(
                 f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}"
             )
@@ -175,12 +181,23 @@ class ExperimentWrapper:
             f"Loading pretrained {self.embedding_model_type} model from: {filepath}"
         )
         dumped_model = torch.load(filepath)
+        COVARIATE_AVAILABLE = False
         if len(dumped_model) == 3:
             # old version
             state_dict, model_config, history = dumped_model
+        elif len(dumped_model) == 4:
+            logging.info(f"Loading model without covariate embedding.")
+            (
+                state_dict,
+                adversary_cov_state_dicts,
+                model_config,
+                history,
+            ) = dumped_model
+            cov_embeddings_state_dicts = []
         else:
             # new version
             assert len(dumped_model) == 5
+            COVARIATE_AVAILABLE = True
             (
                 state_dict,
                 adversary_cov_state_dicts,
@@ -207,7 +224,8 @@ class ExperimentWrapper:
             for key in keys:
                 if key.startswith("dosers") or key.startswith("drug_embedding_encoder"):
                     state_dict.pop(key)
-        return state_dict, cov_embeddings_state_dicts, model_config
+
+        return state_dict, cov_embeddings_state_dicts, model_config, COVARIATE_AVAILABLE
 
     def update_datasets(self):
         """
@@ -249,6 +267,9 @@ class ExperimentWrapper:
         run_eval_disentangle: bool,
         save_checkpoints: bool,
         save_dir: str,
+        run_eval_r2: bool = True,
+        run_eval_r2_sc: bool = True,
+        run_eval_logfold: bool = True,
     ):
 
         print(f"CWD: {os.getcwd()}")
@@ -325,22 +346,22 @@ class ExperimentWrapper:
                         self.datasets["test_treated"],
                         self.datasets["test_control"].genes,
                     )
-                    evaluation_stats["test_sc"] = evaluate_r2_sc(
-                        self.autoencoder,
-                        self.datasets["test_treated"],
-                    )
+                    # evaluation_stats["test_sc"] = evaluate_r2_sc(
+                    #     self.autoencoder,
+                    #     self.datasets["test_treated"],
+                    # )
                     self.autoencoder.train()
-                # test_score = (
-                #     np.mean(evaluation_stats["test"])
-                #     if evaluation_stats["test"]
-                #     else None
-                # )
-
                 test_score = (
-                    evaluation_stats["test"][1]  # DE genes
+                    np.mean(evaluation_stats["test"])
                     if evaluation_stats["test"]
                     else None
                 )
+
+                # test_score = (
+                #     evaluation_stats["test"][1]  # DE genes
+                #     if evaluation_stats["test"]
+                #     else None
+                # )
 
                 test_score_is_nan = test_score is not None and math.isnan(test_score)
                 autoenc_early_stop = self.autoencoder.early_stopping(test_score)
@@ -357,7 +378,10 @@ class ExperimentWrapper:
                         self.autoencoder,
                         self.datasets,
                         eval_stats=evaluation_stats,
-                        disentangle=run_eval_disentangle,
+                        run_disentangle=run_eval_disentangle,
+                        run_r2=run_eval_r2,
+                        run_r2_sc=run_eval_r2_sc,
+                        run_logfold=run_eval_logfold,
                     )
                     for key, val in evaluation_stats.items():
                         if key not in self.autoencoder.history:
@@ -381,7 +405,8 @@ class ExperimentWrapper:
 
                 # Cmp using == is fine, since if we improve we'll have updated this in `early_stopping`
                 improved_model = self.autoencoder.best_score == test_score
-                if save_checkpoints and improved_model:
+                # Ignore early stopping and save results at the end -> match data in mongoDB
+                if save_checkpoints and stop:
                     logging.info(f"Updating checkpoint at epoch {epoch}")
                     file_name = f"{ex.observers[0].run_entry['config_hash']}.pt"
                     torch.save(
