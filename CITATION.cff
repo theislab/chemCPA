@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: >-
+  Predicting single-cell perturbation responses for
+  unseen drugs
+message: 'If you build upon our work, please cite our paper.'
+type: conference-paper
+booktitle: ICLR2022 Machine Learning for Drug Discovery
+year: 2022
+authors:
+  - given-names: Leon
+    family-names: Hetzel
+  - given-names: Simon
+    family-names: Böhm
+  - given-names: Niki
+    family-names: Kilbertus
+  - given-names: Stephan
+    family-names: Günnemann
+  - given-names: Mohammad
+    family-names: Lotfollahi
+  - given-names: Fabian
+    name-particle: J
+    family-names: Theis
