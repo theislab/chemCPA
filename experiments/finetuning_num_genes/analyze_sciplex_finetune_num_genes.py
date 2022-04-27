@@ -54,34 +54,34 @@ pd.crosstab(
     results["result.perturbation disentanglement"].isnull(),
 )
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 [c for c in results.columns if "ae" in c]
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 pd.crosstab(
     results["config.dataset.data_params.split_key"],
     results["config.model.load_pretrained"],
 )
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 pd.crosstab(
     results["config.dataset.data_params.split_key"],
     results["result.loss_reconstruction"].isnull(),
 )
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # columns
 results.isnull().any()[results.isnull().any()]
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # rows without nans
 clean_id = results.loc[~results["result.training"].isnull(), "_id"]
 # clean_id
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Preprocessing the results dataframe
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # percentage of training runs that resulted in NaNs or totally failed
 
 results_clean = results[results._id.isin(clean_id)].copy()
@@ -90,10 +90,10 @@ print(f"Percentage of invalid (nan) runs: {1 - len(clean_id) / len(results)}")
 # Remove runs with r2 < 0.6 on the training set
 # results_clean = results_clean[results_clean['result.training'].apply(lambda x: x[0][0])>0.6]
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 results_clean["config.model.embedding.model"].value_counts()
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 results_clean[
     [
         "config.model.load_pretrained",
@@ -103,7 +103,7 @@ results_clean[
     ]
 ]
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # calculate some stats
 get_mean = lambda x: np.array(x)[-1, 0]
 get_mean_de = lambda x: np.array(x)[-1, 1]
@@ -128,7 +128,7 @@ results_clean["result.final_reconstruction"] = results_clean[
 
 results_clean.head(3)
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 results_clean["result.training_sc_mean"] = results_clean["result.training_sc"].apply(
     get_mean
 )
@@ -148,10 +148,10 @@ results_clean = results_clean[results_clean["result.val_sc_mean"] > 0.01]
 results_clean = results_clean[results_clean["result.val_mean_de"] > 0.4]
 # results_clean = results_clean[results_clean["config.model.append_ae_layer"] == True]
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Look at early stopping
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 fig, ax = plt.subplots(2, 1)
 sns.histplot(
     data=results_clean[results_clean["config.model.load_pretrained"] == True][
@@ -171,10 +171,10 @@ ax[1].set_title("Total epochs before final stopping (min 125), non pretrained")
 
 plt.tight_layout()
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Look at $r^2$ reconstruction
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 [c for c in results_clean.columns if "pretrain" in c]
 
 results_clean[
@@ -185,10 +185,10 @@ results_clean[
     ]
 ]
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ### DE genes
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # DE genes
 rows, cols = 1, 3
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
@@ -222,7 +222,7 @@ ax[2].legend(
 )
 plt.tight_layout()
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # DE genes
 rows, cols = 1, 3
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
@@ -256,10 +256,10 @@ ax[2].legend(
 )
 plt.tight_layout()
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ### All genes
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # DE genes
 rows, cols = 1, 3
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
@@ -291,10 +291,10 @@ ax[2].legend(
 )
 plt.tight_layout()
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Look at disentanglement scores
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 rows = 2
 cols = 1
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 7 * rows), sharex=True)
@@ -326,10 +326,10 @@ ax[1].legend(
 )
 plt.tight_layout()
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Subselect to disentangled models
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 n_top = 2
 
 
@@ -352,7 +352,7 @@ for embedding in list(results_clean["config.model.embedding.model"].unique()):
 
 best = pd.concat(best)
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 # All genes, DE genes, disentanglement
 rows, cols = 1, 4
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
@@ -393,7 +393,7 @@ ax[3].legend(
 plt.tight_layout()
 
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 rows, cols = 1, 3
 fig, ax = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
 
@@ -429,13 +429,13 @@ ax[2].legend(
 )
 plt.tight_layout()
 
-# %% [markdown]
+# %% [markdown] pycharm={"name": "#%% md\n"}
 # ## Take a deeper look in the `.config` of the best performing models
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 [c for c in best.columns if "hash" in c]
 
-# %%
+# %% pycharm={"name": "#%%\n"}
 best[
     [
         "config.model.load_pretrained",
@@ -445,4 +445,4 @@ best[
     ]
 ]
 
-# %%
+# %% pycharm={"name": "#%%\n"}

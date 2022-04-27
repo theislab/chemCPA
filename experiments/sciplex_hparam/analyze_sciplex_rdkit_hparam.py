@@ -12,7 +12,7 @@
 # %% [markdown] pycharm={"name": "#%% md\n"}
 # # Analyzing the results for `sciplex_hparam` with `grover` and `rdkit` sweeps
 #
-# This is preliminary to the `fintuning_num_genes` and `finetuning_OOD_prediction` experiments. We look at the results of sweeping the optimisation related hyperparameters for fine-tuning on the sciplex dataset for all other embeddings.
+# This is preliminary to the `fintuning_num_genes` experiments. We look at the results of sweeping the optimisation related hyperparameters for fine-tuning on the sciplex dataset for all other embeddings.
 
 # %% pycharm={"name": "#%%\n"}
 import math
