@@ -1,6 +1,5 @@
 # Predicting single-cell perturbation responses for unseen drugs
 Code accompanying the ICLR 2022 MLDD paper.
-Main authors: Leon Hetzel, Simon Boehm (equal contribution).
 
 ![architecture of CCPA](docs/chemCPA.png)
 
