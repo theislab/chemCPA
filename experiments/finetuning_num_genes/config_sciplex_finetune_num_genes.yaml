@@ -1,4 +1,4 @@
-# Config for finetuning-tuning (on Trapnell) a CPA model that was petrained on LINCS
+# Config for finetuning-tuning (on sci-PLex) a chemCPA model that was petrained on L1000
 seml:
   executable: chemCPA/seml_sweep_icb.py
   name: ft_trapnell_num_genes
@@ -152,7 +152,7 @@ grid:
       # - split_ho_pathway # necessary field for train, test, ood splits.
       - split_ood_finetuning # necessary field for train, test, ood splits.
       # - split_random
-      - split_ho_epigenetic
+      # - split_ho_epigenetic
       # - split_ho_epigenetic_all
 
 rdkit_all_genes:
