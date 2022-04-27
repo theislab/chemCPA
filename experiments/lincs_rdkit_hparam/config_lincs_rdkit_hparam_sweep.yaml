@@ -1,4 +1,4 @@
-# Config for hyperparameter-tuning CCPA on LINCS, using rdkit embeddings (part 1 of lincs_rdkit_hparam)
+# Config for hyperparameter-tuning chemCPA on L1000, using rdkit embeddings (part 1 of lincs_rdkit_hparam)
 seml:
   executable: chemCPA/seml_sweep_icb.py
   name: lincs_rdkit_hparam
