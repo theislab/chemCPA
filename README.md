@@ -1,5 +1,5 @@
-# Predicting single-cell perturbation responses for unseen drugs
-Code accompanying the ICLR 2022 MLDD paper.
+# Predicting Single-Cell Perturbation Responses for Unseen Drugs
+Code accompanying the [ICLR 2022 MLDD paper](https://openreview.net/forum?id=Wz9OtQYk_A).
 
 ![architecture of CCPA](docs/chemCPA.png)
 
@@ -11,6 +11,7 @@ numerically stable losses, ...) that allow for training on large datasets, like 
 
 For the final models, we provide [weight checkpoints](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip) as well as the [hyperparameter configuration](https://f003.backblazeb2.com/file/chemCPA-models/finetuning_num_genes.json).
 The raw datasets can be downloaded from a [FAIR server](https://dl.fbaipublicfiles.com/dlp/cpa_binaries.tar).
+We also provide our processed sci-Plex datasets for reproducibility: [shared gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset_lincs_genes.h5ad) & [extended gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset.h5ad).
 
 To setup the environment, install conda and run:
 ```python
