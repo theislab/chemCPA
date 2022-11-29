@@ -1,17 +1,17 @@
 import logging
 import warnings
-
-import numpy as np
-import torch
-
-warnings.simplefilter(action="ignore", category=FutureWarning)
 from typing import List, Optional, Union
 
+import numpy as np
 import pandas as pd
 import scanpy as sc
+import torch
+from anndata import AnnData
 from sklearn.preprocessing import OneHotEncoder
 
 from chemCPA.helper import canonicalize_smiles
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
 def ranks_to_df(data, key="rank_genes_groups"):
@@ -69,7 +69,7 @@ class Dataset:
 
     def __init__(
         self,
-        fname: str,
+        data: str,
         perturbation_key=None,
         dose_key=None,
         covariate_keys=None,
@@ -89,8 +89,11 @@ class Dataset:
             Example: cell type + drug name + drug dose. This is used during evaluation.
         :param use_drugs_idx: Whether or not to encode drugs via their index, instead of via a OneHot encoding
         """
-        logging.info(f"Starting to read in data: {fname}\n...")
-        data = sc.read(fname)
+        logging.info(f"Starting to read in data: {data}\n...")
+        if isinstance(data, AnnData):
+            data = data
+        else:
+            data = sc.read(data)
         logging.info(f"Finished data loading.")
         self.genes = torch.Tensor(data.X.A)
         self.var_names = data.var_names
@@ -257,6 +260,25 @@ class Dataset:
             "ood": np.where(data.obs[split_key] == "ood")[0].tolist(),
         }
 
+        # This could be made much faster
+        degs_tensor = []
+        for i in range(len(self)):
+            drug = indx(self.drugs_names, i)
+            cov = indx(self.covariate_names["cell_type"], i)
+
+            if drug == "JQ1":
+                drug = "(+)-JQ1"
+
+            if drug == "control":
+                genes = []
+            else:
+                genes = self.de_genes[f"{cov}_{drug}_1.0"]
+
+            degs_tensor.append(
+                torch.Tensor(self.var_names.isin(genes)).detach().clone()
+            )
+        self.degs = torch.stack(degs_tensor)
+
     def subset(self, split, condition="all"):
         idx = list(set(self.indices[split]) & set(self.indices[condition]))
         return SubDataset(self, idx)
@@ -274,12 +296,14 @@ class Dataset:
                 self.genes[i],
                 indx(self.drugs_idx, i),
                 indx(self.dosages, i),
+                indx(self.degs, i),
                 *[indx(cov, i) for cov in self.covariates],
             )
         else:
             return (
                 self.genes[i],
                 indx(self.drugs, i),
+                indx(self.degs, i),
                 *[indx(cov, i) for cov in self.covariates],
             )
 
@@ -324,18 +348,22 @@ class SubDataset:
         self.num_genes = dataset.num_genes
         self.num_drugs = dataset.num_drugs
 
+        self.degs = dataset.degs
+
     def __getitem__(self, i):
         if self.use_drugs_idx:
             return (
                 self.genes[i],
                 indx(self.drugs_idx, i),
                 indx(self.dosages, i),
+                indx(self.degs, i),
                 *[indx(cov, i) for cov in self.covariates],
             )
         else:
             return (
                 self.genes[i],
                 indx(self.drugs, i),
+                indx(self.degs, i),
                 *[indx(cov, i) for cov in self.covariates],
             )
 

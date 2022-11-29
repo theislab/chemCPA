@@ -50,7 +50,7 @@ from utils import (
 )
 
 from chemCPA.data import load_dataset_splits
-from chemCPA.paths import FIGURE_DIR
+from chemCPA.paths import FIGURE_DIR, ROOT
 
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
@@ -71,28 +71,31 @@ sns.set_context("poster")
 #
 #
 # **Info**
-# * split:            `split_ood_finetuning`
+# * split:            `multi_task`
 # * append_ae_layer:  `True`
 
 # %%
-seml_collection = "finetuning_num_genes"
+seml_collection = "multi_task"
 
+model_hash_pretrained_rdkit = "dde01c1c58f398d524453c4b564a440f"  # Fine-tuned
+model_hash_scratch_rdkit = "475e26950b2c531bea88931a4b2c27b7"  # Non-pretrained
 
-model_hash_pretrained_rdkit = "d2686f53a55468497195941fac1d7e5e"  # Fine-tuned
-model_hash_scratch_rdkit = "28c172ee2884c3204fa0df4b7223ff93"  # Non-pretrained
+model_hash_pretrained_grover = "0f4a3b11e1fbe3da58125f39ff6fb035"  # Fine-tuned
+model_hash_scratch_grover = "b372147c80cf9ad4bd10d16bc56b7534"  # Non-pretrained
 
-model_hash_pretrained_grover = "a2e83773f445adf813284155efbede9e"  # Fine-tuned
-model_hash_scratch_grover = "5cacac24918054861104eacff97fcf5c"  # Non-pretrained
-
-model_hash_pretrained_jtvae = "a15a363b77060383b397a81861615864"  # Fine-tuned
-model_hash_scratch_jtvae = "cbf9e956049fce00dbcebdfc1aeb67fe"  # Non-pretrained
-
+model_hash_pretrained_jtvae = "e4eac660c5830245f681ec3cc5099f21"  # Fine-tuned
+model_hash_scratch_jtvae = "6b465400467f69da861e3ef0b4709e19"  # Non-pretrained
 
 # %% [markdown]
 # ## Load config and SMILES
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained_rdkit)
+
+config["dataset"]["data_params"]["dataset_path"] = (
+    ROOT / config["dataset"]["data_params"]["dataset_path"]
+)
+
 dataset, key_dict = load_dataset(config)
 config["dataset"]["n_vars"] = dataset.n_vars
 
@@ -164,6 +167,9 @@ ood_drugs
 # %%
 config = load_config(seml_collection, model_hash_pretrained_rdkit)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_pretrained_rdkit, embedding_pretrained_rdkit = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -195,6 +201,9 @@ drug_r2_pretrained_all_rdkit, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_scratch_rdkit)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_scratch_rdkit, embedding_scratch_rdkit = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -229,6 +238,9 @@ drug_r2_scratch_all_rdkit, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_pretrained_grover)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_pretrained_grover, embedding_pretrained_grover = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -260,6 +272,9 @@ drug_r2_pretrained_all_grover, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_scratch_grover)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_scratch_grover, embedding_scratch_grover = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -294,6 +309,9 @@ drug_r2_scratch_all_grover, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_pretrained_jtvae)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_pretrained_jtvae, embedding_pretrained_jtvae = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -325,6 +343,9 @@ drug_r2_pretrained_all_jtvae, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_scratch_jtvae)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_scratch_jtvae, embedding_scratch_jtvae = load_model(
     config, canon_smiles_unique_sorted
 )

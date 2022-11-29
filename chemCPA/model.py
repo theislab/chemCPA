@@ -64,6 +64,59 @@ class NBLoss(torch.nn.Module):
         return torch.mean(final)
 
 
+class FocalLoss(torch.nn.Module):
+    def __init__(self, alpha=0.3, gamma=3, reduction="mean") -> None:
+        """Original implementation from https://github.com/facebookresearch/fvcore/blob/master/fvcore/nn/focal_loss.py .
+
+        Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
+
+        Args:
+            alpha: (optional) Weighting factor in range (0,1) to balance
+                    positive vs negative examples or -1 for ignore. Default = 0.25
+            gamma: Exponent of the modulating factor (1 - p_t) to
+                balance easy vs hard examples.
+            reduction: 'none' | 'mean' | 'sum'
+                    'none': No reduction will be applied to the output.
+                    'mean': The output will be averaged.
+                    'sum': The output will be summed.
+        """
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+        self.reduction = reduction
+
+    def forward(self, inputs, target):
+        """Compute the FocalLoss
+
+        Args:
+            inputs: A float tensor of arbitrary shape.
+                    The predictions for each example.
+            targets: A float tensor with the same shape as inputs. Stores the binary
+                    classification label for each element in inputs
+                    (0 for the negative class and 1 for the positive class).
+            alpha: (optional) Weighting factor in range (0,1) to balance
+                    positive vs negative examples or -1 for ignore. Default = 0.25
+            gamma: Exponent of the modulating factor (1 - p_t) to
+                balance easy vs hard examples.
+            reduction: 'none' | 'mean' | 'sum'
+                    'none': No reduction will be applied to the output.
+                    'mean': The output will be averaged.
+                    'sum': The output will be summed.
+        Returns:
+            Loss tensor with the reduction option applied.
+        """
+        from torchvision.ops import focal_loss
+
+        loss = focal_loss.sigmoid_focal_loss(
+            inputs,
+            target,
+            reduction=self.reduction,
+            gamma=self.gamma,
+            alpha=self.alpha,
+        )
+        return loss
+
+
 def _nan2inf(x):
     return torch.where(torch.isnan(x), torch.zeros_like(x) + np.inf, x)
 
@@ -243,6 +296,8 @@ class ComPert(torch.nn.Module):
         drug_embeddings: Union[None, torch.nn.Embedding] = None,
         use_drugs_idx=False,
         append_layer_width=None,
+        multi_task: bool = False,
+        enable_cpa_mode=False,
     ):
         super(ComPert, self).__init__()
         # set generic attributes
@@ -256,6 +311,8 @@ class ComPert(torch.nn.Module):
         self.best_score = -1e3
         self.patience_trials = 0
         self.use_drugs_idx = use_drugs_idx
+        self.multi_task = multi_task
+        self.enable_cpa_mode = enable_cpa_mode
 
         # set hyperparameters
         if isinstance(hparams, dict):
@@ -292,6 +349,20 @@ class ComPert(torch.nn.Module):
             append_layer_width=2 * append_layer_width if append_layer_width else None,
             append_layer_position="last",
         )
+
+        if append_layer_width:
+            self.num_genes = append_layer_width
+
+        self.degs_predictor = None
+        if self.multi_task:
+            self.degs_predictor = MLP(
+                [2 * self.hparams["dim"]]
+                + [2 * self.hparams["dim"]]
+                + [self.num_genes],
+                batch_norm=True,
+            )
+            self.loss_degs = FocalLoss()
+
         if self.num_drugs > 0:
             self.adversary_drugs = MLP(
                 [self.hparams["dim"]]
@@ -307,13 +378,16 @@ class ComPert(torch.nn.Module):
                 self.drug_embeddings = drug_embeddings
                 embedding_requires_grad = False
 
-            self.drug_embedding_encoder = MLP(
-                [self.drug_embeddings.embedding_dim]
-                + [self.hparams["embedding_encoder_width"]]
-                * self.hparams["embedding_encoder_depth"]
-                + [self.hparams["dim"]],
-                last_layer_act="linear",
-            )
+            if self.enable_cpa_mode:
+                self.drug_embedding_encoder = None
+            else:
+                self.drug_embedding_encoder = MLP(
+                    [self.drug_embeddings.embedding_dim]
+                    + [self.hparams["embedding_encoder_width"]]
+                    * self.hparams["embedding_encoder_depth"]
+                    + [self.hparams["dim"]],
+                    last_layer_act="linear",
+                )
 
             if use_drugs_idx:
                 # there will only ever be a single drug, so no binary cross entropy needed
@@ -347,6 +421,7 @@ class ComPert(torch.nn.Module):
                     + [1],
                 )
             else:
+                assert doser_type == "sigm" or doser_type == "logsigm"
                 self.dosers = GeneralizedSigmoid(
                     self.num_drugs, self.device, nonlin=doser_type
                 )
@@ -389,7 +464,8 @@ class ComPert(torch.nn.Module):
             get_params(self.encoder, True)
             + get_params(self.decoder, True)
             + get_params(self.drug_embeddings, has_drugs and embedding_requires_grad)
-            + get_params(self.drug_embedding_encoder, True)
+            + get_params(self.degs_predictor, self.multi_task)
+            + get_params(self.drug_embedding_encoder, not self.enable_cpa_mode)
         )
         for emb in self.covariates_embeddings:
             _parameters.extend(get_params(emb, has_covariates))
@@ -546,9 +622,20 @@ class ComPert(torch.nn.Module):
             else:
                 scaled_dosages = self.dosers(dosages, drugs_idx)
 
+        if not self.enable_cpa_mode:
+            # Transform and adjust dimension to latent dims
+            latent_drugs = self.drug_embedding_encoder(latent_drugs)
+        else:
+            # in CPAMode, we don't use the drug embedding encoder, as it
+            # is not part of the CPA paper.
+            assert (
+                latent_drugs.shape[-1] == self.hparams["dim"]
+            ), f"{latent_drugs.shape[-1]} != {self.hparams['dim']}"
+
         if drugs_idx is None:
             return scaled_dosages @ latent_drugs
         else:
+            # scale latent vector by scalar scaled_dosage
             return torch.einsum("b,be->be", [scaled_dosages, latent_drugs])
 
     def predict(
@@ -578,14 +665,17 @@ class ComPert(torch.nn.Module):
             drug_embedding = self.compute_drug_embeddings_(
                 drugs=drugs, drugs_idx=drugs_idx, dosages=dosages
             )
-            latent_treated = latent_treated + self.drug_embedding_encoder(
-                drug_embedding
-            )
+            # latent_treated = latent_treated + self.drug_embedding_encoder(
+            #     drug_embedding
+            # )
+            latent_treated = latent_treated + drug_embedding
         if self.num_covariates[0] > 0:
             for cov_type, emb_cov in enumerate(self.covariates_embeddings):
                 emb_cov = emb_cov.to(self.device)
                 cov_idx = covariates[cov_type].argmax(1)
                 latent_treated = latent_treated + emb_cov(cov_idx)
+
+        cell_drug_embedding = torch.cat([emb_cov(cov_idx), drug_embedding], dim=1)
 
         gene_reconstructions = self.decoder(latent_treated)
 
@@ -596,9 +686,9 @@ class ComPert(torch.nn.Module):
         normalized_reconstructions = torch.concat([mean, var], dim=1)
 
         if return_latent_basal:
-            return normalized_reconstructions, latent_basal
+            return normalized_reconstructions, cell_drug_embedding, latent_basal
 
-        return normalized_reconstructions
+        return normalized_reconstructions, cell_drug_embedding
 
     def early_stopping(self, score):
         """
@@ -615,14 +705,22 @@ class ComPert(torch.nn.Module):
 
         return self.patience_trials > self.patience
 
-    def update(self, genes, drugs=None, drugs_idx=None, dosages=None, covariates=None):
+    def update(
+        self,
+        genes,
+        drugs=None,
+        drugs_idx=None,
+        dosages=None,
+        degs=None,
+        covariates=None,
+    ):
         """
         Update ComPert's parameters given a minibatch of genes, drugs, and
         cell types.
         """
         assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
 
-        gene_reconstructions, latent_basal = self.predict(
+        gene_reconstructions, cell_drug_embedding, latent_basal = self.predict(
             genes=genes,
             drugs=drugs,
             drugs_idx=drugs_idx,
@@ -630,10 +728,16 @@ class ComPert(torch.nn.Module):
             covariates=covariates,
             return_latent_basal=True,
         )
+
         dim = gene_reconstructions.size(1) // 2
         mean = gene_reconstructions[:, :dim]
         var = gene_reconstructions[:, dim:]
         reconstruction_loss = self.loss_autoencoder(input=mean, target=genes, var=var)
+
+        multi_task_loss = torch.tensor([0.0], device=self.device)
+        if self.multi_task:
+            degs_prediciton = self.degs_predictor(cell_drug_embedding)
+            multi_task_loss = self.loss_degs(degs_prediciton, degs)
 
         adversary_drugs_loss = torch.tensor([0.0], device=self.device)
         if self.num_drugs > 0:
@@ -696,6 +800,7 @@ class ComPert(torch.nn.Module):
                 reconstruction_loss
                 - self.hparams["reg_adversary"] * adversary_drugs_loss
                 - self.hparams["reg_adversary_cov"] * adversary_covariates_loss
+                + self.hparams["reg_multi_task"] * multi_task_loss
             ).backward()
             self.optimizer_autoencoder.step()
             if self.num_drugs > 0:
@@ -708,6 +813,7 @@ class ComPert(torch.nn.Module):
             "loss_adv_covariates": adversary_covariates_loss.item(),
             "penalty_adv_drugs": adv_drugs_grad_penalty.item(),
             "penalty_adv_covariates": adv_covs_grad_penalty.item(),
+            "loss_multi_task": multi_task_loss.item(),
         }
 
     @classmethod

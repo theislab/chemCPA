@@ -5,6 +5,7 @@ import os
 import time
 from collections import defaultdict
 from pathlib import Path
+from pprint import pformat
 
 import numpy as np
 import seml
@@ -114,6 +115,7 @@ class ExperimentWrapper:
         additional_params: dict,
         load_pretrained: bool,
         append_ae_layer: bool,
+        enable_cpa_mode: bool,
         pretrained_model_path: str,
         pretrained_model_hashes: dict,
     ):
@@ -149,6 +151,7 @@ class ExperimentWrapper:
                 drug_embeddings=self.drug_embeddings,
                 use_drugs_idx=self.dataset.use_drugs_idx,
                 append_layer_width=append_layer_width,
+                enable_cpa_mode=enable_cpa_mode,
             )
             incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
             if COVARIATE_AVAILABLE:
@@ -156,8 +159,13 @@ class ExperimentWrapper:
                     self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts
                 ):
                     embedding.load_state_dict(state_dict)
+            incomp_keys_info = {
+                "Missing keys": incomp_keys.missing_keys,
+                "Unexpected_keys": incomp_keys.unexpected_keys,
+            }
             logging.info(
-                f"INCOMP_KEYS (make sure these contain what you expected):\n{incomp_keys}"
+                "INCOMP_KEYS (make sure these contain what you expected):\n%s",
+                pformat(incomp_keys_info, indent=4, width=1),
             )
         else:
             self.autoencoder = ComPert(
@@ -170,6 +178,7 @@ class ExperimentWrapper:
                 drug_embeddings=self.drug_embeddings,
                 use_drugs_idx=self.dataset.use_drugs_idx,
                 append_layer_width=None,
+                enable_cpa_mode=enable_cpa_mode,
             )
 
     def load_state_dict(
@@ -287,16 +296,18 @@ class ExperimentWrapper:
 
             for data in self.datasets["loader_tr"]:
                 if self.dataset.use_drugs_idx:
-                    genes, drugs_idx, dosages, covariates = (
+                    genes, drugs_idx, dosages, degs, covariates = (
                         data[0],
                         data[1],
                         data[2],
-                        data[3:],
+                        data[3],
+                        data[4:],
                     )
                     training_stats = self.autoencoder.update(
                         genes=genes,
                         drugs_idx=drugs_idx,
                         dosages=dosages,
+                        degs=degs,
                         covariates=covariates,
                     )
                 else:
@@ -304,6 +315,7 @@ class ExperimentWrapper:
                     training_stats = self.autoencoder.update(
                         genes=genes,
                         drugs=drugs,
+                        degs=degs,
                         covariates=covariates,
                     )
 
@@ -323,7 +335,9 @@ class ExperimentWrapper:
             self.autoencoder.history["epoch"].append(epoch)
 
             # print some stats for each epoch
-            pjson({"epoch": epoch, "training_stats": epoch_training_stats})
+            epoch_training_stats["epoch"] = epoch
+            logging.info("\n%s", pformat(dict(epoch_training_stats), indent=4, width=1))
+
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes
             reconst_loss_is_nan = math.isnan(
@@ -390,18 +404,18 @@ class ExperimentWrapper:
                     self.autoencoder.history["stats_epoch"].append(epoch)
 
                 # print some stats for the evaluation
-                pjson(
-                    {
-                        "epoch": epoch,
-                        "evaluation_stats": evaluation_stats,
-                        "ellapsed_minutes": ellapsed_minutes,
-                        "test_score_is_nan": test_score_is_nan,
-                        "reconst_loss_is_nan": reconst_loss_is_nan,
-                        "autoenc_early_stop": autoenc_early_stop,
-                        "max_minutes_reached": ellapsed_minutes > max_minutes,
-                        "max_epochs_reached": epoch == num_epochs - 1,
-                    }
-                )
+                stats = {
+                    "epoch": epoch,
+                    "evaluation_stats": evaluation_stats,
+                    "ellapsed_minutes": ellapsed_minutes,
+                    "test_score_is_nan": test_score_is_nan,
+                    "reconst_loss_is_nan": reconst_loss_is_nan,
+                    "autoenc_early_stop": autoenc_early_stop,
+                    "max_minutes_reached": ellapsed_minutes > max_minutes,
+                    "max_epochs_reached": epoch == num_epochs - 1,
+                }
+
+                logging.info("\n%s", pformat(stats, indent=4, width=1))
 
                 # Cmp using == is fine, since if we improve we'll have updated this in `early_stopping`
                 improved_model = self.autoencoder.best_score == test_score
@@ -427,10 +441,10 @@ class ExperimentWrapper:
                         ),
                         os.path.join(save_dir, file_name),
                     )
-                    pjson({"model_saved": file_name})
+                    logging.info(f"model_saved: {file_name}")
 
                 if stop:
-                    pjson({"early_stop": epoch})
+                    logging.info(f"early_stop: {epoch}")
                     break
 
         results = self.autoencoder.history

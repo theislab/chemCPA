@@ -13,8 +13,8 @@
 # **Requirements:**
 # * Trained models
 # * JT-VAE:
-#      * fine-tuned:      `'a15a363b77060383b397a81861615864'`
-#      * non-pretrained: `'cbf9e956049fce00dbcebdfc1aeb67fe'`
+#      * fine-tuned:      `'e4eac660c5830245f681ec3cc5099f21'`
+#      * non-pretrained: `'6b465400467f69da861e3ef0b4709e19'`
 #
 # Here everything is in setting 2 (extended gene set, 977 L100 + 1023 HVGs)
 #
@@ -44,7 +44,7 @@ from utils import (
 )
 
 from chemCPA.data import load_dataset_splits
-from chemCPA.paths import FIGURE_DIR
+from chemCPA.paths import FIGURE_DIR, ROOT
 
 # %%
 BLACK = False
@@ -70,18 +70,22 @@ sns.set_context("poster")
 # * Define `seml_collection` and `model_hash` to load data and model
 
 # %%
-seml_collection = "finetuning_num_genes"
+seml_collection = "multi_task"
 
-# JTVAE, batch ANY
-# split_ood_finetuning, append_ae_layer: true
-model_hash_pretrained = "a15a363b77060383b397a81861615864"  # Fine-tuned
-model_hash_scratch = "cbf9e956049fce00dbcebdfc1aeb67fe"  # Non-pretrained
+# JTVAE
+model_hash_pretrained = "e4eac660c5830245f681ec3cc5099f21"  # Fine-tuned
+model_hash_scratch = "6b465400467f69da861e3ef0b4709e19"  # Non-pretrained
 
 # %% [markdown]
 # ## Load config and SMILES
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
+
+config["dataset"]["data_params"]["dataset_path"] = (
+    ROOT / config["dataset"]["data_params"]["dataset_path"]
+)
+
 dataset, key_dict = load_dataset(config)
 config["dataset"]["n_vars"] = dataset.n_vars
 
@@ -149,7 +153,12 @@ ood_drugs
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
+
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
+
 model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_sorted)
 
 # %%
@@ -178,7 +187,12 @@ drug_r2_pretrained_all, _ = compute_pred(
 
 # %%
 config = load_config(seml_collection, model_hash_scratch)
+
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
+
 model_scratch, embedding_scratch = load_model(config, canon_smiles_unique_sorted)
 
 # %%
@@ -254,7 +268,7 @@ df_all = create_df(drug_r2_baseline_all, drug_r2_pretrained_all, drug_r2_scratch
 # # Plot Figure 4 with JT-VAE
 
 # %%
-SAVEFIG = False
+SAVEFIG = True
 
 # %%
 fig, ax = plt.subplots(1, 2, figsize=(21, 6))
@@ -316,10 +330,10 @@ plt.tight_layout()
 if SAVEFIG:
     if BLACK:
         plt.savefig(
-            FIGURE_DIR / "JTVAE_extended_gene_set_black.eps", format="eps"
+            FIGURE_DIR / "JTVAE_extended_gene_set_black.pdf", format="pdf"
         )  # BLACK:
     else:
-        plt.savefig(FIGURE_DIR / "JTVAE_extended_gene_set.eps", format="eps")  # WHITE
+        plt.savefig(FIGURE_DIR / "JTVAE_extended_gene_set.pdf", format="pdf")  # WHITE
 
 
 # %% [markdown]
