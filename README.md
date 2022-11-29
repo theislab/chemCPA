@@ -4,6 +4,8 @@ Code accompanying the [NeurIPS 2022 paper](https://neurips.cc/virtual/2022/poste
 
 ![architecture of CCPA](docs/chemCPA.png)
 
+Our talk on chemCPA at the M2D2 reading club is available [here](https://m2d2.io/talks/m2d2/predicting-single-cell-perturbation-responses-for-unseen-drugs/).
+
 ## Codebase overview
 
 For the final models, we provide [weight checkpoints](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip) as well as the [hyperparameter configuration](https://f003.backblazeb2.com/file/chemCPA-models/finetuning_num_genes.json).
