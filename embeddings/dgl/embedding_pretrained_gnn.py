@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 # ---
 
 # %% [markdown]
@@ -20,13 +20,12 @@ sys.path.insert(
 )  # this depends on the notebook depth and must be adapted per notebook
 # %%
 import numpy as np
+from compert.paths import DATA_DIR, EMBEDDING_DIR
 from dgllife.utils import (
     CanonicalAtomFeaturizer,
     CanonicalBondFeaturizer,
     smiles_to_bigraph,
 )
-
-from chemCPA.paths import DATA_DIR, EMBEDDING_DIR
 
 # %% [markdown]
 # ## Load Smiles list

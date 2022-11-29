@@ -1,17 +1,17 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 22.10.0
     hooks:
       - id: black
         language_version: python3
-  - repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.8.0
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
     hooks:
      - id: isort
        args: ["--profile", "black", "--filter-files"]
        verbose: true
   - repo: https://github.com/mwouts/jupytext
-    rev: v1.13.6
+    rev: v1.14.1
     hooks:
      - id: jupytext
        args:
@@ -21,5 +21,5 @@ repos:
          - --pipe=isort - --profile black --filter-files
          - --opt=notebook_metadata_filter=-kernelspec
        additional_dependencies:
-         - black==20.8b1 # Matches hook
-         - isort==5.8.0
+         - black==22.10.0 # Matches hook
+         - isort==5.10.1
