@@ -5,6 +5,8 @@ Code accompanying the [NeurIPS 2022 paper](https://neurips.cc/virtual/2022/poste
 ![architecture of CCPA](docs/chemCPA.png)
 
 Our talk on chemCPA at the M2D2 reading club is available [here](https://m2d2.io/talks/m2d2/predicting-single-cell-perturbation-responses-for-unseen-drugs/).
+A [previous version](https://arxiv.org/abs/2204.13545) of this work was a spotlight paper at ICLR MLDD 2022.
+Code for this previous version can be found under the `v1.0` git tag.
 
 ## Codebase overview
 
