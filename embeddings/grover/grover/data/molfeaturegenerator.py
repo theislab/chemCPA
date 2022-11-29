@@ -127,7 +127,6 @@ try:
         features = generator.process(smiles)[1:]
         return features
 
-
 except ImportError:
     pass
 

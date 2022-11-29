@@ -6,15 +6,15 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 # ---
 
 # %% [markdown]
 # **Requirements:**
 # * Trained models
 # * GROVER:
-#      * fine-tuned:      `'a2e83773f445adf813284155efbede9e'`
-#      * non-pretrained: `'5cacac24918054861104eacff97fcf5c'`
+#      * fine-tuned:      `'0f4a3b11e1fbe3da58125f39ff6fb035'`
+#      * non-pretrained: `'b372147c80cf9ad4bd10d16bc56b7534'`
 #
 # Here everything is in setting 2 (extended gene set, 977 L1000 + 1023 HVGs)
 #
@@ -44,7 +44,7 @@ from utils import (
 )
 
 from chemCPA.data import load_dataset_splits
-from chemCPA.paths import FIGURE_DIR
+from chemCPA.paths import FIGURE_DIR, ROOT
 
 # %%
 BLACK = False
@@ -70,18 +70,22 @@ sns.set_context("poster")
 # * Define `seml_collection` and `model_hash` to load data and model
 
 # %%
-seml_collection = "finetuning_num_genes"
+seml_collection = "multi_task"
 
 # GROVER, batch 10
-# split_ood_finetuning, append_ae_layer: true
-model_hash_pretrained = "a2e83773f445adf813284155efbede9e"  # Fine-tuned
-model_hash_scratch = "5cacac24918054861104eacff97fcf5c"  # Non-pretrained
+model_hash_pretrained = "0f4a3b11e1fbe3da58125f39ff6fb035"  # Fine-tuned
+model_hash_scratch = "b372147c80cf9ad4bd10d16bc56b7534"  # Non-pretrained
 
 # %% [markdown]
 # ## Load config and SMILES
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
+
+config["dataset"]["data_params"]["dataset_path"] = (
+    ROOT / config["dataset"]["data_params"]["dataset_path"]
+)
+
 dataset, key_dict = load_dataset(config)
 config["dataset"]["n_vars"] = dataset.n_vars
 
@@ -149,7 +153,12 @@ ood_drugs
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
+
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
+
 model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_sorted)
 
 # %%
@@ -178,7 +187,12 @@ drug_r2_pretrained_all, _ = compute_pred(
 
 # %%
 config = load_config(seml_collection, model_hash_scratch)
+
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
+
 model_scratch, embedding_scratch = load_model(config, canon_smiles_unique_sorted)
 
 # %%
@@ -254,7 +268,7 @@ df_all = create_df(drug_r2_baseline_all, drug_r2_pretrained_all, drug_r2_scratch
 # # Plot Figure 4 for GROVER
 
 # %%
-SAVEFIG = False
+SAVEFIG = True
 
 # %%
 fig, ax = plt.subplots(1, 2, figsize=(21, 6))
@@ -316,10 +330,10 @@ plt.tight_layout()
 if SAVEFIG:
     if BLACK:
         plt.savefig(
-            FIGURE_DIR / "GROVER_extended_gene_set_black.eps", format="eps"
+            FIGURE_DIR / "GROVER_extended_gene_set_black.pdf", format="pdf"
         )  # BLACK:
     else:
-        plt.savefig(FIGURE_DIR / "GROVER_extended_gene_set.eps", format="eps")  # WHITE
+        plt.savefig(FIGURE_DIR / "GROVER_extended_gene_set.pdf", format="pdf")  # WHITE
 
 
 # %% [markdown]

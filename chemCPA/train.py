@@ -1,3 +1,4 @@
+import logging
 import time
 
 import numpy as np
@@ -47,11 +48,11 @@ def compute_prediction(autoencoder: ComPert, genes, emb_drugs, emb_covs):
             drugs_idx=emb_drugs[0],
             dosages=emb_drugs[1],
             covariates=emb_covs,
-        ).detach()
+        )[0].detach()
     else:
         genes_pred = autoencoder.predict(
             genes=genes, drugs=emb_drugs, covariates=emb_covs
-        ).detach()
+        )[0].detach()
     dim = genes.size(1)
     mean = genes_pred[:, :dim]
     var = genes_pred[:, dim:]
@@ -167,7 +168,7 @@ def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
 
     with torch.no_grad():
         if data.use_drugs_idx:
-            _, latent_basal = autoencoder.predict(
+            _, _, latent_basal = autoencoder.predict(
                 genes=data.genes,
                 drugs_idx=data.drugs_idx,
                 dosages=data.dosages,
@@ -175,7 +176,7 @@ def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
                 return_latent_basal=True,
             )
         else:
-            _, latent_basal = autoencoder.predict(
+            _, _, latent_basal = autoencoder.predict(
                 genes=data.genes,
                 drugs=data.drugs,
                 covariates=data.covariates,

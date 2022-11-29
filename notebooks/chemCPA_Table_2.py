@@ -6,21 +6,21 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 # ---
 
 # %% [markdown]
 # **Requirements:**
 # * Trained models
 # * GROVER:
-#      * fine-tuned:      `'a50dc68191a3776694ce8f34ad55e7e0'`
-#      * non-pretrained: `'51b81b77079c1060aedb0ee2259008ca'`
+#      * fine-tuned:      `'c30016a7469feb78a8ee9ebb18ed9b1f'`
+#      * non-pretrained: `'60e4b40e8d67bff2d5efc5e22e265820'`
 # * RDKit:
-#      * fine-tuned:      `'27b401db1845eea26c102fb614df9c33'`
-#      * non-pretrained: `'cbf9e956049fce00dbcebdfc1aeb67fe'`
+#      * fine-tuned:      `'c824e42f7ce751cf9a8ed26f0d9e0af7'`
+#      * non-pretrained: `'59bdaefb1c1adfaf2976e3fdf62afa21'`
 # * JT-VAE:
-#      * fine-tuned:      `'f9e328d21bff64c5541f81ae1303c279'`
-#      * non-pretrained: `'d273bf129f3a866a4d02f8925cf5cc8d'`
+#      * fine-tuned:      `'915345a522c29fa709b995d6149083b9'`
+#      * non-pretrained: `'934c89b742a6309ad6bb2e1cf90c5e50'`
 #
 # Here everything is in setting 1 (shared gene sets)
 #
@@ -50,7 +50,7 @@ from utils import (
 )
 
 from chemCPA.data import load_dataset_splits
-from chemCPA.paths import FIGURE_DIR
+from chemCPA.paths import FIGURE_DIR, ROOT
 
 matplotlib.style.use("fivethirtyeight")
 matplotlib.style.use("seaborn-talk")
@@ -70,26 +70,31 @@ sns.set_context("poster")
 #
 #
 # **Info**
-# * split:            `split_ood_finetuning`
+# * split:            `multi_task`
 # * append_ae_layer:  `False`
 
 # %%
-seml_collection = "finetuning_num_genes"
+seml_collection = "multi_task"
 
-model_hash_pretrained_rdkit = "27b401db1845eea26c102fb614df9c33"  # Fine-tuned
-model_hash_scratch_rdkit = "51b81b77079c1060aedb0ee2259008ca"  # Non-pretrained
+model_hash_pretrained_rdkit = "c824e42f7ce751cf9a8ed26f0d9e0af7"  # Fine-tuned
+model_hash_scratch_rdkit = "59bdaefb1c1adfaf2976e3fdf62afa21"  # Non-pretrained
 
-model_hash_pretrained_grover = "a50dc68191a3776694ce8f34ad55e7e0"  # Fine-tuned
-model_hash_scratch_grover = "0807497c5407f4e0c8a52207f36a185f"  # Non-pretrained
+model_hash_pretrained_grover = "c30016a7469feb78a8ee9ebb18ed9b1f"  # Fine-tuned
+model_hash_scratch_grover = "60e4b40e8d67bff2d5efc5e22e265820"  # Non-pretrained
 
-model_hash_pretrained_jtvae = "f9e328d21bff64c5541f81ae1303c279"  # Fine-tuned
-model_hash_scratch_jtvae = "d273bf129f3a866a4d02f8925cf5cc8d"  # Non-pretrained
+model_hash_pretrained_jtvae = "915345a522c29fa709b995d6149083b9"  # Fine-tuned
+model_hash_scratch_jtvae = "934c89b742a6309ad6bb2e1cf90c5e50"  # Non-pretrained
 
 # %% [markdown]
 # ## Load config and SMILES
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained_rdkit)
+
+config["dataset"]["data_params"]["dataset_path"] = (
+    ROOT / config["dataset"]["data_params"]["dataset_path"]
+)
+
 dataset, key_dict = load_dataset(config)
 config["dataset"]["n_vars"] = dataset.n_vars
 
@@ -161,6 +166,9 @@ ood_drugs
 # %%
 config = load_config(seml_collection, model_hash_pretrained_rdkit)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_pretrained_rdkit, embedding_pretrained_rdkit = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -192,6 +200,9 @@ drug_r2_pretrained_all_rdkit, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_scratch_rdkit)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_scratch_rdkit, embedding_scratch_rdkit = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -226,6 +237,9 @@ drug_r2_scratch_all_rdkit, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_pretrained_grover)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_pretrained_grover, embedding_pretrained_grover = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -257,6 +271,9 @@ drug_r2_pretrained_all_grover, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_scratch_grover)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_scratch_grover, embedding_scratch_grover = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -291,6 +308,9 @@ drug_r2_scratch_all_grover, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_pretrained_jtvae)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_pretrained_jtvae, embedding_pretrained_jtvae = load_model(
     config, canon_smiles_unique_sorted
 )
@@ -322,6 +342,9 @@ drug_r2_pretrained_all_jtvae, _ = compute_pred(
 # %%
 config = load_config(seml_collection, model_hash_scratch_jtvae)
 config["dataset"]["n_vars"] = dataset.n_vars
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 model_scratch_jtvae, embedding_scratch_jtvae = load_model(
     config, canon_smiles_unique_sorted
 )

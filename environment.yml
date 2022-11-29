@@ -26,7 +26,6 @@ dependencies:
   - pre-commit
   - seml
   - py-spy
-  - moses
   # UMAP
   - umap-learn
   - datashader
@@ -36,6 +35,6 @@ dependencies:
   - scikit-image
   - pip
   - pip:
-      - sfaira
       - tensorflow
-      - 'git+git://github.com/siboehm/dgl-lifesci@jtvae#subdirectory=python'
+      - dgllife
+      - scgen

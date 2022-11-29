@@ -149,7 +149,7 @@ def load_model(config, canon_smiles_unique_sorted):
             len(incomp_keys.missing_keys) == 1
             and "drug_embeddings.weight" in incomp_keys.missing_keys
         ), incomp_keys.missing_keys
-        assert len(incomp_keys.unexpected_keys) == 0, incomp_keys.unexpected_keys
+        # assert len(incomp_keys.unexpected_keys) == 0, incomp_keys.unexpected_keys
 
     return model, embedding
 
@@ -160,11 +160,11 @@ def compute_drug_embeddings(model, embedding, dosage=1e4):
     # dosages = torch.ones((len(embedding.weight),))
     with torch.no_grad():
         # scaled the drug embeddings using the doser
-        scaled_embeddings = model.compute_drug_embeddings_(
+        transf_embeddings = model.compute_drug_embeddings_(
             drugs_idx=all_drugs_idx, dosages=dosages
         )
         # apply drug embedder
-        transf_embeddings = model.drug_embedding_encoder(scaled_embeddings)
+        # transf_embeddings = model.drug_embedding_encoder(transf_embeddings)
     return transf_embeddings
 
 
@@ -285,11 +285,11 @@ def compute_pred(
         if use_DEGs:
             r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
-            drug_r2[cell_drug_dose_comb] = r2_m_de
+            drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
             r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
-            drug_r2[cell_drug_dose_comb] = r2_m
+            drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
         predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
     return drug_r2, predictions_dict
@@ -391,11 +391,11 @@ def compute_pred_ctrl(
         if use_DEGs:
             r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
-            drug_r2[cell_drug_dose_comb] = r2_m_de
+            drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
             r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
-            drug_r2[cell_drug_dose_comb] = r2_m
+            drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
         predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
     return drug_r2, predictions_dict

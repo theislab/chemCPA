@@ -31,12 +31,11 @@ def get_chemical_representation(
         "zeros",
         "chemvae",
     )
-
     if data_dir is None:
         data_dir = Path(EMBEDDING_DIR)
     else:
         data_dir = Path(data_dir)
-    assert Path(data_dir).exists()
+    assert Path(data_dir).exists(), f"{data_dir} does not exist."
 
     df = None
     if embedding_model == "grover_base":

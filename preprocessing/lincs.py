@@ -6,12 +6,14 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.14.1
 # ---
 
 # %%
+import numpy as np
 import pandas as pd
 import scanpy as sc
+from tqdm.notebook import tqdm
 
 sc.set_figure_params(dpi=100, frameon=False)
 sc.logging.print_header()
@@ -72,11 +74,8 @@ adata
 # %% [markdown]
 # Calculate differential genes manually, such that the genes are the same per condition.
 
-import numpy as np
-
 # %%
 # %%time
-from tqdm.notebook import tqdm
 
 de_genes = {}
 de_genes_quick = {}

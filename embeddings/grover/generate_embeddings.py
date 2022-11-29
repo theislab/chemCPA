@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.14.1
 # ---
 
 # %% [markdown]
@@ -17,11 +17,11 @@
 # 1. Load `lincs_trapnell.smiles` as the list of SMILES to be encoded
 # 2. Generate fingerprints using GROVER
 # 3. Save SMILES -> fingerprint mapping as a pandas df.
-
-from pathlib import Path
-
-import numpy as np
-import pandas as pd
+#
+# from pathlib import Path
+#
+# import numpy as np
+# import pandas as pd
 
 # %%
 import rdkit

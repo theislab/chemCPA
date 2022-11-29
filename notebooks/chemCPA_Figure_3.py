@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 # ---
 
 # %% [markdown]
@@ -40,11 +40,11 @@ from utils import (
     load_smiles,
 )
 
-from chemCPA.paths import FIGURE_DIR
+from chemCPA.paths import FIGURE_DIR, ROOT
 
 # %%
-BLACK = True
-SAVEFIG = False
+BLACK = False
+SAVEFIG = True
 
 # %%
 if BLACK:
@@ -135,12 +135,19 @@ def plot_umap(
 # * Define `seml_collection` and `model_hash` to load data and model
 
 # %%
-seml_collection = "finetuning_num_genes"
+seml_collection = "multi_task"
 
-# GROVER, Setting 1
-model_hash_pretrained = "a50dc68191a3776694ce8f34ad55e7e0"  # Fine-tuned
-model_hash_scratch = "0807497c5407f4e0c8a52207f36a185f"  # Non-pretrained
+model_hash_pretrained_rdkit = "c824e42f7ce751cf9a8ed26f0d9e0af7"  # Fine-tuned
+model_hash_scratch_rdkit = "59bdaefb1c1adfaf2976e3fdf62afa21"  # Non-pretrained
 
+model_hash_pretrained_grover = "c30016a7469feb78a8ee9ebb18ed9b1f"  # Fine-tuned
+model_hash_scratch_grover = "60e4b40e8d67bff2d5efc5e22e265820"  # Non-pretrained
+
+model_hash_pretrained_jtvae = "915345a522c29fa709b995d6149083b9"  # Fine-tuned
+model_hash_scratch_jtvae = "934c89b742a6309ad6bb2e1cf90c5e50"  # Non-pretrained
+
+# %%
+model_hash_pretrained = model_hash_pretrained_rdkit
 
 # %% [markdown]
 # ___
@@ -151,6 +158,12 @@ model_hash_scratch = "0807497c5407f4e0c8a52207f36a185f"  # Non-pretrained
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
+config["dataset"]["data_params"]["dataset_path"] = (
+    ROOT / config["dataset"]["data_params"]["dataset_path"]
+)
+config["model"]["embedding"]["directory"] = (
+    ROOT / config["model"]["embedding"]["directory"]
+)
 dataset, key_dict = load_dataset(config)
 config["dataset"]["n_vars"] = dataset.n_vars
 canon_smiles_unique_sorted, smiles_to_pathway_map, smiles_to_drug_map = load_smiles(
@@ -161,12 +174,15 @@ model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_
 # %%
 dataset
 
+# %%
+config
+
 # %% [markdown]
 # #### Define which drugs should be annotaded with list `ood_drugs`
 
 # %%
 ood_drugs = (
-    dataset.obs.condition[dataset.obs.split_ood_finetuning.isin(["ood"])]
+    dataset.obs.condition[dataset.obs.split_ood_multi_task.isin(["ood"])]
     .unique()
     .to_list()
 )
@@ -191,15 +207,20 @@ for (drug, pw1, pw2), df in dataset.obs.groupby(
         pw1_to_pw2[pw1] = {pw2}
 
 # %%
+for s, pw in smiles_to_pw_level2_map.items():
+    if pw == "Histone deacetylation":
+        smiles_to_pathway_map[s] = pw
+
+# %%
 groups = [
-    "Epigenetic regulation",
+    "Histone deacetylation",
     "Tyrosine kinase signaling",
     "Cell cycle regulation",
     "DNA damage & DNA repair",
 ]
 
-groups_pw2 = [pw2 for pw in groups for pw2 in pw1_to_pw2[pw]]
-groups_pw2
+# groups_pw2 = [pw2 for pw in groups for pw2 in pw1_to_pw2[pw]]
+# groups_pw2
 
 # %% [markdown]
 # ### Compute UMAP
@@ -208,14 +229,14 @@ groups_pw2
 transf_embeddings_pretrained_high = compute_drug_embeddings(
     model_pretrained, embedding_pretrained, dosage=1e4
 )
-mapper_pretrained_high = umap.UMAP(n_neighbors=25, min_dist=0.5).fit_transform(
-    transf_embeddings_pretrained_high
-)
+mapper_pretrained_high = umap.UMAP(
+    n_neighbors=25, min_dist=1, spread=2, metric="euclidean"
+).fit_transform(transf_embeddings_pretrained_high)
 
 transf_embeddings_pretrained_low = compute_drug_embeddings(
     model_pretrained, embedding_pretrained, dosage=10
 )
-mapper_pretrained_low = umap.UMAP(n_neighbors=25, min_dist=0.5).fit_transform(
+mapper_pretrained_low = umap.UMAP(n_neighbors=25, min_dist=1, spread=2).fit_transform(
     transf_embeddings_pretrained_low
 )
 
@@ -264,7 +285,7 @@ plt.tight_layout()
 
 if SAVEFIG:
     if BLACK:
-        plt.savefig(FIGURE_DIR / "umap_drug_embedding_balck.png", format="png")
+        plt.savefig(FIGURE_DIR / "umap_drug_embedding_black.png", format="png")
     else:
         plt.savefig(FIGURE_DIR / "umap_drug_embedding.png", format="png")
 
