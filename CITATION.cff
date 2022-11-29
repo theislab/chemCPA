@@ -1,10 +1,9 @@
 cff-version: 1.2.0
 title: >-
-  Predicting single-cell perturbation responses for
-  unseen drugs
+  Predicting Cellular Responses to Novel Drug Perturbations at a Single-Cell Resolution
 message: 'If you build upon our work, please cite our paper.'
 type: conference-paper
-booktitle: ICLR2022 Machine Learning for Drug Discovery
+booktitle: NeurIPS2022
 year: 2022
 authors:
   - given-names: Leon
