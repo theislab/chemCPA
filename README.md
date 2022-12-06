@@ -1,6 +1,6 @@
 # Predicting Cellular Responses to Novel Drug Perturbations at a Single-Cell Resolution
 
-Code accompanying the [NeurIPS 2022 paper](https://neurips.cc/virtual/2022/poster/53227), ([PDF](https://openreview.net/pdf?id=vRrFVHxFiXJ)).
+Code accompanying the [NeurIPS 2022 paper](https://neurips.cc/virtual/2022/poster/53227) ([PDF](https://openreview.net/pdf?id=vRrFVHxFiXJ)).
 
 ![architecture of CCPA](docs/chemCPA.png)
 
