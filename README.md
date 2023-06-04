@@ -35,6 +35,8 @@ The script expects a `manual_run.yaml` file containing the experiment configurat
 
 All notebooks also exist as Python scripts (converted through [jupytext](https://github.com/mwouts/jupytext)) to make them easier to review.
 
+In some notebooks, a drug database .csv file is required. We used the [DrugBank](https://go.drugbank.com/) database (requires registration).
+
 ## Citation
 
 You can cite our work as:
