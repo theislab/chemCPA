@@ -130,6 +130,7 @@ rdkit_model:
     #____________________________________________________________________________________________________
     #_Extended_gene_set_(setting_2)______________________________________________________________________
     model.append_ae_layer: True
+    model.enable_cpa_mode: False
     dataset.data_params.dataset_path: project_folder/datasets/sciplex_complete_middle_subset.h5ad 
     dataset.data_params.degs_key: all_DEGs 
     #____________________________________________________________________________________________________

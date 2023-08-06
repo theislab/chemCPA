@@ -9,12 +9,8 @@ if __name__ == "__main__":
     exp = ExperimentWrapper(init_all=False)
 
     # this is how seml loads the config file internally
-    assert Path(
-        "simon/config_sciplex3_interactive.yaml"
-    ).exists(), "config file not found"
-    seml_config, slurm_config, experiment_config = read_config(
-        "simon/config_sciplex3_interactive.yaml"
-    )
+    assert Path("manual_run.yaml").exists(), "config file not found"
+    seml_config, slurm_config, experiment_config = read_config("manual_run.yaml")
     # we take the first config generated
     configs = generate_configs(experiment_config)
     if len(configs) > 1:
