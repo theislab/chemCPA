@@ -111,7 +111,7 @@ def extract_drug(cond):
     split = cond.split("_")
     if len(split) == 2:
         return split[-1]
-    return "_".join(split[1:-1])
+    return "_".join(split[1:])
 
 
 adata.obs["cov_drug_dose_name"].apply(lambda s: len(s.split("_"))).value_counts()
