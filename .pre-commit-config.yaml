@@ -5,7 +5,7 @@ repos:
       - id: black
         language_version: python3
   - repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+    rev: 5.11.5
     hooks:
      - id: isort
        args: ["--profile", "black", "--filter-files"]
@@ -22,4 +22,4 @@ repos:
          - --opt=notebook_metadata_filter=-kernelspec
        additional_dependencies:
          - black==22.10.0 # Matches hook
-         - isort==5.10.1
+         - isort==5.11.5
