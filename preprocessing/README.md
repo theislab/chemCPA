@@ -8,4 +8,6 @@ We combined the data which is only available in the `.gctx` together with its me
 
 Note that not all perturbations correspond to small molecules which is why we subsetted the data to only contain perturbation types `trt_cp` and `ctl_vehicle`, resulting in a total of 1034271 observations.
 
-The provided data is normalised.
+The provided data is normalised. 
+
+For the training on the LINCS data, we ignored the treatment time, `adata_lincs_full.obs["pert_time"]`.
