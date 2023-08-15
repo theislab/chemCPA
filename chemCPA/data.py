@@ -337,6 +337,9 @@ class SubDataset:
         self.drugs_names = indx(dataset.drugs_names, indices)
         self.pert_categories = indx(dataset.pert_categories, indices)
         self.covariate_names = {}
+        assert (
+            "cell_type" in self.covars_dict
+        ), "`cell_type` must be provided as a covariate"
         for cov in self.covariate_keys:
             self.covariate_names[cov] = indx(dataset.covariate_names[cov], indices)
 
@@ -383,7 +386,6 @@ def load_dataset_splits(
     return_dataset: bool = False,
     use_drugs_idx=False,
 ):
-
     dataset = Dataset(
         dataset_path,
         perturbation_key,

@@ -35,7 +35,7 @@ fixed:
   dataset.data_params.perturbation_key: pert_id # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
   dataset.data_params.dose_key: pert_dose # stores drug dose as a float
-  dataset.data_params.covariate_keys: cell_id # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
+  dataset.data_params.covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
   dataset.data_params.smiles_key: canonical_smiles
   dataset.data_params.degs_key: rank_genes_groups_cov # `uns` column name denoting the DEGs for each perturbation
   dataset.data_params.split_key: random_split # necessary field for train, test, ood splits.
