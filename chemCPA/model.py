@@ -591,6 +591,13 @@ class ComPert(torch.nn.Module):
 
         latent_drugs = self.drug_embeddings.weight
 
+        if drugs is None:
+            if len(drugs_idx.size()) == 0:
+                drugs_idx = drugs_idx.unsqueeze(0)
+
+            if len(dosages.size()) == 0:
+                dosages = dosages.unsqueeze(0)
+
         if drugs_idx is not None:
             assert drugs_idx.shape == dosages.shape and len(drugs_idx.shape) == 1
             # results in a tensor of shape [batchsize, drug_embedding_dimension]
@@ -621,6 +628,10 @@ class ComPert(torch.nn.Module):
                 scaled_dosages = self.dosers(drugs)
             else:
                 scaled_dosages = self.dosers(dosages, drugs_idx)
+
+        # unsqueeze if batch_size is 1
+        if len(scaled_dosages.size()) == 0:
+            scaled_dosages = scaled_dosages.unsqueeze(0)
 
         if not self.enable_cpa_mode:
             # Transform and adjust dimension to latent dims
