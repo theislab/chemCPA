@@ -106,6 +106,7 @@ else:
 # %% [markdown]
 # Mapping from `rank_genes_groups_cov` might cause problems when drug contains '_'
 
+
 # %%
 def extract_drug(cond):
     split = cond.split("_")
