@@ -44,18 +44,29 @@ sc.logging.print_header()
 
 # %% [markdown]
 # ## Load data
+# Note: Run notebook for both adata objects (LINCS_GENES)
 
 # %%
-# adata_cpa = sc.read(DATA_DIR/'sciplex3_old_reproduced.h5ad')
-adata_cpa = sc.read(PROJECT_DIR / "datasets" / "sciplex3_matched_genes_lincs.h5ad")
-adata_cpi = sc.read(PROJECT_DIR / "datasets" / "trapnell_final_V7.h5ad")
+# Switch between 977 (True) and 2000 (False) gene set
+LINCS_GENES = True
+
+adata_cpa = sc.read(
+    DATA_DIR
+    / f"sciplex3_{'matched_genes_lincs' if not LINCS_GENES else 'lincs_genes'}.h5ad"
+)
+adata_cpi = sc.read(DATA_DIR / "trapnell_final_V7.h5ad")
+
+# %%
+adata_cpa
 
 # %% [markdown]
 # Determine output directory
 
 # %%
-adata_out = PROJECT_DIR / "datasets" / "trapnell_cpa.h5ad"
-adata_out_subset = PROJECT_DIR / "datasets" / "trapnell_cpa_subset.h5ad"
+adata_out = DATA_DIR / f"trapnell_cpa{'_lincs_genes' if LINCS_GENES else ''}.h5ad"
+adata_out_subset = (
+    DATA_DIR / f"trapnell_cpa_subset{'_lincs_genes' if LINCS_GENES else ''}.h5ad"
+)
 
 # %% [markdown]
 # Overview over adata files
@@ -136,7 +147,7 @@ Chem.MolFromSmiles(drug_dict["ENMD-2076"])
 # np.unique([f'{condition}_{smiles}' for condition, smiles in list(zip(adata_cpi.obs.condition, adata_cpi.obs.SMILES))])
 
 # %% [markdown]
-# ## Rename weird drug `(+)-JQ1`
+# ## Rename drug `(+)-JQ1`
 # This had a different name in the old Sciplex dataset, where it was called `JQ1`. We rename it for consistency.
 
 # %%
@@ -249,7 +260,7 @@ adatas = []
 
 for drug in np.unique(adata_cpa.obs.condition):
     tmp = adata_cpa[adata_cpa.obs.condition == drug].copy()
-    tmp = sc.pp.subsample(tmp, n_obs=50, copy=True)
+    tmp = sc.pp.subsample(tmp, n_obs=50, copy=True, random_state=42)
     adatas.append(tmp)
 
 adata_cpa_subset = adatas[0].concatenate(adatas[1:])
@@ -270,5 +281,9 @@ adata_cpa_subset.write(adata_out_subset)
 # %%
 adata = sc.read(adata_out_subset)
 adata.obs.dose.value_counts()
+
+# %%
+adata_cpa.uns["log1p"]
+
 
 # %%

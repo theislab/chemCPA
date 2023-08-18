@@ -49,7 +49,7 @@ pd.set_option("display.max_columns", 100)
 # Load lincs
 
 # %% tags=[]
-adata_lincs = sc.read(PROJECT_DIR / "datasets" / "lincs_full_smiles.h5ad")
+adata_lincs = sc.read(DATA_DIR / "lincs_full_smiles.h5ad")
 
 # %% [markdown]
 # Load trapnell
@@ -57,7 +57,7 @@ adata_lincs = sc.read(PROJECT_DIR / "datasets" / "lincs_full_smiles.h5ad")
 # %%
 adatas = []
 for i in range(5):
-    adatas.append(sc.read(PROJECT_DIR / "datasets" / f"sciplex_raw_chunk_{i}.h5ad"))
+    adatas.append(sc.read(DATA_DIR / f"sciplex_raw_chunk_{i}.h5ad"))
 adata = adatas[0].concatenate(adatas[1:])
 
 # %% [markdown]
@@ -73,16 +73,19 @@ adata.var["gene_id"] = adata.var.id.str.split(".").str[0]
 # Load genome container with sfaira
 
 # %%
-genome_container = sfaira.versions.genomes.GenomeContainer(
-    organism="homo_sapiens", release="82"
-)
+try:
+    # load json file with symbol to id mapping
+    import json
 
-# %% [markdown]
-# Extend symbols dict with unknown symbol
-
-# %%
-symbols_dict = genome_container.symbol_to_id_dict
-symbols_dict.update({"PLSCR3": "ENSG00000187838"})
+    with open(DATA_DIR / "symbols_dict.json") as json_file:
+        symbols_dict = json.load(json_file)
+except:
+    genome_container = sfaira.versions.genomes.GenomeContainer(
+        organism="homo_sapiens", release="82"
+    )
+    symbols_dict = genome_container.symbol_to_id_dict
+    # Extend symbols dict with unknown symbol
+    symbols_dict.update({"PLSCR3": "ENSG00000187838"})
 
 # %% [markdown]
 # Identify genes that are shared between lincs and trapnell
@@ -110,7 +113,7 @@ adata.var["in_lincs"] = adata.var.gene_id.isin(adata_lincs.var.gene_id)
 SUBSET = False
 
 if SUBSET:
-    sc.pp.subsample(adata, fraction=0.5)
+    sc.pp.subsample(adata, fraction=0.5, random_state=42)
 
 # %%
 sc.pp.normalize_per_cell(adata)
@@ -169,6 +172,10 @@ adata.obs["condition"] = adata.obs.product_name.copy()
 # Add combinations of drug (`condition`), dose (`dose_val`), and cell_type (`cell_type`)
 
 # %%
+# make column of dataframe to categorical
+adata.obs["condition"] = (
+    adata.obs["condition"].astype("category").cat.rename_categories({"(+)-JQ1": "JQ1"})
+)
 adata.obs["drug_dose_name"] = (
     adata.obs.condition.astype(str) + "_" + adata.obs.dose_val.astype(str)
 )
@@ -587,10 +594,11 @@ sc.write(fname, adata)
 # ____
 
 # %%
-# fname_lincs = PROJECT_DIR/'datasets'/'lincs_full_smiles_sciplex_genes.h5ad'
+fname_lincs = PROJECT_DIR / "datasets" / "lincs_full_smiles_sciplex_genes.h5ad"
 
-# sc.write(fname_lincs, adata_lincs)
+sc.write(fname_lincs, adata_lincs)
 
 # %%
+adata.uns["log1p"]
 
 # %%

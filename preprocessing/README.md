@@ -11,3 +11,6 @@ Note that not all perturbations correspond to small molecules which is why we su
 The provided data is normalised. 
 
 For the training on the LINCS data, we ignored the treatment time, `adata_lincs_full.obs["pert_time"]`.
+
+#### Preprocess data 
+The data preprocessing should run thorugh with the provided files. Note that you have to execute `4_sciplex_SMILES.ipynb` for both gene sets. The same notebook also contains multiple check to make sure that the SMILES are correctly matched. You could ignore these and implement your own solution. For this, we provide `drug_dict.json` file.  

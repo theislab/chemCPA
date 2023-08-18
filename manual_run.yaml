@@ -22,13 +22,16 @@ fixed:
   training.save_dir: project_folder/checkpoints
   
   dataset.dataset_type: trapnell
-  dataset.data_params.perturbation_key: condition         # stores name of the drug
+  # dataset.data_params.perturbation_key: condition         # stores name of the drug
+  dataset.data_params.perturbation_key: pert_id         # stores name of the drug
   dataset.data_params.pert_category: cov_drug_dose_name   # stores celltype_drugname_drugdose
-  dataset.data_params.dose_key: dose                      # stores drug dose as a float
+  dataset.data_params.dose_key: pert_dose                      # stores drug dose as a float
   dataset.data_params.covariate_keys: cell_type           # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
-  dataset.data_params.smiles_key: SMILES
+  # dataset.data_params.smiles_key: SMILES
+  dataset.data_params.smiles_key: canonical_smiles
   dataset.data_params.use_drugs_idx: True                 # If false, will use One-hot encoding instead
-  dataset.data_params.split_key: split_ood_multi_task
+  # dataset.data_params.split_key: split_ood_multi_task
+  dataset.data_params.split_key: random_split
 
   model.pretrained_model_path: project_folder/checkpoints
   model.pretrained_model_hashes: null
@@ -129,8 +132,11 @@ rdkit_model:
     # dataset.data_params.degs_key: lincs_DEGs # `uns` column name denoting the DEGs for each perturbation
     #____________________________________________________________________________________________________
     #_Extended_gene_set_(setting_2)______________________________________________________________________
-    model.append_ae_layer: True
+    # model.append_ae_layer: True
+    model.append_ae_layer: False
     model.enable_cpa_mode: False
-    dataset.data_params.dataset_path: project_folder/datasets/sciplex_complete_middle_subset.h5ad 
-    dataset.data_params.degs_key: all_DEGs 
+    # dataset.data_params.dataset_path: project_folder/datasets/sciplex_complete_middle_subset.h5ad 
+    # dataset.data_params.degs_key: all_DEGs 
+    dataset.data_params.dataset_path: project_folder/datasets/lincs_full_smiles_sciplex_genes.h5ad
+    dataset.data_params.degs_key: rank_genes_groups_cov 
     #____________________________________________________________________________________________________
