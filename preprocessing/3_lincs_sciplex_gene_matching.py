@@ -599,6 +599,3 @@ fname_lincs = PROJECT_DIR / "datasets" / "lincs_full_smiles_sciplex_genes.h5ad"
 sc.write(fname_lincs, adata_lincs)
 
 # %%
-adata.uns["log1p"]
-
-# %%

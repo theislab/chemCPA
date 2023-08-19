@@ -36,8 +36,15 @@ adata_out = "".join(adata_in.split(".")[:-1]) + "_pp.h5ad"
 adata_out
 
 # %%
+import re
+
+
+def remove_non_alphanumeric(input_string):
+    return re.sub(r"[^a-zA-Z0-9]", "", input_string)
+
+
 adata.obs["condition"] = adata.obs["pert_iname"]
-adata.obs["condition"] = adata.obs["condition"].str.replace("/", "|")
+adata.obs["condition"] = adata.obs["condition"].apply(remove_non_alphanumeric)
 
 adata.obs["cell_type"] = adata.obs["cell_id"]
 adata.obs["dose_val"] = adata.obs["pert_dose"].astype(float) / np.max(
@@ -53,7 +60,7 @@ adata.obs["cov_drug_dose_name"] = (
 adata.obs["cov_drug_name"] = (
     adata.obs.cell_type.astype(str) + "_" + adata.obs.condition.astype(str)
 )
-adata.obs["eval_category"] = adata.obs["cov_drug_dose_name"]
+adata.obs["eval_category"] = adata.obs["cov_drug_name"]
 adata.obs["control"] = (adata.obs["condition"] == "DMSO").astype(int)
 
 # adata.obs['cov_drug_dose_name'] = adata.obs['cov_drug_dose_name'].str.replace('/','|')

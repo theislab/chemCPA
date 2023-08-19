@@ -285,7 +285,7 @@ adata = sc.read(adata_out)
 # **Additional**: Check that `adata.uns[rank_genes_groups_cov]` has all entries in `adata.obs.cov_drug_name` as keys
 
 # %%
-for i, k in enumerate(adata.obs.cov_drug_dose_name.unique()):
+for i, k in enumerate(adata.obs.cov_drug_name.unique()):
     try:
         adata.uns["rank_genes_groups_cov"][k]
     except:
