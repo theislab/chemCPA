@@ -12,7 +12,7 @@ Code for this previous version can be found under the `v1.0` git tag.
 
 For the final models, we provide [weight checkpoints](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip) as well as the [hyperparameter configuration](https://f003.backblazeb2.com/file/chemCPA-models/finetuning_num_genes.json).
 The raw datasets can be downloaded from a [FAIR server](https://dl.fbaipublicfiles.com/dlp/cpa_binaries.tar).
-We also provide our processed datasets for reproducibility: sci-Plex [shared gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset_lincs_genes.h5ad) & [extended gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset.h5ad), [LINCS](https://f003.backblazeb2.com/file/chemCPA-datasets/lincs_full.h5ad.gz).
+We also provide our processed datasets for reproducibility: sci-Plex [shared gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset_lincs_genes.h5ad) & [extended gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset.h5ad), [LINCS](https://f003.backblazeb2.com/file/chemCPA-datasets/lincs_full.h5ad.gz). Embeddings can be downloaded [here](https://drive.google.com/drive/folders/1KzkhYptcW3uT3j4GQpDdAC1DXEuXe49J?usp=share_link).
 
 To setup the environment, install conda and run:
 
