@@ -10,40 +10,46 @@
 # ---
 
 # %%
+import os
+import warnings
+
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from scipy import sparse
 from tqdm.notebook import tqdm
+
+from chemCPA.helper import rank_genes_groups_by_cov
+from chemCPA.paths import DATA_DIR
 
 sc.set_figure_params(dpi=100, frameon=False)
 sc.logging.print_header()
-
-# %%
-import os
-
-os.chdir("./../")
-# %%
-import warnings
-
-from chemCPA.helper import rank_genes_groups_by_cov
-
 warnings.filterwarnings("ignore")
 
 # %%
-full = False
+full = True
 load_adata = True
-adata_in = "datasets/lincs_full.h5ad" if full else "datasets/lincs.h5ad"
-adata = sc.read(adata_in) if load_adata else None
+adata_in = "lincs_full.h5ad" if full else "lincs.h5ad"
+adata = sc.read(DATA_DIR / adata_in) if load_adata else None
 
 adata_out = "".join(adata_in.split(".")[:-1]) + "_pp.h5ad"
 adata_out
 
 # %%
+import re
+
+
+def remove_non_alphanumeric(input_string):
+    return re.sub(r"[^a-zA-Z0-9]", "", input_string)
+
+
 adata.obs["condition"] = adata.obs["pert_iname"]
-adata.obs["condition"] = adata.obs["condition"].str.replace("/", "|")
+adata.obs["condition"] = adata.obs["condition"].apply(remove_non_alphanumeric)
 
 adata.obs["cell_type"] = adata.obs["cell_id"]
-adata.obs["dose_val"] = adata.obs["pert_dose"]
+adata.obs["dose_val"] = adata.obs["pert_dose"].astype(float) / np.max(
+    adata.obs["pert_dose"].astype(float)
+)
 adata.obs["cov_drug_dose_name"] = (
     adata.obs.cell_type.astype(str)
     + "_"
@@ -106,13 +112,12 @@ else:
 # %% [markdown]
 # Mapping from `rank_genes_groups_cov` might cause problems when drug contains '_'
 
-
 # %%
 def extract_drug(cond):
     split = cond.split("_")
     if len(split) == 2:
         return split[-1]
-    return "_".join(split[1:])
+    return "_".join(split[1:-1])
 
 
 adata.obs["cov_drug_dose_name"].apply(lambda s: len(s.split("_"))).value_counts()
@@ -156,18 +161,16 @@ except:
 
 # %%
 # code compatibility
-from scipy import sparse
-
 adata.X = sparse.csr_matrix(adata.X)
 
 # %%
-sc.write(adata_out, adata)
+sc.write(DATA_DIR / adata_out, adata)
 
 # %%
 print("all done.")
 
 # %% [markdown]
-# ### Check that `adata.uns[rank_genes_groups_cov]` has all entries in `adata.obs.cov_drug_dose_name` as keys
+# ### Check that `adata.uns[rank_genes_groups_cov]` has all entries in `adata.obs.cov_drug_name` as keys
 
 # %%
 for i, k in enumerate(adata.obs.eval_category.unique()):
@@ -180,7 +183,7 @@ for i, k in enumerate(adata.obs.eval_category.unique()):
 # ### Checking the same for the stored adata object
 
 # %%
-adata_2 = sc.read(adata_out)
+adata_2 = sc.read(DATA_DIR / adata_out)
 
 # %%
 for i, k in enumerate(adata_2.obs.eval_category.unique()):
@@ -198,5 +201,11 @@ set(list(adata.uns["rank_genes_groups_cov"])) - set(
 set((list(adata_2.uns["rank_genes_groups_cov"]))) - set(
     list(adata.uns["rank_genes_groups_cov"])
 )
+
+# %%
+len(list(adata_2.uns["rank_genes_groups_cov"].keys()))
+
+# %%
+adata.obs["dose_val"].value_counts()
 
 # %%

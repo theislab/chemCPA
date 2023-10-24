@@ -262,17 +262,24 @@ class Dataset:
 
         # This could be made much faster
         degs_tensor = []
+        # check if the DEGs are condtioned on covariate, drug, and dose or only covariate and drug
+        dose_specific = (
+            True if len(list(self.de_genes.keys())[0].split()) == 3 else False
+        )
         for i in range(len(self)):
             drug = indx(self.drugs_names, i)
             cov = indx(self.covariate_names["cell_type"], i)
+            if dose_specific:
+                dose = indx(self.dose_key, i)
 
             if drug == "JQ1":
                 drug = "(+)-JQ1"
 
-            if drug == "control":
+            if drug == "control" or drug == "DMSO":
                 genes = []
             else:
-                genes = self.de_genes[f"{cov}_{drug}_1.0"]
+                key = f"{cov}_{drug}_{dose}" if dose_specific else f"{cov}_{drug}"
+                genes = self.de_genes[key]
 
             degs_tensor.append(
                 torch.Tensor(self.var_names.isin(genes)).detach().clone()

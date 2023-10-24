@@ -15,13 +15,13 @@
 # **Output**
 #
 # ## Imports
-#
-# import matplotlib.pyplot as plt
-# import numpy as np
-# import pandas as pd
 
 # %%
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import scanpy as sc
+from rdkit import Chem
 
 from chemCPA.paths import DATA_DIR, PROJECT_DIR
 
@@ -119,7 +119,6 @@ adata = adata[cond]
 # Checking that SMILES are valid according to `rdkit`
 
 # %%
-from rdkit import Chem
 
 
 def check_smiles(smiles):
@@ -162,10 +161,9 @@ adata = adata[cond]
 # ### Add additional drugbank info to `adata.obs`
 
 # %%
-from os.path import exists
-
 drugbank_path = DATA_DIR / "drug_bank" / "drugbank_all.csv"
-if exists(drugbank_path):
+
+if drugbank_path.exists():
     drugbank_df = pd.read_csv(drugbank_path)
 else:
     print(f"Invalid path: {drugbank_path}")
@@ -193,8 +191,10 @@ from sklearn.model_selection import train_test_split
 if "split" not in list(adata.obs):
     print("Addig 'split' to 'adata.obs'.")
     unique_drugs = np.unique(adata.obs.canonical_smiles)
-    drugs_train, drugs_tmp = train_test_split(unique_drugs, test_size=0.2)
-    drugs_val, drugs_test = train_test_split(drugs_tmp, test_size=0.5)
+    drugs_train, drugs_tmp = train_test_split(
+        unique_drugs, test_size=0.2, random_state=42
+    )
+    drugs_val, drugs_test = train_test_split(drugs_tmp, test_size=0.5, random_state=42)
 
     adata.obs["split"] = "train"
     adata.obs.loc[adata.obs.canonical_smiles.isin(drugs_val), "split"] = "test"
@@ -245,8 +245,10 @@ adata.obs.split1.value_counts()
 adata.obs_names
 
 # %%
-train_obs, val_test_obs = train_test_split(adata.obs_names, test_size=0.15)
-val_obs, test_obs = train_test_split(val_test_obs, test_size=0.5)
+train_obs, val_test_obs = train_test_split(
+    adata.obs_names, test_size=0.15, random_state=42
+)
+val_obs, test_obs = train_test_split(val_test_obs, test_size=0.5, random_state=42)
 
 # %%
 adata.obs["random_split"] = ""
@@ -273,9 +275,6 @@ len(adata.obs.pert_id.unique())
 adata.write(adata_out)
 adata
 
-# %%
-# adata.obs['drug_dose_name']
-
 # %% [markdown]
 # ### Loading the result for `adata_out`
 
@@ -283,10 +282,10 @@ adata
 adata = sc.read(adata_out)
 
 # %% [markdown]
-# **Additional**: Check that `adata.uns[rank_genes_groups_cov]` has all entries in `adata.obs.cov_drug_dose_name` as keys
+# **Additional**: Check that `adata.uns[rank_genes_groups_cov]` has all entries in `adata.obs.cov_drug_name` as keys
 
 # %%
-for i, k in enumerate(adata.obs.cov_drug_dose_name.unique()):
+for i, k in enumerate(adata.obs.cov_drug_name.unique()):
     try:
         adata.uns["rank_genes_groups_cov"][k]
     except:
