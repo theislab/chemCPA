@@ -82,7 +82,8 @@ def get_chemical_representation(
             / "rdkit"
             / "data"
             / "embeddings"
-            / "rdkit2D_embedding_lincs_trapnell.parquet"
+            # / "rdkit2D_embedding_lincs_trapnell.parquet"
+            / "rdkit2D_embedding_biolord.parquet"
         )
     elif embedding_model == "jtvae":
         df = pd.read_parquet(data_dir / "jtvae" / "data" / "jtvae_dgl.parquet")

@@ -114,12 +114,12 @@ class Dataset:
             self.pert_categories = np.array(data.obs[pert_category].values)
             self.de_genes = data.uns[degs_key]
             self.drugs_names = np.array(data.obs[perturbation_key].values)
-            self.dose_names = np.array(data.obs[dose_key].values)
+            self.dose_names = np.array(data.obs[dose_key].values).astype(float)
 
             # get unique drugs
             drugs_names_unique = set()
             for d in self.drugs_names:
-                [drugs_names_unique.add(i) for i in d.split("+")]
+                [drugs_names_unique.add(i) for i in d.split("&")]
 
             self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
 
@@ -130,7 +130,7 @@ class Dataset:
                 list(self.drugs_names_unique_sorted), data, perturbation_key, smiles_key
             )
             self.max_num_perturbations = max(
-                len(name.split("+")) for name in self.drugs_names
+                len(name.split("&")) for name in self.drugs_names
             )
 
             if not use_drugs_idx:
@@ -264,18 +264,19 @@ class Dataset:
         degs_tensor = []
         # check if the DEGs are condtioned on covariate, drug, and dose or only covariate and drug
         dose_specific = (
-            True if len(list(self.de_genes.keys())[0].split()) == 3 else False
+            True if len(list(self.de_genes.keys())[0].split("_")) == 3 else False
         )
         for i in range(len(self)):
             drug = indx(self.drugs_names, i)
             cov = indx(self.covariate_names["cell_type"], i)
             if dose_specific:
-                dose = indx(self.dose_key, i)
+                # dose = indx(self.dose_names, i)/10000
+                dose = indx(self.dose_names, i)
 
             if drug == "JQ1":
                 drug = "(+)-JQ1"
 
-            if drug == "control" or drug == "DMSO":
+            if drug == "control" or drug == "DMSO" or drug == "Vehicle":
                 genes = []
             else:
                 key = f"{cov}_{drug}_{dose}" if dose_specific else f"{cov}_{drug}"
