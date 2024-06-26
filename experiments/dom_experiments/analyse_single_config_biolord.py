@@ -219,10 +219,20 @@ config["config_hash"] = model_hash_pretrained
 model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_sorted)
 
 # %%
+gene_control_dict = {}
+
+for cl in cell_lines:
+    idx = np.where(datasets["test_control"].covariate_names["cell_type"] == cl)[0]
+    gene_control_dict[cl] = datasets["test_control"].genes[idx]
+
+# %%
+datasets
+
+# %%
 drug_r2_pretrained_degs, _ = compute_pred(
     model_pretrained,
-    datasets["ood"],
-    genes_control=datasets["test_control"].genes,
+    datasets["test"],
+    genes_control_dict=gene_control_dict,
     dosages=dosages,
     cell_lines=cell_lines,
     use_DEGs=True,
@@ -231,8 +241,8 @@ drug_r2_pretrained_degs, _ = compute_pred(
 
 drug_r2_pretrained_all, pred = compute_pred(
     model_pretrained,
-    datasets["ood"],
-    genes_control=datasets["test_control"].genes,
+    datasets["test"],
+    genes_control_dict=gene_control_dict,
     dosages=dosages,
     cell_lines=cell_lines,
     use_DEGs=False,
@@ -244,45 +254,97 @@ predictions = []
 targets = []
 cl_p = []
 cl_t = []
-d_p = []
-d_t = []
+drug_p = []
+drug_t = []
+dose_p = []
+dose_t = []
+control = {}
+control_cl = {}
 for key, vals in pred.items():
     cl = key.split("_")[0]
     drug = "_".join(key.split("_")[1:-1])
-    if "10000.0" in key:
-        print(key)
-        control = vals[0]
-        predictions.append(vals[1])
-        targets.append(vals[2])
-        cl_p.extend(vals[1].shape[0] * [cl])
-        cl_t.extend(vals[2].shape[0] * [cl])
-        d_p.extend(vals[1].shape[0] * [drug])
-        d_t.extend(vals[2].shape[0] * [drug])
+    dose = key.split("_")[-1]
+    control[cl] = vals[0]
+    control_cl[cl] = vals[0].shape[0] * [cl]
+    predictions.append(vals[1])
+    targets.append(vals[2])
+    cl_p.extend(vals[1].shape[0] * [cl])
+    cl_t.extend(vals[2].shape[0] * [cl])
+    drug_p.extend(vals[1].shape[0] * [drug])
+    drug_t.extend(vals[2].shape[0] * [drug])
+    dose_p.extend(vals[1].shape[0] * [float(dose)])
+    dose_t.extend(vals[2].shape[0] * [float(dose)])
 
 # %%
 import anndata as ad
 
-adata_c = ad.AnnData(control)
-adata_p = ad.AnnData(np.concatenate(predictions, axis=0))
-adata_t = ad.AnnData(np.concatenate(targets, axis=0))
-
+adata_c = ad.AnnData(np.concatenate([control[cl] for cl in control], axis=0))
+adata_c.obs["cell_line"] = list(
+    np.concatenate([control_cl[cl] for cl in control], axis=0)
+)
 adata_c.obs["condition"] = "control"
-adata_c.obs["cell_line"] = "control"
-adata_c.obs["perturbation"] = "control"
+adata_c.obs["perturbation"] = "Vehicle"
+adata_c.obs["dose"] = 1.0
+
+adata_p = ad.AnnData(np.concatenate(predictions, axis=0))
 adata_p.obs["condition"] = "prediction"
 adata_p.obs["cell_line"] = cl_p
-adata_p.obs["perturbation"] = d_p
+adata_p.obs["perturbation"] = drug_p
+adata_p.obs["dose"] = dose_p
+
+
+adata_t = ad.AnnData(np.concatenate(targets, axis=0))
 adata_t.obs["condition"] = "target"
 adata_t.obs["cell_line"] = cl_t
-adata_t.obs["perturbation"] = d_t
+adata_t.obs["perturbation"] = drug_t
+adata_t.obs["dose"] = dose_t
 
 adata = ad.concat([adata_c, adata_p, adata_t])
 
 import scanpy as sc
 
-sc.pp.pca(adata)
-sc.pp.neighbors(adata)
-sc.tl.umap(adata)
+# sc.pp.pca(adata)
+# sc.pp.neighbors(adata)
+# sc.tl.umap(adata)
+
+# %%
+sc.write("adata_biolord_test_predictions.h5ad", adata)
+
+# %%
+embeddings = {}
+
+# %%
+# embedding
+
+_dataset = datasets["ood"]
+
+for i, pc in tqdm(enumerate(_dataset.pert_categories)):
+    drug_idx = _dataset.drugs_idx[i].unsqueeze(0)
+    dosage = _dataset.dosages[i].unsqueeze(0)
+    if pc not in embeddings:
+        embeddings[pc] = (
+            model_pretrained.compute_drug_embeddings_(
+                drugs_idx=drug_idx, dosages=dosage
+            )
+            .squeeze()
+            .detach()
+            .cpu()
+            .numpy()
+        )
+
+
+# %%
+import pickle
+
+# Save dictionary to a pickle file
+with open("drug_embeddings.pkl", "wb") as f:
+    pickle.dump(embeddings, f)
+
+
+# %%
+# Load the dictionary back
+with open("drug_embeddings.pkl", "rb") as f:
+    loaded_data = pickle.load(f)
 
 # %%
 adata.obs["perturbation"].value_counts()

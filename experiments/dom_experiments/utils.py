@@ -173,7 +173,7 @@ def compute_pred(
     dataset,
     dosages=[1e4],
     cell_lines=None,
-    genes_control=None,
+    genes_control_dict=None,
     use_DEGs=True,
     verbose=True,
 ):
@@ -200,7 +200,8 @@ def compute_pred(
     ):
         if dataset.perturbation_key is None:
             break
-
+        cl = cell_drug_dose_comb.split("_")[0]
+        genes_control = genes_control_dict[cl]
         # estimate metrics only for reasonably-sized drug/cell-type combos
         if category_count <= 5:
             continue
@@ -209,6 +210,7 @@ def compute_pred(
         if (
             "dmso" in cell_drug_dose_comb.lower()
             or "control" in cell_drug_dose_comb.lower()
+            or "vehicle" in cell_drug_dose_comb.lower()
         ):
             continue
 
