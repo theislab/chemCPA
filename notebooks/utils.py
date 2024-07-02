@@ -280,18 +280,24 @@ def compute_pred(
                 emb_covs,
             )
 
-        y_pred = mean_pred.mean(0)
-        y_true = y_true.mean(0)
+        y_pred = mean_pred
+        _y_pred = mean_pred.mean(0)
+        _y_true = y_true.mean(0)
         if use_DEGs:
-            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            r2_m_de = compute_r2(_y_true[idx_de].cuda(), _y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
-            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            r2_m = compute_r2(_y_true.cuda(), _y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
-        predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
+        # predictions_dict[cell_drug_dose_comb] = [_y_true, _y_pred, idx_de]
+        predictions_dict[cell_drug_dose_comb] = [
+            genes_control.detach().cpu().numpy(),
+            y_pred.detach().cpu().numpy(),
+            y_true.detach().cpu().numpy(),
+        ]
     return drug_r2, predictions_dict
 
 
@@ -386,18 +392,24 @@ def compute_pred_ctrl(
         else:
             emb_drugs = repeat_n(dataset.drugs[idx], n_obs)
 
-        y_pred = genes_control.mean(0)
-        y_true = y_true.mean(0)
+        y_pred = genes_control
+        _y_pred = genes_control.mean(0)
+        _y_true = y_true.mean(0)
         if use_DEGs:
-            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            r2_m_de = compute_r2(_y_true[idx_de].cuda(), _y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
-            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            r2_m = compute_r2(_y_true.cuda(), _y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
-        predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
+        # predictions_dict[cell_drug_dose_comb] = [_y_true, _y_pred, idx_de]
+        predictions_dict[cell_drug_dose_comb] = [
+            genes_control.detach().cpu().numpy(),
+            y_pred.detach().cpu().numpy(),
+            y_true.detach().cpu().numpy(),
+        ]
     return drug_r2, predictions_dict
 
 
