@@ -1,0 +1,2 @@
+directory: null # null will load the path from paths.py
+model: rdkit
