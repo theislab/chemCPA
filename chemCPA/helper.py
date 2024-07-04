@@ -1,18 +1,19 @@
 import warnings
 from typing import Optional
 
-import dgl
+# import dgl
 import pandas as pd
 import scanpy as sc
-from dgllife.utils import (
-    AttentiveFPAtomFeaturizer,
-    AttentiveFPBondFeaturizer,
-    CanonicalAtomFeaturizer,
-    CanonicalBondFeaturizer,
-    PretrainAtomFeaturizer,
-    PretrainBondFeaturizer,
-    smiles_to_bigraph,
-)
+
+# from dgllife.utils import (
+#     AttentiveFPAtomFeaturizer,
+#     AttentiveFPBondFeaturizer,
+#     CanonicalAtomFeaturizer,
+#     CanonicalBondFeaturizer,
+#     PretrainAtomFeaturizer,
+#     PretrainBondFeaturizer,
+#     smiles_to_bigraph,
+# )
 from rdkit import Chem
 
 

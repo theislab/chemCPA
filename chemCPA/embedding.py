@@ -39,40 +39,22 @@ def get_chemical_representation(
 
     df = None
     if embedding_model == "grover_base":
-        df = pd.read_parquet(
-            data_dir / "grover" / "data" / "embeddings" / "grover_base.parquet"
-        )
+        df = pd.read_parquet(data_dir / "grover" / "data" / "embeddings" / "grover_base.parquet")
     elif embedding_model == "weave":
         df = pd.read_parquet(
-            data_dir
-            / "dgl"
-            / "data"
-            / "embeddings"
-            / "Weave_canonical_PCBA_embedding_lincs_trapnell.parquet"
+            data_dir / "dgl" / "data" / "embeddings" / "Weave_canonical_PCBA_embedding_lincs_trapnell.parquet"
         )
     elif embedding_model == "MPNN":
         df = pd.read_parquet(
-            data_dir
-            / "dgl"
-            / "data"
-            / "embeddings"
-            / "MPNN_canonical_PCBA_embedding_lincs_trapnell.parquet"
+            data_dir / "dgl" / "data" / "embeddings" / "MPNN_canonical_PCBA_embedding_lincs_trapnell.parquet"
         )
     elif embedding_model == "GCN":
         df = pd.read_parquet(
-            data_dir
-            / "dgl"
-            / "data"
-            / "embeddings"
-            / "GCN_canonical_PCBA_embedding_lincs_trapnell.parquet"
+            data_dir / "dgl" / "data" / "embeddings" / "GCN_canonical_PCBA_embedding_lincs_trapnell.parquet"
         )
     elif embedding_model == "AttentiveFP":
         df = pd.read_parquet(
-            data_dir
-            / "dgl"
-            / "data"
-            / "embeddings"
-            / "AttentiveFP_canonical_PCBA_embedding_lincs_trapnell.parquet"
+            data_dir / "dgl" / "data" / "embeddings" / "AttentiveFP_canonical_PCBA_embedding_lincs_trapnell.parquet"
         )
     elif embedding_model == "seq2seq":
         df = pd.read_parquet(Path(data_dir) / "seq2seq" / "data" / "seq2seq.parquet")
