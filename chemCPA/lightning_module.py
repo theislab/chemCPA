@@ -23,7 +23,7 @@ class ChemCPA(L.LightningModule):
         self.drug_embeddings = get_chemical_representation(
             smiles=dataset_config["canon_smiles_unique_sorted"],
             embedding_model=embedding["model"],
-            data_dir=embedding["directory"],
+            data_path=embedding["datapath"],
         )
 
         self.model = ComPert(

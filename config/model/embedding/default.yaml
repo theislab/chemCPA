@@ -1,2 +1,2 @@
-directory: null # null will load the path from paths.py
+datapath: /nfs/homedirs/hetzell/code/chemCPA/project_folder/embeddings/rdkit/data/embeddings/rdkit2D_embedding_biolord.parquet
 model: rdkit
