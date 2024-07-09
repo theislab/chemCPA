@@ -164,25 +164,38 @@ class ChemCPA(L.LightningModule):
     def on_train_end(self):
         self.model.eval()
         if self.config["training"]["run_eval_disentangle"]:
-            dataset_test = self.trainer.datamodule.test_dataset
+            dl_test = self.trainer.datamodule.val_dataloader()["test"]
+            dataset_test = dl_test.dataset
             drug_names, drug_counts = np.unique(dataset_test.drugs_names, return_counts=True)
-            disent_scores = evaluate_disentanglement(self.model, dataset_test)
+            disent_scores = evaluate_disentanglement(self.model, dataloader=dl_test)
             stats_disent_pert = disent_scores[0]
             # optimal score == always predicting the most common drug
             optimal_disent_score = max(drug_counts) / len(dataset_test)
             stats_disent_cov = disent_scores[1:]
+
             evaluation_stats = {
                 "perturbation disentanglement": stats_disent_pert,
                 "optimal for perturbations": optimal_disent_score,
-                "covariate disentanglement": stats_disent_cov,
-                "optimal for covariates": (
-                    [
-                        max(cov.mean(axis=0)).item() for cov in dataset_test.covariates
-                    ]  # mean over OHE embedding of covariates
-                    if dataset_test.num_covariates[0] > 0
-                    else None
-                ),
             }
+            for i, cov_type in enumerate(dataset_test.covariate_names.keys()):
+                if dataset_test.num_covariates[i] > 0:
+                    stats = {
+                        f"optimal for {cov_type}": dataset_test.covariates[i].mean(axis=0).max().item(),
+                        f"{cov_type} disentanglement": stats_disent_cov[i],
+                    }
+                    evaluation_stats.update(stats)
+            # evaluation_stats = {
+            #     "perturbation disentanglement": stats_disent_pert,
+            #     "optimal for perturbations": optimal_disent_score,
+            #     "covariate disentanglement": stats_disent_cov,
+            #     "optimal for covariates": (
+            #         [
+            #             max(cov.mean(axis=0)).item() for cov in dataset_test.covariates
+            #         ]  # mean over OHE embedding of covariates
+            #         if dataset_test.num_covariates[0] > 0
+            #         else None
+            #     ),
+            # }
 
             self.logger.experiment.log(evaluation_stats, step=self.trainer.global_step)
 
