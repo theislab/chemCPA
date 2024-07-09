@@ -208,7 +208,7 @@ def evaluate_disentanglement(autoencoder: ComPert, dataloader: DataLoader):
         ).to("cuda")
         optimizer = torch.optim.Adam(disentanglement_classifier.parameters(), lr=1e-2)
 
-        for epoch in tqdm(range(2)):
+        for epoch in tqdm(range(400)):
             for X, y in data_loader:
                 pred = disentanglement_classifier(X)
                 loss = criterion(pred, y)
