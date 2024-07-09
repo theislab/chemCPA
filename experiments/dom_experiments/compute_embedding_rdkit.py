@@ -20,9 +20,8 @@
 # %%
 import sys
 
-sys.path.insert(
-    0, "/"
-)  # this depends on the notebook depth and must be adapted per notebook
+# this depends on the notebook depth and must be adapted per notebook
+sys.path.insert(0, "/")
 # %%
 import numpy as np
 
@@ -59,8 +58,7 @@ for name, numpy_type in generator.GetColumns():
 # %%
 n_jobs = 16
 data = Parallel(n_jobs=n_jobs)(
-    delayed(generator.process)(smiles)
-    for smiles in tqdm(smiles_list, position=0, leave=True)
+    delayed(generator.process)(smiles) for smiles in tqdm(smiles_list, position=0, leave=True)
 )
 
 # %%
@@ -111,11 +109,7 @@ embedding[drug_idx, feature_idx] = 0
 # %%
 import pandas as pd
 
-df = pd.DataFrame(
-    data=embedding,
-    index=smiles_list,
-    columns=[f"latent_{i}" for i in range(embedding.shape[1])],
-)
+df = pd.DataFrame(data=embedding, index=smiles_list, columns=[f"latent_{i}" for i in range(embedding.shape[1])])
 
 # Drop first feature from generator (RDKit2D_calculated)
 df.drop(columns=["latent_0"], inplace=True)
@@ -124,9 +118,7 @@ df.drop(columns=["latent_0"], inplace=True)
 threshold = 0.01
 columns = [f"latent_{idx+1}" for idx in np.where(df.std() <= threshold)[0]]
 print(f"Deleting columns with std<={threshold}: {columns}")
-df.drop(
-    columns=[f"latent_{idx+1}" for idx in np.where(df.std() <= 0.01)[0]], inplace=True
-)
+df.drop(columns=[f"latent_{idx+1}" for idx in np.where(df.std() <= 0.01)[0]], inplace=True)
 
 # %% [markdown]
 # Check that correct columns were deleted:
