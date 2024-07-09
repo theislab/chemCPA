@@ -5,6 +5,7 @@ from typing import Union
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 
@@ -401,11 +402,9 @@ class ComPert(torch.nn.Module):
             pass
         else:
             assert 0 not in self.num_covariates
-            self.adversary_covariates = []
-            self.loss_adversary_covariates = []
-            self.covariates_embeddings = (
-                []
-            )  # TODO: Continue with checking that dict assignment is possible via covaraites names and if dict are possible to use in optimisation
+            self.adversary_covariates = nn.ModuleList()
+            self.loss_adversary_covariates = nn.ModuleList()
+            self.covariates_embeddings = nn.ModuleList()
             for num_covariate in self.num_covariates:
                 self.adversary_covariates.append(
                     MLP(
@@ -644,7 +643,7 @@ class ComPert(torch.nn.Module):
         normalized_reconstructions = torch.concat([mean, var], dim=1)
 
         if return_latent_basal:
-            return normalized_reconstructions, cell_drug_embedding, latent_basal
+            return normalized_reconstructions, cell_drug_embedding, (latent_basal, drug_embedding, latent_treated)
 
         return normalized_reconstructions, cell_drug_embedding
 
