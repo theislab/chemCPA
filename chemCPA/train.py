@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 from torchmetrics import R2Score
+from tqdm.auto import tqdm
 
 import chemCPA.data
 from chemCPA.data import SubDataset
@@ -142,7 +144,7 @@ def evaluate_logfold_r2(autoencoder: ComPert, ds_treated: SubDataset, ds_ctrl: S
     return mean(logfold_score), mean(signs_score)
 
 
-def evaluate_disentanglement(autoencoder: ComPert, data: chemCPA.data.Dataset):
+def evaluate_disentanglement(autoencoder: ComPert, dataloader: DataLoader):
     """
     Given a ComPert model, this function measures the correlation between
     its latent space and 1) a dataset's drug vectors 2) a datasets covariate
@@ -151,17 +153,37 @@ def evaluate_disentanglement(autoencoder: ComPert, data: chemCPA.data.Dataset):
     """
 
     # generate random indices to subselect the dataset
-    print(f"Size of disentanglement testdata: {len(data)}")
-
+    print(f"Size of disentanglement testdata: {len(dataloader)*dataloader.batch_size}")
+    data = dataloader.dataset
     with torch.no_grad():
         autoencoder.to(autoencoder.device)
-        _, _, latent_basal = autoencoder.predict(
-            genes=data.genes,
-            drugs_idx=data.drugs_idx,
-            dosages=data.dosages,
-            covariates=data.covariates,
-            return_latent_basal=True,
-        )
+        latent_basal = []
+        for batch in dataloader:
+            genes, drugs_idx, dosages, degs, covariates = (
+                batch[0],
+                batch[1],
+                batch[2],
+                batch[3],
+                batch[4:],
+            )
+
+            _, _, _latent_basal = autoencoder.predict(
+                genes=genes,
+                drugs=None,
+                drugs_idx=drugs_idx,
+                dosages=dosages,
+                covariates=covariates,
+                return_latent_basal=True,
+            )
+            latent_basal.append(_latent_basal)
+        latent_basal = torch.cat(latent_basal, dim=0)
+        # _, _, latent_basal = autoencoder.predict(
+        #     genes=data.genes,
+        #     drugs_idx=data.drugs_idx,
+        #     dosages=data.dosages,
+        #     covariates=data.covariates,
+        #     return_latent_basal=True,
+        # )
 
     mean = latent_basal.mean(dim=0, keepdim=True)
     stddev = latent_basal.std(0, unbiased=False, keepdim=True)
@@ -185,7 +207,7 @@ def evaluate_disentanglement(autoencoder: ComPert, data: chemCPA.data.Dataset):
         ).to("cuda")
         optimizer = torch.optim.Adam(disentanglement_classifier.parameters(), lr=1e-2)
 
-        for epoch in range(400):
+        for epoch in tqdm(range(2)):
             for X, y in data_loader:
                 pred = disentanglement_classifier(X)
                 loss = criterion(pred, y)
