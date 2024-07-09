@@ -16,9 +16,9 @@ class ChemCPA(L.LightningModule):
         self.automatic_optimization = False
         self.config = config
 
-        embedding = config["model"]["embedding"]
-        additional_params = config["model"]["additional_params"]
-        hparams = config["model"]["hparams"]
+        embedding = self.config["model"]["embedding"]
+        additional_params = self.config["model"]["additional_params"]
+        hparams = self.config["model"]["hparams"]
 
         self.drug_embeddings = get_chemical_representation(
             smiles=dataset_config["canon_smiles_unique_sorted"],
@@ -49,7 +49,7 @@ class ChemCPA(L.LightningModule):
             batch[4:],
         )
 
-        gene_reconstructions, cell_drug_embedding, latent_basal = self.model.predict(
+        gene_reconstructions, cell_drug_embedding, latents = self.model.predict(
             genes=genes,
             drugs=None,
             drugs_idx=drugs_idx,
@@ -62,13 +62,14 @@ class ChemCPA(L.LightningModule):
         mean = gene_reconstructions[:, :dim]
         var = gene_reconstructions[:, dim:]
         if return_latent_basal:
-            return (mean, var), latent_basal
+            return (mean, var), latents
         return mean, var
 
     def training_step(self, batch, batch_idx):
         genes, drugs_idx, covariates = batch[0], batch[1], batch[4:]
 
-        (mean, var), latent_basal = self(batch, return_latent_basal=True)
+        (mean, var), latents = self(batch, return_latent_basal=True)
+        latent_basal = latents[0]
 
         reconstruction_loss = self.model.loss_autoencoder(input=mean, target=genes, var=var)
 
@@ -150,19 +151,57 @@ class ChemCPA(L.LightningModule):
         pass
 
     def on_validation_epoch_end(self):
-        self.model.eval()
+        assert not self.training
         result = evaluate_r2(
             self.model,
             self.trainer.datamodule.test_treated_dataset,
             self.trainer.datamodule.test_control_dataset.genes,
         )
-        self.model.train()
+        # _result = evaluate_r2(
+        #     self.model,
+        #     self.trainer.datamodule.test_treated_dataset,
+        #     self.trainer.datamodule.test_control_dataset.genes,
+        # )
+        # assert np.allclose(result, _result)
 
         evaluation_stats = dict(zip(["R2_mean", "R2_mean_de", "R2_var", "R2_var_de"], result))
         self.log_dict(evaluation_stats, on_step=False, on_epoch=True)
 
+        # self.trainer.save_checkpoint("test.ckpt")
+        # model_2 = ChemCPA.load_from_checkpoint(checkpoint_path="test.ckpt")
+        # sd_a = self.state_dict()
+        # sd_b = model_2.state_dict()
+        # for key in sd_a:
+        #     if not torch.equal(sd_a[key], sd_b[key]):
+        #         print(f"Difference found in layer: {key}")
+        # model_2.eval()
+        # result2 = evaluate_r2(
+        #     model_2.model,
+        #     self.trainer.datamodule.test_treated_dataset,
+        #     self.trainer.datamodule.test_control_dataset.genes,
+        # )
+        # # _result2 = evaluate_r2(
+        # #     model_2.model,
+        # #     self.trainer.datamodule.test_treated_dataset,
+        # #     self.trainer.datamodule.test_control_dataset.genes,
+        # # )
+        # # assert np.allclose(result2, _result2)
+        # # check that result and result2 are close
+        # if not np.allclose(result, result2):
+        #     print(self.trainer.current_epoch)
+        #     print(result)
+        #     print(result2)
+
+        # # for batch in self.trainer.datamodule.train_dataloader():
+        # #     genes, drugs_idx, covariates = batch[0], batch[1], batch[4:]
+
+        # #     (mean, var), latents = self(batch, return_latent_basal=True)
+        # #     (mean2, var2), latents2 = model_2(batch, return_latent_basal=True)
+        # #     break
+
     def on_train_end(self):
-        self.model.eval()
+        self.eval()
+        assert not self.training
         if self.config["training"]["run_eval_disentangle"]:
             dl_test = self.trainer.datamodule.val_dataloader()["test"]
             dataset_test = dl_test.dataset

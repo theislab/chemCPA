@@ -167,7 +167,7 @@ def evaluate_disentanglement(autoencoder: ComPert, dataloader: DataLoader):
                 batch[4:],
             )
 
-            _, _, _latent_basal = autoencoder.predict(
+            _, _, _latents = autoencoder.predict(
                 genes=genes,
                 drugs=None,
                 drugs_idx=drugs_idx,
@@ -175,6 +175,7 @@ def evaluate_disentanglement(autoencoder: ComPert, dataloader: DataLoader):
                 covariates=covariates,
                 return_latent_basal=True,
             )
+            _latent_basal = _latents[0]
             latent_basal.append(_latent_basal)
         latent_basal = torch.cat(latent_basal, dim=0)
         # _, _, latent_basal = autoencoder.predict(
