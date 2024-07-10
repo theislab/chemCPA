@@ -17,8 +17,8 @@ We also provide our processed datasets for reproducibility: sci-Plex [shared gen
 To setup the environment, install conda and run:
 
 ```python
-conda env create -f environment.yml
-python setup.py install -e .
+conda env create -f environment.yaml
+pip install -e .
 ```
 
 - `chemCPA/`: contains the code for the model, the data, and the training loop.
