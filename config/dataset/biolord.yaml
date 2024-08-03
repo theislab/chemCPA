@@ -5,5 +5,5 @@ covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy
 smiles_key: smiles
 use_drugs_idx: True # If false, will use One-hot encoding instead
 split_key: split
-dataset_path: project_folder/datasets/adata_biolord_split_30.h5ad 
+dataset_path: project_folder/datasets/adata_biolord_300_split_4_chemcpa.h5ad
 degs_key: rank_genes_groups_cov_all

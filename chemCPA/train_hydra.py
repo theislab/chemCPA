@@ -2,7 +2,6 @@ from pathlib import Path
 
 import hydra
 import lightning as L
-import torch
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from lightning_module import ChemCPA
@@ -32,7 +31,8 @@ def main(args):
     wandb_logger = WandbLogger(**args["wandb"], save_dir=WB_DIR)
     run_id = wandb_logger.experiment.id
 
-    checkpoint_callback = ModelCheckpoint(dirpath=Path(args["training"]["save_dir"]) / run_id, save_last=True)
+    checkpoint_callback = ModelCheckpoint(dirpath=Path(args["training"]["save_dir"]) / run_id, save_last=True, verbose=True)
+    print(Path(args["training"]["save_dir"]) / run_id)
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
     trainer = L.Trainer(

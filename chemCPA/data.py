@@ -433,9 +433,9 @@ class PerturbationDataModule(L.LightningDataModule):
 
     def val_dataloader(self):
         return {
-            "test": DataLoader(self.test_dataset, batch_size=self.val_bs),
-            "test_control": DataLoader(self.test_control_dataset, batch_size=self.val_bs),
-            "test_treated": DataLoader(self.test_treated_dataset, batch_size=self.val_bs),
+            "test": DataLoader(self.test_dataset, batch_size=self.val_bs, num_workers=27),
+            "test_control": DataLoader(self.test_control_dataset, batch_size=self.val_bs, num_workers=27),
+            "test_treated": DataLoader(self.test_treated_dataset, batch_size=self.val_bs, num_workers=27),
         }
 
     def test_dataloader(self):
