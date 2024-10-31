@@ -63,7 +63,7 @@ def load_smiles(config, dataset, key_dict, return_pathway_map=False):
     drugs_names = np.array(dataset.obs[perturbation_key].values)
     drugs_names_unique = set()
     for d in drugs_names:
-        [drugs_names_unique.add(i) for i in d.split("+")]
+        [drugs_names_unique.add(i) for i in d.split("&")]
     drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
     canon_smiles_unique_sorted = drug_names_to_once_canon_smiles(
         list(drugs_names_unique_sorted), dataset, perturbation_key, smiles_key
@@ -92,7 +92,6 @@ def load_model(config, canon_smiles_unique_sorted):
 
     embedding_model = config["model"]["embedding"]["model"]
     if embedding_model == "vanilla":
-        print("CPA model without chemical prior.")
         embedding = None
     else:
         embedding = get_chemical_representation(
@@ -128,15 +127,7 @@ def load_model(config, canon_smiles_unique_sorted):
 
     if embedding_model != "vanilla":
         state_dict.pop("drug_embeddings.weight")
-
-    enable_cpa = True if embedding_model == "vanilla" else False
-
-    model = ComPert(
-        **init_args,
-        drug_embeddings=embedding,
-        append_layer_width=append_layer_width,
-        enable_cpa_mode=enable_cpa,
-    )
+    model = ComPert(**init_args, drug_embeddings=embedding, append_layer_width=append_layer_width)
     model = model.eval()
     if COV_EMB_AVAILABLE:
         for embedding_cov, state_dict_cov in zip(model.covariates_embeddings, cov_emb_state_dicts):
@@ -173,7 +164,7 @@ def compute_pred(
     dataset,
     dosages=[1e4],
     cell_lines=None,
-    genes_control=None,
+    genes_control_dict=None,
     use_DEGs=True,
     verbose=True,
 ):
@@ -198,13 +189,18 @@ def compute_pred(
     for cell_drug_dose_comb, category_count in tqdm(zip(*np.unique(dataset.pert_categories, return_counts=True))):
         if dataset.perturbation_key is None:
             break
-
+        cl = cell_drug_dose_comb.split("_")[0]
+        genes_control = genes_control_dict[cl]
         # estimate metrics only for reasonably-sized drug/cell-type combos
         if category_count <= 5:
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
+        if (
+            "dmso" in cell_drug_dose_comb.lower()
+            or "control" in cell_drug_dose_comb.lower()
+            or "vehicle" in cell_drug_dose_comb.lower()
+        ):
             continue
 
         # dataset.var_names is the list of gene names
@@ -273,18 +269,24 @@ def compute_pred(
                 emb_covs,
             )
 
-        y_pred = mean_pred.mean(0)
-        y_true = y_true.mean(0)
+        y_pred = mean_pred
+        _y_pred = mean_pred.mean(0)
+        _y_true = y_true.mean(0)
         if use_DEGs:
-            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            r2_m_de = compute_r2(_y_true[idx_de].cuda(), _y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
-            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            r2_m = compute_r2(_y_true.cuda(), _y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
-        predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
+        # predictions_dict[cell_drug_dose_comb] = [_y_true, _y_pred, idx_de]
+        predictions_dict[cell_drug_dose_comb] = [
+            genes_control.detach().cpu().numpy(),
+            y_pred.detach().cpu().numpy(),
+            y_true.detach().cpu().numpy(),
+        ]
     return drug_r2, predictions_dict
 
 
@@ -372,18 +374,24 @@ def compute_pred_ctrl(
         else:
             emb_drugs = repeat_n(dataset.drugs[idx], n_obs)
 
-        y_pred = genes_control.mean(0)
-        y_true = y_true.mean(0)
+        y_pred = genes_control
+        _y_pred = genes_control.mean(0)
+        _y_true = y_true.mean(0)
         if use_DEGs:
-            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            r2_m_de = compute_r2(_y_true[idx_de].cuda(), _y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
-            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            r2_m = compute_r2(_y_true.cuda(), _y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
-        predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
+        # predictions_dict[cell_drug_dose_comb] = [_y_true, _y_pred, idx_de]
+        predictions_dict[cell_drug_dose_comb] = [
+            genes_control.detach().cpu().numpy(),
+            y_pred.detach().cpu().numpy(),
+            y_true.detach().cpu().numpy(),
+        ]
     return drug_r2, predictions_dict
 
 

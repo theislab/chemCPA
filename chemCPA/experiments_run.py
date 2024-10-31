@@ -32,9 +32,7 @@ def config():
     overwrite = None
     db_collection = None
     if db_collection is not None:
-        ex.observers.append(
-            seml.create_mongodb_observer(db_collection, overwrite=overwrite)
-        )
+        ex.observers.append(seml.create_mongodb_observer(db_collection, overwrite=overwrite))
 
 
 profiler = None
@@ -87,9 +85,7 @@ class ExperimentWrapper:
         """
 
         if dataset_type in ("kang", "trapnell", "lincs"):
-            self.datasets, self.dataset = load_dataset_splits(
-                **data_params, return_dataset=True
-            )
+            self.datasets, self.dataset = load_dataset_splits(**data_params, return_dataset=True)
 
     @ex.capture(prefix="model")
     def init_drug_embedding(self, embedding: dict):
@@ -100,7 +96,7 @@ class ExperimentWrapper:
             self.drug_embeddings = get_chemical_representation(
                 smiles=self.dataset.canon_smiles_unique_sorted,
                 embedding_model=embedding["model"],
-                data_dir=embedding["directory"],
+                data_path=embedding["directory"],
                 device=device,
             )
         else:
@@ -128,17 +124,9 @@ class ExperimentWrapper:
                 cov_embeddings_state_dicts,
                 model_config,
                 COVARIATE_AVAILABLE,
-            ) = self.load_state_dict(
-                pretrained_model_hashes, pretrained_model_path, append_ae_layer
-            )
-            append_layer_width = (
-                self.datasets["training"].num_genes if append_ae_layer else None
-            )
-            in_out_size = (
-                model_config["num_genes"]
-                if append_ae_layer
-                else self.datasets["training"].num_genes
-            )
+            ) = self.load_state_dict(pretrained_model_hashes, pretrained_model_path, append_ae_layer)
+            append_layer_width = self.datasets["training"].num_genes if append_ae_layer else None
+            in_out_size = model_config["num_genes"] if append_ae_layer else self.datasets["training"].num_genes
             # idea: Reconstruct the ComPert model as pretrained (hence the "old" in_out_size)
             # then add the append_layer (the "new" in_out_size)
             self.autoencoder = ComPert(
@@ -155,9 +143,7 @@ class ExperimentWrapper:
             )
             incomp_keys = self.autoencoder.load_state_dict(state_dict, strict=False)
             if COVARIATE_AVAILABLE:
-                for embedding, state_dict in zip(
-                    self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts
-                ):
+                for embedding, state_dict in zip(self.autoencoder.covariates_embeddings, cov_embeddings_state_dicts):
                     embedding.load_state_dict(state_dict)
             incomp_keys_info = {
                 "Missing keys": incomp_keys.missing_keys,
@@ -181,14 +167,10 @@ class ExperimentWrapper:
                 enable_cpa_mode=enable_cpa_mode,
             )
 
-    def load_state_dict(
-        self, pretrained_model_hashes, pretrained_model_path, append_ae_layer
-    ):
+    def load_state_dict(self, pretrained_model_hashes, pretrained_model_path, append_ae_layer):
         filename = pretrained_model_hashes[self.embedding_model_type] + ".pt"
         filepath = Path(pretrained_model_path) / filename
-        logging.info(
-            f"Loading pretrained {self.embedding_model_type} model from: {filepath}"
-        )
+        logging.info(f"Loading pretrained {self.embedding_model_type} model from: {filepath}")
         dumped_model = torch.load(filepath)
         COVARIATE_AVAILABLE = False
         if len(dumped_model) == 3:
@@ -340,15 +322,9 @@ class ExperimentWrapper:
 
             ellapsed_minutes = (time.time() - start_time) / 60
             self.autoencoder.history["elapsed_time_min"] = ellapsed_minutes
-            reconst_loss_is_nan = math.isnan(
-                epoch_training_stats["loss_reconstruction"]
-            )
+            reconst_loss_is_nan = math.isnan(epoch_training_stats["loss_reconstruction"])
 
-            stop = (
-                ellapsed_minutes > max_minutes
-                or (epoch == num_epochs - 1)
-                or reconst_loss_is_nan
-            )
+            stop = ellapsed_minutes > max_minutes or (epoch == num_epochs - 1) or reconst_loss_is_nan
 
             # we always run the evaluation when training has stopped
             if ((epoch % checkpoint_freq) == 0 and epoch > 0) or stop:
@@ -365,11 +341,7 @@ class ExperimentWrapper:
                     #     self.datasets["test_treated"],
                     # )
                     self.autoencoder.train()
-                test_score = (
-                    np.mean(evaluation_stats["test"])
-                    if evaluation_stats["test"]
-                    else None
-                )
+                test_score = np.mean(evaluation_stats["test"]) if evaluation_stats["test"] else None
 
                 # test_score = (
                 #     evaluation_stats["test"][1]  # DE genes
@@ -382,11 +354,7 @@ class ExperimentWrapper:
                 stop = stop or autoenc_early_stop or test_score_is_nan
                 # we don't do disentanglement if the loss was NaN
                 # run_full_eval determines whether we run the full evaluate also during training, or only at the end
-                if (
-                    (full_eval_during_train or stop)
-                    and not reconst_loss_is_nan
-                    and not test_score_is_nan
-                ):
+                if (full_eval_during_train or stop) and not reconst_loss_is_nan and not test_score_is_nan:
                     logging.info(f"Running the full evaluation (Epoch:{epoch})")
                     evaluation_stats = evaluate(
                         self.autoencoder,

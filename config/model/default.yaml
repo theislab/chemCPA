@@ -1,0 +1,16 @@
+defaults:
+  - hparams: default
+  - embedding: default
+  - additional_params: default
+
+enable_cpa_mode: False
+load_pretrained: False    
+append_ae_layer: False
+pretrained_model_path: /nfs/homedirs/hetzell/hdd/project_chemCPA/checkpoints
+pretrained_model_hashes: 
+  rdkit: 4f061dbfc7af05cf84f06a724b0c8563
+
+
+
+
+

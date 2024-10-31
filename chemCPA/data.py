@@ -2,12 +2,14 @@ import logging
 import warnings
 from typing import List, Optional, Union
 
+import lightning as L
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import torch
 from anndata import AnnData
 from sklearn.preprocessing import OneHotEncoder
+from torch.utils.data import DataLoader
 
 from chemCPA.helper import canonicalize_smiles
 
@@ -38,9 +40,7 @@ def ranks_to_df(data, key="rank_genes_groups"):
     return pd.concat(dfs, axis=1)
 
 
-def drug_names_to_once_canon_smiles(
-    drug_names: List[str], dataset: sc.AnnData, perturbation_key: str, smiles_key: str
-):
+def drug_names_to_once_canon_smiles(drug_names: List[str], dataset: sc.AnnData, perturbation_key: str, smiles_key: str):
     """
     Converts a list of drug names to a list of SMILES. The ordering is of the list is preserved.
 
@@ -49,9 +49,7 @@ def drug_names_to_once_canon_smiles(
     """
     name_to_smiles_map = {
         drug: canonicalize_smiles(smiles)
-        for drug, smiles in dataset.obs.groupby(
-            [perturbation_key, smiles_key]
-        ).groups.keys()
+        for drug, smiles in dataset.obs.groupby([perturbation_key, smiles_key]).groups.keys()
     }
     return [name_to_smiles_map[name] for name in drug_names]
 
@@ -108,45 +106,35 @@ class Dataset:
 
         if perturbation_key is not None:
             if dose_key is None:
-                raise ValueError(
-                    f"A 'dose_key' is required when provided a 'perturbation_key'({perturbation_key})."
-                )
+                raise ValueError(f"A 'dose_key' is required when provided a 'perturbation_key'({perturbation_key}).")
             self.pert_categories = np.array(data.obs[pert_category].values)
             self.de_genes = data.uns[degs_key]
             self.drugs_names = np.array(data.obs[perturbation_key].values)
-            self.dose_names = np.array(data.obs[dose_key].values)
+            self.dose_names = np.array(data.obs[dose_key].values).astype(float)
 
             # get unique drugs
             drugs_names_unique = set()
             for d in self.drugs_names:
-                [drugs_names_unique.add(i) for i in d.split("+")]
+                [drugs_names_unique.add(i) for i in d.split("&")]
 
             self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
 
-            self._drugs_name_to_idx = {
-                smiles: idx for idx, smiles in enumerate(self.drugs_names_unique_sorted)
-            }
+            self._drugs_name_to_idx = {smiles: idx for idx, smiles in enumerate(self.drugs_names_unique_sorted)}
             self.canon_smiles_unique_sorted = drug_names_to_once_canon_smiles(
                 list(self.drugs_names_unique_sorted), data, perturbation_key, smiles_key
             )
-            self.max_num_perturbations = max(
-                len(name.split("+")) for name in self.drugs_names
-            )
+            self.max_num_perturbations = max(len(name.split("&")) for name in self.drugs_names)
 
             if not use_drugs_idx:
                 # prepare a OneHot encoding for each unique drug in the dataset
                 # use the same sorted ordering of drugs as for indexing
-                self.encoder_drug = OneHotEncoder(
-                    sparse=False, categories=[list(self.drugs_names_unique_sorted)]
-                )
+                self.encoder_drug = OneHotEncoder(sparse=False, categories=[list(self.drugs_names_unique_sorted)])
                 self.encoder_drug.fit(self.drugs_names_unique_sorted.reshape(-1, 1))
                 # stores a drug name -> OHE mapping (np float array)
                 self.atomic_drugs_dict = dict(
                     zip(
                         self.drugs_names_unique_sorted,
-                        self.encoder_drug.transform(
-                            self.drugs_names_unique_sorted.reshape(-1, 1)
-                        ),
+                        self.encoder_drug.transform(self.drugs_names_unique_sorted.reshape(-1, 1)),
                     )
                 )
                 # get drug combination encoding: for each cell we calculate a single vector as:
@@ -154,9 +142,7 @@ class Dataset:
                 drugs = []
                 for i, comb in enumerate(self.drugs_names):
                     # here (in encoder_drug.transform()) is where the init_dataset function spends most of it's time.
-                    drugs_combos = self.encoder_drug.transform(
-                        np.array(comb.split("+")).reshape(-1, 1)
-                    )
+                    drugs_combos = self.encoder_drug.transform(np.array(comb.split("+")).reshape(-1, 1))
                     dose_combos = str(data.obs[dose_key].values[i]).split("+")
                     for j, d in enumerate(dose_combos):
                         if j == 0:
@@ -169,16 +155,12 @@ class Dataset:
                 # store a mapping from int -> drug_name, where the integer equals the position
                 # of the drug in the OneHot encoding. Very convoluted, should be refactored.
                 self.drug_dict = {}
-                atomic_ohe = self.encoder_drug.transform(
-                    self.drugs_names_unique_sorted.reshape(-1, 1)
-                )
+                atomic_ohe = self.encoder_drug.transform(self.drugs_names_unique_sorted.reshape(-1, 1))
                 for idrug, drug in enumerate(self.drugs_names_unique_sorted):
                     i = np.where(atomic_ohe[idrug] == 1)[0][0]
                     self.drug_dict[i] = drug
             else:
-                assert (
-                    self.max_num_perturbations == 1
-                ), "Index-based drug encoding only works with single perturbations"
+                assert self.max_num_perturbations == 1, "Index-based drug encoding only works with single perturbations"
                 drugs_idx = [self.drug_name_to_idx(drug) for drug in self.drugs_names]
                 self.drugs_idx = torch.tensor(
                     drugs_idx,
@@ -212,17 +194,13 @@ class Dataset:
                 self.covariate_names_unique[cov] = np.unique(self.covariate_names[cov])
 
                 names = self.covariate_names_unique[cov]
-                encoder_cov = OneHotEncoder(sparse=False)
+                encoder_cov = OneHotEncoder(sparse_output=False)
                 encoder_cov.fit(names.reshape(-1, 1))
 
-                self.atomic_сovars_dict[cov] = dict(
-                    zip(list(names), encoder_cov.transform(names.reshape(-1, 1)))
-                )
+                self.atomic_сovars_dict[cov] = dict(zip(list(names), encoder_cov.transform(names.reshape(-1, 1))))
 
                 names = self.covariate_names[cov]
-                self.covariates.append(
-                    torch.Tensor(encoder_cov.transform(names.reshape(-1, 1))).float()
-                )
+                self.covariates.append(torch.Tensor(encoder_cov.transform(names.reshape(-1, 1))).float())
         else:
             self.covariate_names = None
             self.covariate_names_unique = None
@@ -232,24 +210,16 @@ class Dataset:
         self.ctrl = data.obs["control"].values
 
         if perturbation_key is not None:
-            self.ctrl_name = list(
-                np.unique(data[data.obs["control"] == 1].obs[self.perturbation_key])
-            )
+            self.ctrl_name = list(np.unique(data[data.obs["control"] == 1].obs[self.perturbation_key]))
         else:
             self.ctrl_name = None
 
         if self.covariates is not None:
-            self.num_covariates = [
-                len(names) for names in self.covariate_names_unique.values()
-            ]
+            self.num_covariates = [len(names) for names in self.covariate_names_unique.values()]
         else:
             self.num_covariates = [0]
         self.num_genes = self.genes.shape[1]
-        self.num_drugs = (
-            len(self.drugs_names_unique_sorted)
-            if self.drugs_names_unique_sorted is not None
-            else 0
-        )
+        self.num_drugs = len(self.drugs_names_unique_sorted) if self.drugs_names_unique_sorted is not None else 0
 
         self.indices = {
             "all": list(range(len(self.genes))),
@@ -263,27 +233,24 @@ class Dataset:
         # This could be made much faster
         degs_tensor = []
         # check if the DEGs are condtioned on covariate, drug, and dose or only covariate and drug
-        dose_specific = (
-            True if len(list(self.de_genes.keys())[0].split()) == 3 else False
-        )
+        dose_specific = True if len(list(self.de_genes.keys())[0].split("_")) == 3 else False
         for i in range(len(self)):
             drug = indx(self.drugs_names, i)
             cov = indx(self.covariate_names["cell_type"], i)
             if dose_specific:
-                dose = indx(self.dose_key, i)
+                # dose = indx(self.dose_names, i) / 10000
+                dose = indx(self.dose_names, i)
 
-            if drug == "JQ1":
-                drug = "(+)-JQ1"
+            # if drug == "JQ1":
+            #     drug = "(+)-JQ1"
 
-            if drug == "control" or drug == "DMSO":
+            if drug == "control" or drug == "DMSO" or drug == "Vehicle":
                 genes = []
             else:
                 key = f"{cov}_{drug}_{dose}" if dose_specific else f"{cov}_{drug}"
                 genes = self.de_genes[key]
 
-            degs_tensor.append(
-                torch.Tensor(self.var_names.isin(genes)).detach().clone()
-            )
+            degs_tensor.append(torch.Tensor(self.var_names.isin(genes)).detach().clone())
         self.degs = torch.stack(degs_tensor)
 
     def subset(self, split, condition="all"):
@@ -344,9 +311,7 @@ class SubDataset:
         self.drugs_names = indx(dataset.drugs_names, indices)
         self.pert_categories = indx(dataset.pert_categories, indices)
         self.covariate_names = {}
-        assert (
-            "cell_type" in self.covars_dict
-        ), "`cell_type` must be provided as a covariate"
+        assert "cell_type" in self.covars_dict, "`cell_type` must be provided as a covariate"
         for cov in self.covariate_keys:
             self.covariate_names[cov] = indx(dataset.covariate_names[cov], indices)
 
@@ -382,11 +347,11 @@ class SubDataset:
 
 
 def load_dataset_splits(
-    dataset_path: str,
-    perturbation_key: Union[str, None],
-    dose_key: Union[str, None],
-    covariate_keys: Union[list, str, None],
-    smiles_key: Union[str, None],
+    dataset_path: str = None,
+    perturbation_key: Union[str, None] = None,
+    dose_key: Union[str, None] = None,
+    covariate_keys: Union[list, str, None] = None,
+    smiles_key: Union[str, None] = None,
     degs_key: str = "rank_genes_groups_cov",
     pert_category: str = "cov_drug_dose_name",
     split_key: str = "split",
@@ -419,3 +384,62 @@ def load_dataset_splits(
         return splits, dataset
     else:
         return splits
+
+
+def custom_collate(batch):
+    transposed = zip(*batch)
+    concat_batch = []
+    for samples in transposed:
+        if samples[0] is None:
+            concat_batch.append(None)
+        else:
+            # we move to CUDA here so that prefetching in the DataLoader already yields
+            # ready-to-process CUDA tensors
+            concat_batch.append(torch.stack(samples, 0).to("cuda"))
+    return concat_batch
+
+
+class PerturbationDataModule(L.LightningDataModule):
+    def __init__(self, datasplits, train_bs=32, val_bs=32, test_bs=32):
+        super().__init__()
+        self.datasplits = datasplits
+        self.train_bs = train_bs
+        self.val_bs = val_bs
+        self.test_bs = test_bs
+
+    def setup(self, stage: str):
+        # Assign datasets for use in dataloaders
+        if stage == "fit":
+            self.train_dataset = self.datasplits["training"]
+            self.train_control_dataset = self.datasplits["training_control"]
+            self.train_treated_dataset = self.datasplits["training_treated"]
+            self.test_dataset = self.datasplits["test"]
+            self.test_control_dataset = self.datasplits["test_control"]
+            self.test_treated_dataset = self.datasplits["test_treated"]
+            self.ood_control_dataset = self.datasplits["test_control"]
+            self.ood_treated_dataset = self.datasplits["ood"]
+
+        if stage == "validate" or stage == "test":
+            self.test_dataset = self.datasplits["test"]
+            self.test_control_dataset = self.datasplits["test_control"]
+            self.test_treated_dataset = self.datasplits["test_treated"]
+
+        if stage == "predict":
+            self.ood_control_dataset = self.datasplits["test_control"]
+            self.ood_treated_dataset = self.datasplits["ood"]
+
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size=self.train_bs, shuffle=True, collate_fn=custom_collate)
+
+    def val_dataloader(self):
+        return {
+            "test": DataLoader(self.test_dataset, batch_size=self.val_bs),
+            "test_control": DataLoader(self.test_control_dataset, batch_size=self.val_bs),
+            "test_treated": DataLoader(self.test_treated_dataset, batch_size=self.val_bs),
+        }
+
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.test_bs)
+
+    def predict_dataloader(self):
+        return DataLoader(self.ood_dataset, batch_size=self.test_bs)

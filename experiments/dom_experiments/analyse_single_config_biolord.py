@@ -26,6 +26,16 @@
 # # Imports
 
 # %%
+import os
+
+os.chdir("../..")
+
+# %%
+import chemCPA
+
+chemCPA.__file__
+
+# %%
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -70,12 +80,12 @@ sns.set_context("poster")
 # * Define `seml_collection` and `model_hash` to load data and model
 
 # %%
-# seml_collection = "multi_task"
-seml_collection = "chemCPA_configs"
+seml_collection = "run_biolord"
 
 # # RDKit
-model_hash_pretrained = "c824e42f7ce751cf9a8ed26f0d9e0af7"  # Fine-tuned
-model_hash_scratch = "59bdaefb1c1adfaf2976e3fdf62afa21"  # Non-pretrained
+# Only scratch!
+model_hash_pretrained = "469df41600a5cf3b19765574df4178d9"  # Fine-tuned
+model_hash_scratch = "469df41600a5cf3b19765574df4178d9"  # Non-pretrained
 
 # %% [markdown]
 # ## Load config and SMILES
@@ -83,27 +93,36 @@ model_hash_scratch = "59bdaefb1c1adfaf2976e3fdf62afa21"  # Non-pretrained
 # %%
 import json
 
+import seml
 from tqdm.auto import tqdm
 
 from chemCPA.paths import PROJECT_DIR
 
+# def load_config(seml_collection, model_hash):
+#     file_path = PROJECT_DIR / f"{seml_collection}.json"  # Provide path to json
 
-def load_config(seml_collection, model_hash):
-    file_path = PROJECT_DIR / f"{seml_collection}.json"  # Provide path to json
+#     with open(file_path) as f:
+#         file_data = json.load(f)
 
-    with open(file_path) as f:
-        file_data = json.load(f)
-
-    for _config in tqdm(file_data):
-        if _config["config_hash"] == model_hash:
-            # print(config)
-            config = _config["config"]
-            config["config_hash"] = _config["config_hash"]
-    return config
+#     for _config in tqdm(file_data):
+#         if _config["config_hash"] == model_hash:
+#             # print(config)
+#             config = _config["config"]
+#             config["config_hash"] = _config["config_hash"]
+#     return config
 
 
 # %%
-config = load_config(seml_collection, model_hash_pretrained)
+config = seml.get_results(
+    db_collection_name=seml_collection,
+    to_data_frame=False,
+    filter_dict={"config_hash": model_hash_pretrained},
+)[0]["config"]
+_config = seml.get_results(
+    db_collection_name=seml_collection,
+    to_data_frame=True,
+    filter_dict={"config_hash": model_hash_pretrained},
+)
 
 config["dataset"]["data_params"]["dataset_path"] = (
     ROOT / config["dataset"]["data_params"]["dataset_path"]
@@ -122,7 +141,7 @@ canon_smiles_unique_sorted, smiles_to_pathway_map, smiles_to_drug_map = load_smi
 
 # %%
 ood_drugs = (
-    dataset.obs.condition[
+    dataset.obs.drug[
         dataset.obs[config["dataset"]["data_params"]["split_key"]].isin(["ood"])
     ]
     .unique()
@@ -159,7 +178,7 @@ drug_r2_baseline_degs, _ = compute_pred_ctrl(
     dosages=dosages,
     cell_lines=cell_lines,
     use_DEGs=True,
-    verbose=False,
+    verbose=True,
 )
 
 drug_r2_baseline_all, _ = compute_pred_ctrl(
@@ -178,20 +197,42 @@ drug_r2_baseline_all, _ = compute_pred_ctrl(
 ood_drugs
 
 # %%
-config = load_config(seml_collection, model_hash_pretrained)
+config["model"]
+
+# %%
+# config = load_config(seml_collection, model_hash_pretrained)
+config = seml.get_results(
+    db_collection_name=seml_collection,
+    to_data_frame=False,
+    filter_dict={"config_hash": model_hash_pretrained},
+)[0]["config"]
 
 config["dataset"]["n_vars"] = dataset.n_vars
-config["model"]["embedding"]["directory"] = (
-    ROOT / config["model"]["embedding"]["directory"]
-)
+
+if config["model"]["embedding"]["directory"] is None:
+    from chemCPA.paths import EMBEDDING_DIR
+
+    config["model"]["embedding"]["directory"] = EMBEDDING_DIR
+
+config["config_hash"] = model_hash_pretrained
 
 model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_sorted)
 
 # %%
+gene_control_dict = {}
+
+for cl in cell_lines:
+    idx = np.where(datasets["test_control"].covariate_names["cell_type"] == cl)[0]
+    gene_control_dict[cl] = datasets["test_control"].genes[idx]
+
+# %%
+datasets
+
+# %%
 drug_r2_pretrained_degs, _ = compute_pred(
     model_pretrained,
-    datasets["ood"],
-    genes_control=datasets["test_control"].genes,
+    datasets["test"],
+    genes_control_dict=gene_control_dict,
     dosages=dosages,
     cell_lines=cell_lines,
     use_DEGs=True,
@@ -200,8 +241,8 @@ drug_r2_pretrained_degs, _ = compute_pred(
 
 drug_r2_pretrained_all, pred = compute_pred(
     model_pretrained,
-    datasets["ood"],
-    genes_control=datasets["test_control"].genes,
+    datasets["test"],
+    genes_control_dict=gene_control_dict,
     dosages=dosages,
     cell_lines=cell_lines,
     use_DEGs=False,
@@ -213,47 +254,103 @@ predictions = []
 targets = []
 cl_p = []
 cl_t = []
-d_p = []
-d_t = []
+drug_p = []
+drug_t = []
+dose_p = []
+dose_t = []
+control = {}
+control_cl = {}
 for key, vals in pred.items():
-    cl, drug, _ = key.split("_")
-    if "1.0" in key:
-        print(key)
-        control = vals[0]
-        predictions.append(vals[1])
-        targets.append(vals[2])
-        cl_p.extend(vals[1].shape[0] * [cl])
-        cl_t.extend(vals[2].shape[0] * [cl])
-        d_p.extend(vals[1].shape[0] * [drug])
-        d_t.extend(vals[2].shape[0] * [drug])
+    cl = key.split("_")[0]
+    drug = "_".join(key.split("_")[1:-1])
+    dose = key.split("_")[-1]
+    control[cl] = vals[0]
+    control_cl[cl] = vals[0].shape[0] * [cl]
+    predictions.append(vals[1])
+    targets.append(vals[2])
+    cl_p.extend(vals[1].shape[0] * [cl])
+    cl_t.extend(vals[2].shape[0] * [cl])
+    drug_p.extend(vals[1].shape[0] * [drug])
+    drug_t.extend(vals[2].shape[0] * [drug])
+    dose_p.extend(vals[1].shape[0] * [float(dose)])
+    dose_t.extend(vals[2].shape[0] * [float(dose)])
 
 # %%
 import anndata as ad
 
-adata_c = ad.AnnData(control)
-adata_p = ad.AnnData(np.concatenate(predictions, axis=0))
-adata_t = ad.AnnData(np.concatenate(targets, axis=0))
-
+adata_c = ad.AnnData(np.concatenate([control[cl] for cl in control], axis=0))
+adata_c.obs["cell_line"] = list(
+    np.concatenate([control_cl[cl] for cl in control], axis=0)
+)
 adata_c.obs["condition"] = "control"
-adata_c.obs["cell_line"] = "control"
-adata_c.obs["perturbation"] = "control"
+adata_c.obs["perturbation"] = "Vehicle"
+adata_c.obs["dose"] = 1.0
+
+adata_p = ad.AnnData(np.concatenate(predictions, axis=0))
 adata_p.obs["condition"] = "prediction"
 adata_p.obs["cell_line"] = cl_p
-adata_p.obs["perturbation"] = d_p
+adata_p.obs["perturbation"] = drug_p
+adata_p.obs["dose"] = dose_p
+
+
+adata_t = ad.AnnData(np.concatenate(targets, axis=0))
 adata_t.obs["condition"] = "target"
 adata_t.obs["cell_line"] = cl_t
-adata_t.obs["perturbation"] = d_t
+adata_t.obs["perturbation"] = drug_t
+adata_t.obs["dose"] = dose_t
 
 adata = ad.concat([adata_c, adata_p, adata_t])
 
 import scanpy as sc
 
-sc.pp.pca(adata)
-sc.pp.neighbors(adata)
-sc.tl.umap(adata)
+# sc.pp.pca(adata)
+# sc.pp.neighbors(adata)
+# sc.tl.umap(adata)
 
 # %%
-adata.obs
+sc.write("adata_biolord_test_predictions.h5ad", adata)
+
+# %%
+embeddings = {}
+
+# %%
+# embedding
+
+_dataset = datasets["ood"]
+
+for i, pc in tqdm(enumerate(_dataset.pert_categories)):
+    drug_idx = _dataset.drugs_idx[i].unsqueeze(0)
+    dosage = _dataset.dosages[i].unsqueeze(0)
+    if pc not in embeddings:
+        embeddings[pc] = (
+            model_pretrained.compute_drug_embeddings_(
+                drugs_idx=drug_idx, dosages=dosage
+            )
+            .squeeze()
+            .detach()
+            .cpu()
+            .numpy()
+        )
+
+
+# %%
+import pickle
+
+# Save dictionary to a pickle file
+with open("drug_embeddings.pkl", "wb") as f:
+    pickle.dump(embeddings, f)
+
+
+# %%
+# Load the dictionary back
+with open("drug_embeddings.pkl", "rb") as f:
+    loaded_data = pickle.load(f)
+
+# %%
+adata.obs["perturbation"].value_counts()
+
+# %%
+ood_drugs
 
 # %%
 # cl = "MCF7"

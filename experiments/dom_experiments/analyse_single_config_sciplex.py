@@ -70,12 +70,11 @@ sns.set_context("poster")
 # * Define `seml_collection` and `model_hash` to load data and model
 
 # %%
-# seml_collection = "multi_task"
-seml_collection = "chemCPA_configs"
+seml_collection = "check_seml"
 
 # # RDKit
-model_hash_pretrained = "c824e42f7ce751cf9a8ed26f0d9e0af7"  # Fine-tuned
-model_hash_scratch = "59bdaefb1c1adfaf2976e3fdf62afa21"  # Non-pretrained
+model_hash_pretrained = "df620799d929c39478b7c6bf93ef74ef"  # Fine-tuned
+model_hash_scratch = "09be7dd3cc760e25a9c95035ef7aaaff"  # Non-pretrained
 
 # %% [markdown]
 # ## Load config and SMILES
@@ -83,27 +82,36 @@ model_hash_scratch = "59bdaefb1c1adfaf2976e3fdf62afa21"  # Non-pretrained
 # %%
 import json
 
+import seml
 from tqdm.auto import tqdm
 
 from chemCPA.paths import PROJECT_DIR
 
+# def load_config(seml_collection, model_hash):
+#     file_path = PROJECT_DIR / f"{seml_collection}.json"  # Provide path to json
 
-def load_config(seml_collection, model_hash):
-    file_path = PROJECT_DIR / f"{seml_collection}.json"  # Provide path to json
+#     with open(file_path) as f:
+#         file_data = json.load(f)
 
-    with open(file_path) as f:
-        file_data = json.load(f)
-
-    for _config in tqdm(file_data):
-        if _config["config_hash"] == model_hash:
-            # print(config)
-            config = _config["config"]
-            config["config_hash"] = _config["config_hash"]
-    return config
+#     for _config in tqdm(file_data):
+#         if _config["config_hash"] == model_hash:
+#             # print(config)
+#             config = _config["config"]
+#             config["config_hash"] = _config["config_hash"]
+#     return config
 
 
 # %%
-config = load_config(seml_collection, model_hash_pretrained)
+config = seml.get_results(
+    db_collection_name=seml_collection,
+    to_data_frame=False,
+    filter_dict={"config_hash": model_hash_pretrained},
+)[0]["config"]
+_config = seml.get_results(
+    db_collection_name=seml_collection,
+    to_data_frame=True,
+    filter_dict={"config_hash": model_hash_pretrained},
+)
 
 config["dataset"]["data_params"]["dataset_path"] = (
     ROOT / config["dataset"]["data_params"]["dataset_path"]
@@ -178,12 +186,24 @@ drug_r2_baseline_all, _ = compute_pred_ctrl(
 ood_drugs
 
 # %%
-config = load_config(seml_collection, model_hash_pretrained)
+config["model"]
+
+# %%
+# config = load_config(seml_collection, model_hash_pretrained)
+config = seml.get_results(
+    db_collection_name=seml_collection,
+    to_data_frame=False,
+    filter_dict={"config_hash": model_hash_pretrained},
+)[0]["config"]
 
 config["dataset"]["n_vars"] = dataset.n_vars
-config["model"]["embedding"]["directory"] = (
-    ROOT / config["model"]["embedding"]["directory"]
-)
+
+if config["model"]["embedding"]["directory"] is None:
+    from chemCPA.paths import EMBEDDING_DIR
+
+    config["model"]["embedding"]["directory"] = EMBEDDING_DIR
+
+config["config_hash"] = model_hash_pretrained
 
 model_pretrained, embedding_pretrained = load_model(config, canon_smiles_unique_sorted)
 

@@ -11,7 +11,9 @@ git-lfs-folders/*
 cpa_binaries.tar
 notebooks/*.pth
 embeddings/*/data/*
-
+outputs/*
+lightning_logs/*
+wandb/*
 # embeddings
 *.parquet
 
