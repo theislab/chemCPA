@@ -11,6 +11,7 @@ Briefly:
 4. The fourth notebook adds the SMILES information to the SciPlex-3 dataset
 5. The fifth notebook creates various sub-datasets with varying observations and  train/test/ood splits
 6. The sixth notebook computes a baseline dataset
+7. The seventh notebook computes embedding files for all datasets
 
 For more details read the notebooks.
 
