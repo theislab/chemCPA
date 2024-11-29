@@ -6,13 +6,6 @@ defaults:
 enable_cpa_mode: False
 load_pretrained: True
 append_ae_layer: False
-pretrained_model_path: /path/to/pretrained/models
+pretrained_model_path: ${training.save_dir}
 pretrained_model_hashes: 
-  rdkit: 4f061dbfc7af05cf84f06a724b0c8563
-  grover: c30016a7469feb78a8ee9ebb18ed9b1f
-  jtvae: 915345a522c29fa709b995d6149083b9
-
-
-
-
-
+  model: cln9yc6y   

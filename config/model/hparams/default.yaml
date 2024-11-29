@@ -7,7 +7,7 @@ autoencoder_depth: 4
 autoencoder_lr: 0.0015751320499779737
 autoencoder_wd: 6.251373574521742e-7
 autoencoder_width: 256
-batch_size: 128
+batch_size: 512
 dim: 32
 dosers_depth: 3
 dosers_lr: 0.0015751320499779737

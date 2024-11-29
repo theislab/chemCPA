@@ -7,4 +7,4 @@ run_eval_r2: True
 run_eval_r2_sc: False 
 run_eval_logfold: False 
 save_checkpoints: True # checkpoints tend to be ~250MB large for LINCS.
-save_dir: /nfs/homedirs/hetzell/hdd/project_chemCPA/checkpoints_hydra
+save_dir: ./training_output

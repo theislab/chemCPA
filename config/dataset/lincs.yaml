@@ -1,10 +1,10 @@
 perturbation_key: condition # stores name of the drug
 pert_category: cov_drug_dose_name # stores celltype_drugname_drugdose
-dose_key: dose # stores drug dose as a float
+dose_key: dose_val # stores drug dose as a float
 covariate_keys: cell_type # necessary field for cell types. Fill it with a dummy variable if no celltypes present.
-smiles_key: SMILES
+smiles_key: canonical_smiles 
 use_drugs_idx: True # If false, will use One-hot encoding instead
-split_key: split_cellcycle_ood
-dataset_path: project_folder/datasets/sciplex_complete_v2.h5ad
+split_key: split 
+dataset_path: project_folder/datasets/lincs_full_smiles_sciplex_genes.h5ad  # full path to the anndata dataset
 # dataset_path: project_folder/datasets/adata_biolord_split_30_subset.h5ad # full path to the anndata dataset
-degs_key: all_DEGs # `uns` column name denoting the DEGs for each perturbation
+degs_key: rank_genes_groups_cov
