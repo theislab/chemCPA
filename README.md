@@ -44,7 +44,7 @@ python setup.py install -e .
 
 
 #### Datasets
-The datasets are not included in the docker image, but get automatically downloaded when you run the notebooks that require them. Alternatively you may download them manually using the python tool in the `raw_data/dataset.py` folder. Usage is:
+The datasets are not included in the docker image, but get automatically downloaded when you run the notebooks that require them. The datasets may alternatively be downloaded manually using the python tool in the `raw_data/dataset.py` folder. Usage is:
 ```
 python raw_data/dataset.py --list
 python raw_data/dataset.py --dataset <dataset_name>
@@ -63,6 +63,12 @@ Some of the notebooks use a *drugbank_all.csv* file, which can be downloaded fro
 To train the models, first the raw data needs to be processed.
 This can be done by running the notebooks inside the `preprocessing/` folder in a sequential order.
 Alternatively, you may run 
+
+```
+python preprocessing/run_notebooks.py
+```
+A description of the preprocessing steps is given in the `preprocessing/README.md` file and in the headers
+of individual notebooks. Section 4 of the paper is also highly relevant.
 
 #### Training the models
 Run 
