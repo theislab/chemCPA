@@ -677,7 +677,7 @@ class ComPert(torch.nn.Module):
         """
         assert (drugs is not None) or (drugs_idx is not None and dosages is not None)
 
-        gene_reconstructions, cell_drug_embedding, latent_basal = self.predict(
+        gene_reconstructions, cell_drug_embedding, (latent_basal, drug_embedding, latent_treated) = self.predict(
             genes=genes,
             drugs=drugs,
             drugs_idx=drugs_idx,
@@ -719,7 +719,6 @@ class ComPert(torch.nn.Module):
         adv_covs_grad_penalty = torch.tensor([0.0], device=self.device)
 
         if (self.iteration % self.hparams["adversary_steps"]) == 0:
-
             def compute_gradient_penalty(output, input):
                 grads = torch.autograd.grad(output, input, create_graph=True)
                 grads = grads[0].pow(2).mean()
@@ -733,27 +732,27 @@ class ComPert(torch.nn.Module):
                 for pred in adversary_covariate_predictions:
                     adv_covs_grad_penalty += compute_gradient_penalty(pred.sum(), latent_basal)
 
-            self.optimizer_adversaries.zero_grad()
-            (
-                adversary_drugs_loss
-                + self.hparams["penalty_adversary"] * adv_drugs_grad_penalty
-                + adversary_covariates_loss
-                + self.hparams["penalty_adversary"] * adv_covs_grad_penalty
-            ).backward()
-            self.optimizer_adversaries.step()
-        else:
-            self.optimizer_autoencoder.zero_grad()
-            if self.num_drugs > 0:
-                self.optimizer_dosers.zero_grad()
-            (
-                reconstruction_loss
-                - self.hparams["reg_adversary"] * adversary_drugs_loss
-                - self.hparams["reg_adversary_cov"] * adversary_covariates_loss
-                # + self.hparams["reg_multi_task"] * multi_task_loss
-            ).backward()
-            self.optimizer_autoencoder.step()
-            if self.num_drugs > 0:
-                self.optimizer_dosers.step()
+            # self.optimizer_adversaries.zero_grad()
+            # (
+            #     adversary_drugs_loss
+            #     + self.hparams["penalty_adversary"] * adv_drugs_grad_penalty
+            #     + adversary_covariates_loss
+            #     + self.hparams["penalty_adversary"] * adv_covs_grad_penalty
+            # ).backward()
+            # self.optimizer_adversaries.step()
+        # else:
+            # self.optimizer_autoencoder.zero_grad()
+            # if self.num_drugs > 0:
+            #     self.optimizer_dosers.zero_grad()
+            # (
+            #     reconstruction_loss
+            #     - self.hparams["reg_adversary"] * adversary_drugs_loss
+            #     - self.hparams["reg_adversary_cov"] * adversary_covariates_loss
+            #     # + self.hparams["reg_multi_task"] * multi_task_loss
+            # ).backward()
+            # self.optimizer_autoencoder.step()
+            # if self.num_drugs > 0:
+            #     self.optimizer_dosers.step()
         self.iteration += 1
 
         return {
@@ -762,7 +761,7 @@ class ComPert(torch.nn.Module):
             "loss_adv_covariates": adversary_covariates_loss.item(),
             "penalty_adv_drugs": adv_drugs_grad_penalty.item(),
             "penalty_adv_covariates": adv_covs_grad_penalty.item(),
-            "loss_multi_task": multi_task_loss.item(),
+            # "loss_multi_task": multi_task_loss.item(),
         }
 
     @classmethod

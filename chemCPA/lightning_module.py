@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from lightning.pytorch.demos import Transformer
 
-from chemCPA.data import load_dataset_splits
+from chemCPA.data.data import load_dataset_splits
 from chemCPA.embedding import get_chemical_representation
 from chemCPA.model import ComPert
 from chemCPA.train import evaluate_disentanglement, evaluate_r2
@@ -16,14 +16,13 @@ class ChemCPA(L.LightningModule):
         self.automatic_optimization = False
         self.config = config
 
-        embedding = self.config["model"]["embedding"]
         additional_params = self.config["model"]["additional_params"]
         hparams = self.config["model"]["hparams"]
 
         self.drug_embeddings = get_chemical_representation(
             smiles=dataset_config["canon_smiles_unique_sorted"],
-            embedding_model=embedding["model"],
-            data_path=embedding["datapath"],
+            embedding_model=self.config["model"]["embedding"],
+            data_path=self.config["model"]["embedding"]["datapath"],
         )
 
         self.model = ComPert(

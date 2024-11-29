@@ -110,6 +110,17 @@ def rank_genes_groups_by_cov(
 
 def canonicalize_smiles(smiles: Optional[str]):
     if smiles:
-        return Chem.CanonSmiles(smiles)
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return None
+        return Chem.MolToSmiles(
+            mol,
+            isomericSmiles=True,  # Keep stereochemistry information
+            canonical=True,       # Ensure canonical atom ordering
+            doRandom=False,       # Don't introduce randomness
+            allBondsExplicit=False,  # Don't make all bonds explicit
+            allHsExplicit=False,     # Don't make all hydrogens explicit
+            kekuleSmiles=False       # Don't kekulize the molecule
+        )
     else:
         return None

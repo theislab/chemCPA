@@ -1,5 +1,4 @@
 from pathlib import Path
-
 import hydra
 import lightning as L
 import torch
@@ -7,17 +6,19 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from lightning_module import ChemCPA
 from omegaconf import OmegaConf
+import numpy as np
 
-from chemCPA.data import PerturbationDataModule, load_dataset_splits
+from chemCPA.data.data import PerturbationDataModule, load_dataset_splits
 from chemCPA.paths import WB_DIR
 
 
 @hydra.main(version_base=None, config_path="../config/", config_name="main")
 def main(args):
-    OmegaConf.set_struct(args, False)
+    OmegaConf.set_struct(args, False) 
+
     data_params = args["dataset"]
     datasets, dataset = load_dataset_splits(**data_params, return_dataset=True)
-
+    dm = PerturbationDataModule(datasplits=datasets, train_bs=args["model"]["hparams"]["batch_size"])
     dataset_config = {
         "num_genes": datasets["training"].num_genes,
         "num_drugs": datasets["training"].num_drugs,
@@ -25,9 +26,101 @@ def main(args):
         "use_drugs_idx": dataset.use_drugs_idx,
         "canon_smiles_unique_sorted": dataset.canon_smiles_unique_sorted,
     }
-    dm = PerturbationDataModule(datasplits=datasets, train_bs=args["model"]["hparams"]["batch_size"])
 
+    # Initialize model
     model = ChemCPA(args, dataset_config)
+
+    # Load pretrained weights if specified
+    if args["model"]["load_pretrained"]:
+        print("Debug - full model config:", args["model"])
+        pretrained_path = Path(args["model"]["pretrained_model_path"])
+        model_hash = args["model"]["pretrained_model_hashes"].get("model")
+        print("Debug - model_hash:", model_hash)
+        checkpoint_path = pretrained_path / model_hash / "last.ckpt"
+        print(f"Using pretrained model weights from {checkpoint_path}")
+        
+        if model_hash and checkpoint_path.exists():
+            print(f"Loading pretrained model from: {checkpoint_path}")
+            checkpoint = torch.load(checkpoint_path)
+            state_dict = checkpoint['state_dict']
+            
+            # Remove components we want to train from scratch
+            keys = list(state_dict.keys())
+            for key in keys:
+                if (key.startswith('model.adversary_drugs') or 
+                    key.startswith('model.drug_embeddings') or
+                    key.startswith('drug_embeddings') or 
+                    key.startswith('adversary_drugs')):
+                    state_dict.pop(key)
+            
+            # For vanilla CPA, also remove doser and drug embedding encoder
+            if args["model"]["embedding"]["model"] == "vanilla":
+                keys = list(state_dict.keys())
+                for key in keys:
+                    if (key.startswith('model.dosers') or 
+                        key.startswith('model.drug_embedding_encoder') or
+                        key.startswith('dosers') or
+                        key.startswith('drug_embedding_encoder')):
+                        state_dict.pop(key)
+            
+            # Handle covariate embeddings - map between old and new indices
+            if 'model.covariates_embeddings.0.weight' in state_dict:
+                old_embeddings = state_dict['model.covariates_embeddings.0.weight']  # shape [82, 32]
+                embedding_dim = old_embeddings.shape[1]
+                
+                # Get unique cell types from both datasets
+                new_cell_types = np.unique(datasets['training'].covariate_names['cell_type'])
+                old_cell_types = np.unique(dataset.covariate_names['cell_type'])
+                
+                print("\nDEBUG Unique cell types:")
+                print(f"New dataset: {new_cell_types}")
+                print(f"Old dataset: {old_cell_types}")
+                
+                # Create new embeddings tensor
+                num_covariates = datasets["training"].num_covariates[0]
+                new_embeddings = torch.zeros((num_covariates, embedding_dim), device=old_embeddings.device)
+                
+                # Map between old and new indices based on cell type order
+                for new_idx, cell_type in enumerate(new_cell_types):
+                    if cell_type in old_cell_types:
+                        old_idx = np.where(old_cell_types == cell_type)[0][0]
+                        new_embeddings[new_idx] = old_embeddings[old_idx]
+                    else:
+                        print(f"Warning: Cell type {cell_type} not found in pretrained model")
+                
+                state_dict['model.covariates_embeddings.0.weight'] = new_embeddings
+
+            # Handle adversary covariates similarly
+            if 'model.adversary_covariates.0.network.9.weight' in state_dict:
+                old_layer_weight = state_dict['model.adversary_covariates.0.network.9.weight']
+                old_layer_bias = state_dict['model.adversary_covariates.0.network.9.bias']
+                hidden_dim = old_layer_weight.shape[1]
+                
+                # Create new layer tensors
+                num_covariates = datasets["training"].num_covariates[0]
+                new_layer_weight = torch.zeros((num_covariates, hidden_dim), device=old_layer_weight.device)
+                new_layer_bias = torch.zeros(num_covariates, device=old_layer_bias.device)
+                
+                # Map between old and new indices based on cell type order
+                for new_idx, cell_type in enumerate(new_cell_types):
+                    if cell_type in old_cell_types:
+                        old_idx = np.where(old_cell_types == cell_type)[0][0]
+                        new_layer_weight[new_idx] = old_layer_weight[old_idx]
+                        new_layer_bias[new_idx] = old_layer_bias[old_idx]
+                    else:
+                        print(f"Warning: Cell type {cell_type} not found in pretrained model")
+                
+                state_dict['model.adversary_covariates.0.network.9.weight'] = new_layer_weight
+                state_dict['model.adversary_covariates.0.network.9.bias'] = new_layer_bias
+            
+            # Load modified state dict
+            incomp_keys = model.load_state_dict(state_dict, strict=False)
+            print("Missing keys:", incomp_keys.missing_keys)
+            print("Unexpected keys:", incomp_keys.unexpected_keys)
+        else:
+            print(f"Warning: Pretrained model file not found at {checkpoint_path}")
+    else:
+        print(f"Warning: No pretrained hash found for model")
 
     wandb_logger = WandbLogger(**args["wandb"], save_dir=WB_DIR)
     run_id = wandb_logger.experiment.id

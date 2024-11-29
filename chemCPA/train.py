@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 from torchmetrics import R2Score
 from tqdm.auto import tqdm
 
-import chemCPA.data
-from chemCPA.data import SubDataset
+import chemCPA.data.data
+from chemCPA.data.data import SubDataset
 from chemCPA.model import MLP, ComPert
 
 
@@ -43,7 +43,8 @@ def compute_prediction(autoencoder: ComPert, genes, emb_drugs, emb_covs):
     Computes the prediction of a ComPert `autoencoder` and
     directly splits into `mean` and `variance` predictions
     """
-    if autoencoder.use_drugs_idx:
+    # Check if the attribute exists before accessing it
+    if hasattr(autoencoder, 'use_drugs_idx') and autoencoder.use_drugs_idx:
         assert len(emb_drugs) == 2
         genes_pred = autoencoder.predict(
             genes=genes,
@@ -247,28 +248,48 @@ def evaluate_r2(model: ComPert, dataset: SubDataset, genes_control: torch.Tensor
     n_rows = genes_control.size(0)
     genes_control = genes_control.to(model.device)
 
-    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    # Determine the key format by checking the first key in de_genes
+    if len(dataset.de_genes) > 0:
+        sample_key = next(iter(dataset.de_genes))
+        key_parts = len(sample_key.split('_'))
+        use_cell_drug_only = (key_parts == 2)  # True if keys are cell_drug format
+    else:
+        use_cell_drug_only = True  # Default to cell_drug if no keys exist
+
     pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
-    for cell_drug_dose_comb, category_count in zip(*np.unique(dataset.pert_categories, return_counts=True)):
+    unique_categories, category_counts = np.unique(dataset.pert_categories, return_counts=True)
+    
+    total_combinations = 0
+    missing_combinations = 0
+    missing_keys = set()
+
+    for cell_drug_dose_comb, category_count in zip(unique_categories, category_counts):
         if dataset.perturbation_key is None:
             break
 
-        # estimate metrics only for reasonably-sized drug/cell-type combos
         if category_count <= 5:
             continue
 
-        # doesn't make sense to evaluate DMSO (=control) as a perturbation
         if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
             continue
 
-        # dataset.var_names is the list of gene names
-        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
-        # genes for every cell_drug_dose combination.
-        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[cell_drug_dose_comb]))
-        idx_de = bool2idx(bool_de)
+        # Get the appropriate key based on de_genes format
+        if use_cell_drug_only:
+            lookup_key = '_'.join(cell_drug_dose_comb.split('_')[:2])  # Just cell_drug
+        else:
+            lookup_key = cell_drug_dose_comb  # Full cell_drug_dose
 
+        total_combinations += 1
+        
+        if lookup_key not in dataset.de_genes:
+            missing_combinations += 1
+            missing_keys.add(lookup_key)
+            continue
+
+        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[lookup_key]))
+        
         # need at least two genes to be able to calc r2 score
-        if len(idx_de) < 2:
+        if len(bool_de) < 2:
             continue
 
         bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
@@ -295,16 +316,16 @@ def evaluate_r2(model: ComPert, dataset: SubDataset, genes_control: torch.Tensor
         y_true = dataset.genes[idx_all, :].to(device="cuda")
 
         # true means and variances
-        yt_m = y_true.mean(dim=0)
-        yt_v = y_true.var(dim=0)
+        y_true_mean = y_true.mean(dim=0)
+        y_true_variance = y_true.var(dim=0)
         # predicted means and variances
-        yp_m = mean_pred.mean(dim=0)
-        yp_v = var_pred.mean(dim=0)
+        y_predicted_mean = mean_pred.mean(dim=0)
+        y_predicted_variance = var_pred.mean(dim=0)
 
-        r2_m = compute_r2(yt_m, yp_m)
-        r2_v = compute_r2(yt_v, yp_v)
-        r2_m_de = compute_r2(yt_m[idx_de], yp_m[idx_de])
-        r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
+        r2_m = compute_r2(y_true_mean, y_predicted_mean)
+        r2_v = compute_r2(y_true_variance, y_predicted_variance)
+        r2_m_de = compute_r2(y_true_mean[bool_de], y_predicted_mean[bool_de])
+        r2_v_de = compute_r2(y_true_variance[bool_de], y_predicted_variance[bool_de])
 
         # to be investigated
         if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
@@ -314,6 +335,11 @@ def evaluate_r2(model: ComPert, dataset: SubDataset, genes_control: torch.Tensor
         var_score.append(max(r2_v, 0.0))
         mean_score_de.append(max(r2_m_de, 0.0))
         var_score_de.append(max(r2_v_de, 0.0))
+
+    if missing_combinations > 0:
+        print(f"\nWarning: Missing DE genes for {missing_combinations} out of {total_combinations} combinations")
+        print("Example missing combinations:", list(missing_keys)[:3])
+        
     if len(mean_score) > 0:
         return [np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]]
     else:

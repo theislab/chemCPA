@@ -12,7 +12,7 @@ import seml
 import torch
 from sacred import Experiment
 
-from chemCPA.data import load_dataset_splits
+from chemCPA.data.data import load_dataset_splits
 from chemCPA.embedding import get_chemical_representation
 from chemCPA.model import ComPert
 from chemCPA.profiling import Profiler
@@ -117,6 +117,7 @@ class ExperimentWrapper:
     ):
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        print("DEVICE: ", device)
 
         if load_pretrained:
             (
@@ -276,6 +277,7 @@ class ExperimentWrapper:
             # all items are initialized to 0.0
             epoch_training_stats = defaultdict(float)
 
+            device = "cuda" if torch.cuda.is_available() else "cpu"
             for data in self.datasets["loader_tr"]:
                 if self.dataset.use_drugs_idx:
                     genes, drugs_idx, dosages, degs, covariates = (
@@ -285,6 +287,8 @@ class ExperimentWrapper:
                         data[3],
                         data[4:],
                     )
+                    genes = genes.to(device)
+                    self.autoencoder.to(device)
                     training_stats = self.autoencoder.update(
                         genes=genes,
                         drugs_idx=drugs_idx,
@@ -304,9 +308,11 @@ class ExperimentWrapper:
                 for key, val in training_stats.items():
                     epoch_training_stats[key] += val
 
-            self.autoencoder.scheduler_autoencoder.step()
-            self.autoencoder.scheduler_adversary.step()
-            if self.autoencoder.num_drugs > 0:
+            if hasattr(self.autoencoder, 'scheduler_autoencoder'):
+                self.autoencoder.scheduler_autoencoder.step()
+            if hasattr(self.autoencoder, 'scheduler_adversary'):
+                self.autoencoder.scheduler_adversary.step()
+            if self.autoencoder.num_drugs > 0 and hasattr(self.autoencoder, 'scheduler_dosers'):
                 self.autoencoder.scheduler_dosers.step()
 
             for key, val in epoch_training_stats.items():
