@@ -154,3 +154,5 @@ dmypy.json
 settings.json
 scripts/*.yaml  
 embeddings_dir
+
+project_folder

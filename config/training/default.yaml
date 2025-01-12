@@ -7,4 +7,4 @@ run_eval_r2: True
 run_eval_r2_sc: False
 run_eval_logfold: False
 save_checkpoints: True # checkpoints tend to be ~250MB large for LINCS.
-save_dir: /lustre/groups/ml01/workspace/ot_perturbation/data/sciplex/chemcpa/checkpoints_hydra
+save_dir: /home/jovyan/project/chemcpa_reproducibility/chemCPA/home/jovyan/git-repos/platform-publication/method_benchmarking/chemcpa/chemCPA/project_folder/output
