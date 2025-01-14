@@ -61,7 +61,7 @@ from chemCPA.paths import DATA_DIR, PROJECT_DIR
 
 pd.set_option('display.max_columns', 100)
 
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath('')))
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_DIR)
 import raw_data.datasets as datasets
 import logging
@@ -137,6 +137,12 @@ adata_lincs.var['in_sciplex'] = adata_lincs.var.gene_id.isin(adata_sciplex.var.g
 
 # For trapnell
 adata_sciplex.var['in_lincs'] = adata_sciplex.var.gene_id.isin(adata_lincs.var.gene_id)
+
+# Print gene matching statistics
+print("\nGene matching statistics:")
+print(f"Number of genes in LINCS: {adata_lincs.shape[1]}")
+print(f"Number of genes in sciplex: {adata_sciplex.shape[1]}")
+print(f"Number of shared genes: {sum(adata_sciplex.var.in_lincs)}")
 
 # ## Preprocess sciplex dataset
 

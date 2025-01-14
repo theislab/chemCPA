@@ -19,7 +19,7 @@ import numpy as np
 import scanpy as sc
 import torch
 
-from chemCPA.data import PerturbationDataModule, load_dataset_splits
+from chemCPA.data.data import PerturbationDataModule, load_dataset_splits
 from chemCPA.lightning_module import ChemCPA
 
 # %%

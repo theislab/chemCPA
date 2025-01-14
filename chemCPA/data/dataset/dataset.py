@@ -117,7 +117,7 @@ class Dataset:
             # Get unique drugs
             drugs_names_unique = set()
             for d in self.drugs_names:
-                [drugs_names_unique.add(i) for i in d.split("&")]
+                [drugs_names_unique.add(i) for i in d.split("+")]
 
             self.drugs_names_unique_sorted = np.array(sorted(drugs_names_unique))
 
@@ -128,7 +128,7 @@ class Dataset:
                 list(self.drugs_names_unique_sorted), obs, perturbation_key, smiles_key
             )
 
-            self.max_num_perturbations = max(len(name.split("&")) for name in self.drugs_names)
+            self.max_num_perturbations = max(len(name.split("+")) for name in self.drugs_names)
 
             if not use_drugs_idx:
                 # Prepare a OneHot encoding for each unique drug in the dataset

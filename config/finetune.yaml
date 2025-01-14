@@ -8,3 +8,19 @@ defaults:
 
 profiling.run_profiler: False
 profiling.outdir: "./"
+
+model:
+  load_pretrained: true
+  pretrained_model_path: "path/to/pretrained/models"
+  pretrained_model_hashes:
+    model: "your_model_hash"  # hash of the pretrained model
+  embedding:
+    model: "vanilla"  # or whatever embedding type you want to use
+    directory: "path/to/embeddings"  # if not using vanilla
+
+dataset:
+  dataset_path: "path/to/combo_sciplex_prep_hvg_filtered.h5ad"
+  data_params:
+    use_drugs_idx: true
+    perturbation_key: "condition"  # adjust based on your data
+    smiles_key: "SMILES"  # adjust based on your data

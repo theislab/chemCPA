@@ -53,7 +53,7 @@ from utils import (
     load_smiles,
 )
 
-from chemCPA.data import load_dataset_splits
+from chemCPA.data.data import load_dataset_splits
 from chemCPA.paths import FIGURE_DIR, ROOT
 
 # %%

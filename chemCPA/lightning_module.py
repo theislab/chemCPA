@@ -40,22 +40,35 @@ class ChemCPA(L.LightningModule):
         self.save_hyperparameters()
 
     def forward(self, batch, return_latent_basal=False):
-        genes, drugs_idx, dosages, degs, covariates = (
-            batch[0],
-            batch[1],
-            batch[2],
-            batch[3],
-            batch[4:],
-        )
-
-        gene_reconstructions, cell_drug_embedding, latents = self.model.predict(
-            genes=genes,
-            drugs=None,
-            drugs_idx=drugs_idx,
-            dosages=dosages,
-            covariates=covariates,
-            return_latent_basal=True,
-        )
+        if self.model.use_drugs_idx:
+            # batch has (genes, drugs_idx, dosages, degs, *covariates)
+            genes = batch[0]
+            drugs_idx = batch[1]
+            dosages = batch[2]
+            degs = batch[3]
+            covariates = batch[4:]
+            gene_reconstructions, cell_drug_embedding, latents = self.model.predict(
+                genes=genes,
+                drugs=None,
+                drugs_idx=drugs_idx,
+                dosages=dosages,
+                covariates=covariates,
+                return_latent_basal=True,
+            )
+        else:
+            # batch has (genes, drugs, degs, *covariates)
+            genes = batch[0]
+            drugs = batch[1]
+            degs = batch[2]
+            covariates = batch[3:]
+            gene_reconstructions, cell_drug_embedding, latents = self.model.predict(
+                genes=genes,
+                drugs=drugs,
+                drugs_idx=None,
+                dosages=None,
+                covariates=covariates,
+                return_latent_basal=True,
+            )
 
         dim = gene_reconstructions.size(1) // 2
         mean = gene_reconstructions[:, :dim]
@@ -65,47 +78,90 @@ class ChemCPA(L.LightningModule):
         return mean, var
 
     def training_step(self, batch, batch_idx):
-        genes, drugs_idx, covariates = batch[0], batch[1], batch[4:]
+        """Example training_step that handles both idx-based and multi-hot drugs."""
 
+        # Predefine everything so we don't get "UnboundLocalError".
+        genes, drugs_idx, dosages, drugs, degs, covariates = None, None, None, None, None, None
+
+        # Unpack the batch based on use_drugs_idx
+        if self.model.use_drugs_idx:
+            # batch = (genes, drugs_idx, dosages, degs, *covariates)
+            genes = batch[0]
+            drugs_idx = batch[1]
+            dosages = batch[2]
+            degs = batch[3]
+            covariates = batch[4:]
+        else:
+            # batch = (genes, drugs, degs, *covariates)
+            genes = batch[0]
+            drugs = batch[1]
+            degs = batch[2]
+            covariates = batch[3:]
+
+        # Forward pass
         (mean, var), latents = self(batch, return_latent_basal=True)
         latent_basal = latents[0]
 
-        reconstruction_loss = self.model.loss_autoencoder(input=mean, target=genes, var=var)
+        # Reconstruction loss
+        reconstruction_loss = self.model.loss_autoencoder(
+            input=mean,
+            target=genes,
+            var=var
+        )
 
-        adversary_drugs_loss = torch.tensor([0.0], device=self.device)
-
+        # Adversary (drugs)
         adversary_drugs_predictions = self.model.adversary_drugs(latent_basal)
-        adversary_drugs_loss = self.model.loss_adversary_drugs(adversary_drugs_predictions, drugs_idx)
+        if self.model.use_drugs_idx:
+            # CrossEntropy if we have integer drug indices
+            adversary_drugs_loss = self.model.loss_adversary_drugs(
+                adversary_drugs_predictions,
+                drugs_idx
+            )
+        else:
+            # BCE if we have multi-hot drug dosages
+            # (dosage > 0) means "drug is present"
+            adversary_drugs_loss = self.model.loss_adversary_drugs(
+                adversary_drugs_predictions,
+                (drugs > 0).float()
+            )
 
+        # Adversary (covariates)
         adversary_covariates_loss = torch.tensor([0.0], device=self.device)
         if self.model.num_covariates[0] > 0:
             adversary_covariate_predictions = []
             for i, adv in enumerate(self.model.adversary_covariates):
                 adv = adv.to(self.model.device)
-                adversary_covariate_predictions.append(adv(latent_basal))
+                prediction = adv(latent_basal)
+                adversary_covariate_predictions.append(prediction)
                 adversary_covariates_loss += self.model.loss_adversary_covariates[i](
-                    adversary_covariate_predictions[-1], covariates[i].argmax(1)
+                    prediction,
+                    covariates[i].argmax(dim=1)
                 )
 
-        # two place-holders for when adversary is not executed
+        # Two placeholders for gradient penalties
         adv_drugs_grad_penalty = torch.tensor([0.0], device=self.device)
         adv_covs_grad_penalty = torch.tensor([0.0], device=self.device)
 
+        # Retrieve optimizers in the order returned by configure_optimizers()
         optimizers = self.optimizers()
 
+        # Adversary steps
         if (self.trainer.global_step % self.model.hparams["adversary_steps"]) == 0:
             optimizer_adversaries = optimizers[1]
             optimizer_adversaries.zero_grad()
 
-            def compute_gradient_penalty(output, input):
-                grads = torch.autograd.grad(output, input, create_graph=True)
-                grads = grads[0].pow(2).mean()
-                return grads
+            def compute_gradient_penalty(output, x_input):
+                grads = torch.autograd.grad(output, x_input, create_graph=True)[0]
+                return grads.pow(2).mean()
 
-            adv_drugs_grad_penalty = compute_gradient_penalty(adversary_drugs_predictions.sum(), latent_basal)
+            # Compute penalty for drug adversary
+            adv_drugs_grad_penalty = compute_gradient_penalty(
+                adversary_drugs_predictions.sum(), 
+                latent_basal
+            )
 
+            # Compute penalty for covariates adversary
             if self.model.num_covariates[0] > 0:
-                adv_covs_grad_penalty = torch.tensor([0.0], device=self.device)
                 for pred in adversary_covariate_predictions:
                     adv_covs_grad_penalty += compute_gradient_penalty(pred.sum(), latent_basal)
 
@@ -118,8 +174,10 @@ class ChemCPA(L.LightningModule):
             self.manual_backward(loss)
             self.clip_gradients(optimizer_adversaries, gradient_clip_val=1, gradient_clip_algorithm="norm")
             optimizer_adversaries.step()
+
             self.log("penalized_adversary_loss", loss)
         else:
+            # Autoencoder & dosers step
             optimizer_autoencoder = optimizers[0]
             optimizer_dosers = optimizers[2]
             optimizer_autoencoder.zero_grad()
@@ -135,16 +193,22 @@ class ChemCPA(L.LightningModule):
             self.clip_gradients(optimizer_dosers, gradient_clip_val=1, gradient_clip_algorithm="norm")
             optimizer_autoencoder.step()
             optimizer_dosers.step()
+
             self.log("penalized_reconstruction_loss", loss)
 
-        N = 1
-        if self.trainer.is_last_batch and (self.trainer.current_epoch + 1) % N == 0:
-            [lr_s.step() for lr_s in self.lr_schedulers()]
+        # Optionally step LR schedulers at epoch-end or after last batch
+        # (just an example with step after last batch)
+        if self.trainer.is_last_batch and (self.trainer.current_epoch + 1) % 1 == 0:
+            for lr_s in self.lr_schedulers():
+                lr_s.step()
 
+        # Logging
         self.log("reconstruction_loss", reconstruction_loss)
         self.log("adversary_drugs_loss", adversary_drugs_loss)
         self.log("adversary_covariates_loss", adversary_covariates_loss)
+
         return None
+
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         pass

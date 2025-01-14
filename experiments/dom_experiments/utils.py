@@ -5,7 +5,7 @@ import seml
 import torch
 from tqdm.auto import tqdm
 
-from chemCPA.data import (
+from chemCPA.data.data import (
     SubDataset,
     canonicalize_smiles,
     drug_names_to_once_canon_smiles,

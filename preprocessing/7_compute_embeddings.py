@@ -36,7 +36,8 @@ datasets = [
     #('sciplex_complete_middle_subset_v2.h5ad', 'SMILES'),
     #('sciplex_complete_middle_subset_lincs_genes_v2.h5ad', 'SMILES'),
     #('sciplex_complete_v2.h5ad', 'SMILES'),
-    #('sciplex_complete_lincs_genes_v2.h5ad', 'SMILES')
+    #('sciplex_complete_lincs_genes_v2.h5ad', 'SMILES'),
+    ('combo_sciplex_prep_hvg_filtered.h5ad', 'smiles_rdkit')  # Added combinatorial dataset
 ]
 
 # Define desired embedding dimension

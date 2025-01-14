@@ -170,22 +170,26 @@ def embed_and_save_embeddings(smiles_list, threshold=0.01, embedding_path=None, 
 
 def validate(embedding_df, adata, smiles_key='SMILES'):
     """
-    Validate that all SMILES in the dataset have corresponding embeddings.
-    
-    Args:
-        embedding_df (pd.DataFrame): DataFrame containing the embeddings with SMILES as index
-        adata (AnnData): Annotated data matrix containing SMILES
-        smiles_key (str): Key for SMILES in adata.obs
+    Validate that all SMILES in the dataset (splitting on '..') 
+    have corresponding embeddings.
     """
     logger.info("Starting validation of embeddings against dataset SMILES")
     
-    # Get SMILES from dataset
-    dataset_smiles = set(adata.obs[smiles_key])
+    # Build a set of SMILES from the dataset, splitting combined entries
+    dataset_smiles_expanded = set()
+    for raw_smile in adata.obs[smiles_key]:
+        if ".." in raw_smile:
+            # Split and add each sub-SMILES
+            for single_smile in raw_smile.split(".."):
+                dataset_smiles_expanded.add(single_smile)
+        else:
+            dataset_smiles_expanded.add(raw_smile)
+
+    # Now compare these expanded SMILES against your embedding index
     embedding_smiles = set(embedding_df.index)
     
     # Find missing SMILES
-    missing_smiles = dataset_smiles - embedding_smiles
-    
+    missing_smiles = dataset_smiles_expanded - embedding_smiles
     if missing_smiles:
         logger.error(f"Found {len(missing_smiles)} SMILES in dataset that are missing from embeddings:")
         for smile in list(missing_smiles)[:10]:  # Show first 10
@@ -194,12 +198,13 @@ def validate(embedding_df, adata, smiles_key='SMILES'):
             logger.error("  ...")
         raise ValueError("Embeddings are missing some SMILES from dataset")
     
-    logger.info(f"Validation successful! All {len(dataset_smiles)} dataset SMILES have embeddings")
+    logger.info(f"Validation successful! All combined SMILES are accounted for.")
     
-    # Additional statistics
-    extra_smiles = embedding_smiles - dataset_smiles
+    # Optional: note any extra SMILES that are in embeddings but not in the dataset
+    extra_smiles = embedding_smiles - dataset_smiles_expanded
     if extra_smiles:
         logger.info(f"Note: Embeddings contain {len(extra_smiles)} additional SMILES not in dataset")
+
 
 def compute_rdkit_embeddings(h5ad_path, output_path=None, smiles_key='SMILES', skip_variance_filter=False):
     """

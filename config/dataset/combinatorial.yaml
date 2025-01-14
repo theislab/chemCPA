@@ -1,0 +1,9 @@
+perturbation_key: condition
+pert_category: cov_drug_dose
+dose_key: dose_value
+covariate_keys: cell_type
+smiles_key: smiles_rdkit
+use_drugs_idx: False
+split_key: split
+dataset_path: project_folder/datasets/combo_sciplex_prep_hvg_filtered.h5ad
+degs_key: rank_genes_groups_cov 

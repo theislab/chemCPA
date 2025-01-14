@@ -197,10 +197,13 @@ def _ensure_cpa_binaries():
     """Internal helper to ensure CPA binaries are downloaded and extracted."""
     dataset_key = "cpa_binaries"
     tar_path = get_dataset_path(DATASETS_INFO[dataset_key]["relative_path"])
-    # Since we extract to PROJECT_FOLDER (due to extract_to: "."), 
-    # we should return PROJECT_FOLDER
-    if not os.path.exists(PROJECT_FOLDER):
+    
+    sciplex_path = os.path.join(PROJECT_FOLDER, 'datasets', 'sciplex_raw_chunk_0.h5ad')
+    norman_path = os.path.join(PROJECT_FOLDER, 'datasets', 'norman.h5ad')
+    
+    if not os.path.exists(sciplex_path) or not os.path.exists(norman_path):
         ensure_dataset(dataset_key)
+    
     return PROJECT_FOLDER
 
 
