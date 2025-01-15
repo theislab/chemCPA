@@ -1,0 +1,47 @@
+name: chemCPA
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.9
+  - adjusttext
+  - matplotlib
+  - numpy
+  - pandas
+  - scanpy
+  - scipy
+  - seaborn
+  - scikit-learn
+  - submitit
+  - jupyter
+  - jupytext
+  - pytorch::pytorch=1.12.1
+  - cudatoolkit=11.3
+  - lightning
+  - torchmetrics
+  - h5py
+  - dglteam::dgl-cuda11.3
+  - deepchem
+  - rdkit=2021.09.2
+  - pytest
+  - pre-commit
+  - seml
+  - py-spy
+  - fastparquet
+  - wandb
+  - hydra-core
+  # UMAP
+  - umap-learn
+  - datashader
+  - bokeh
+  - holoviews
+  - colorcet
+  - scikit-image
+  - pip
+  - pip:
+      - pyarrow
+      - tensorflow
+      - dgllife
+      - scgen
+      - wandb
