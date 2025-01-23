@@ -23,7 +23,7 @@ import embeddings.rdkit.embedding_rdkit as embedding_rdkit
 
 # Define the datasets to process with their corresponding SMILES keys
 datasets = [
-    #('lincs_smiles.h5ad', 'SMILES'),
+    ('lincs_smiles.h5ad', 'SMILES'),
     ('lincs_full_smiles.h5ad', 'canonical_smiles'),  # Changed SMILES key to lowercase
     #('sciplex_complete.h5ad', 'SMILES'),
     #('adata_MCF7.h5ad', 'SMILES'),
@@ -32,19 +32,19 @@ datasets = [
     #('adata_K562_lincs_genes.h5ad', 'SMILES'),
     #('adata_A549.h5ad', 'SMILES'),
     #('adata_A549_lincs_genes.h5ad', 'SMILES'),
-    ('sciplex_complete_subset_lincs_genes_v2.h5ad', 'SMILES'),
+    #('sciplex_complete_subset_lincs_genes_v2.h5ad', 'SMILES'),
     #('sciplex_complete_middle_subset_v2.h5ad', 'SMILES'),
     #('sciplex_complete_middle_subset_lincs_genes_v2.h5ad', 'SMILES'),
-    #('sciplex_complete_v2.h5ad', 'SMILES'),
-    #('sciplex_complete_lincs_genes_v2.h5ad', 'SMILES'),
-    ('combo_sciplex_prep_hvg_filtered.h5ad', 'smiles_rdkit')  # Added combinatorial dataset
+    ('sciplex_complete_v2.h5ad', 'SMILES'),
+    ('sciplex_complete_lincs_genes_v2.h5ad', 'SMILES')
+    #('combo_sciplex_prep_hvg_filtered.h5ad', 'smiles_rdkit')
 ]
 
 # Define desired embedding dimension
 FIXED_EMBEDDING_DIM = 200  # or whatever dimension you want
 
 # Define whether to skip variance filtering to keep dimensions consistent
-SKIP_VARIANCE_FILTER = True  # Set this to True to keep all dimensions
+SKIP_VARIANCE_FILTER = False  # Set this to True to keep all dimensions
 
 print("\nComputing and analyzing embeddings:")
 print(f"Using fixed embedding dimension: {FIXED_EMBEDDING_DIM}")

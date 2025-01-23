@@ -70,8 +70,8 @@ with suppress_output():
     sc.logging.print_header()
     warnings.filterwarnings('ignore')
 
-%load_ext autoreload
-%autoreload 2
+#%load_ext autoreload
+#%autoreload 2
 
 # ## Load data
 
@@ -146,4 +146,5 @@ sc.write(fname, adata_sciplex)
 
 # Save LINCS with combinatorial sciplex genes
 fname_lincs = PROJECT_DIR/'datasets'/'lincs_full_smiles_combo_sciplex_genes.h5ad'
+
 sc.write(fname_lincs, adata_lincs) 

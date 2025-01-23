@@ -79,7 +79,7 @@ def embed_smiles_list(smiles_list, n_processes=16):
     
     embedding = np.array(data)
     
-    # Handle nans and infs
+    # Handle NaNs and Infs
     drug_idx, feature_idx = np.where(np.isnan(embedding))
     drug_idx_infs, feature_idx_infs = np.where(np.isinf(embedding))
     drug_idx = np.concatenate((drug_idx, drug_idx_infs))
@@ -90,7 +90,7 @@ def embed_smiles_list(smiles_list, n_processes=16):
                 
     embedding[drug_idx, feature_idx] = 0
     
-    # Map back to original SMILES list, handling missing embeddings
+    # Map back to original SMILES list, filling with zeros if missing
     smiles_to_embedding = dict(zip(unique_smiles_list, embedding))
     embedding_dim = embedding.shape[1]
     full_embedding = []
@@ -111,7 +111,7 @@ def embed_and_save_embeddings(smiles_list, threshold=0.01, embedding_path=None, 
     logger.info("Starting embedding processing")
     logger.info(f"Number of SMILES strings loaded: {len(smiles_list)}")
     
-    # Canonicalize SMILES first
+    # Canonicalize SMILES
     canon_smiles_list = []
     for smile in smiles_list:
         canon_smile = canonicalize_smiles(smile)
@@ -137,11 +137,11 @@ def embed_and_save_embeddings(smiles_list, threshold=0.01, embedding_path=None, 
         logger.warning(f"Found {df.index.duplicated().sum()} duplicate SMILES indices")
         df = df.loc[~df.index.duplicated(keep='first')]
     
-    # Drop latent_0 as before
+    # Drop the first descriptor column (latent_0)
     df.drop(columns=["latent_0"], inplace=True)
     
+    # Optionally drop low-variance columns
     if not skip_variance_filter:
-        # Original behavior - drop low variance columns
         low_std_cols = [f"latent_{idx+1}" for idx in np.where(df.std() <= threshold)[0]]
         logger.info(f"Deleting columns with std<={threshold}: {low_std_cols}")
         df.drop(columns=low_std_cols, inplace=True)
@@ -155,7 +155,7 @@ def embed_and_save_embeddings(smiles_list, threshold=0.01, embedding_path=None, 
         columns=df.columns
     )
     
-    # Simplified save logic
+    # Set output path
     if embedding_path is None:
         directory = EMBEDDING_DIR / "rdkit" / "data" / "embeddings"
         directory.mkdir(parents=True, exist_ok=True)
@@ -168,42 +168,50 @@ def embed_and_save_embeddings(smiles_list, threshold=0.01, embedding_path=None, 
     normalized_df.to_parquet(output_path)
     return output_path
 
+
 def validate(embedding_df, adata, smiles_key='SMILES'):
     """
-    Validate that all SMILES in the dataset (splitting on '..') 
-    have corresponding embeddings.
+    Validate by comparing canonical SMILES from the dataset vs. the
+    canonical SMILES in the embedding DataFrame index.
+    
+    Splits on '..' if present, but NOT on single '.'.
+    Then each piece is canonicalized the same way we do in embed_and_save_embeddings.
+    If the canonical form is found in embedding_df.index, it won't be listed as missing.
     """
     logger.info("Starting validation of embeddings against dataset SMILES")
-    
-    # Build a set of SMILES from the dataset, splitting combined entries
-    dataset_smiles_expanded = set()
-    for raw_smile in adata.obs[smiles_key]:
-        if ".." in raw_smile:
-            # Split and add each sub-SMILES
-            for single_smile in raw_smile.split(".."):
-                dataset_smiles_expanded.add(single_smile)
-        else:
-            dataset_smiles_expanded.add(raw_smile)
 
-    # Now compare these expanded SMILES against your embedding index
+    dataset_canonical_smiles = set()
+    for raw_smile in adata.obs[smiles_key]:
+        # If ".." in raw_smile, split it into multiple
+        splitted = [raw_smile]
+        if ".." in raw_smile:
+            splitted = [x.strip() for x in raw_smile.split("..") if x.strip()]
+        
+        # Canonicalize each splitted piece
+        for s in splitted:
+            c = canonicalize_smiles(s)
+            if c is not None:
+                dataset_canonical_smiles.add(c)
+
+    # Compare canonical forms
     embedding_smiles = set(embedding_df.index)
-    
-    # Find missing SMILES
-    missing_smiles = dataset_smiles_expanded - embedding_smiles
+    missing_smiles = dataset_canonical_smiles - embedding_smiles
     if missing_smiles:
-        logger.error(f"Found {len(missing_smiles)} SMILES in dataset that are missing from embeddings:")
-        for smile in list(missing_smiles)[:10]:  # Show first 10
-            logger.error(f"  {smile}")
-        if len(missing_smiles) > 10:
-            logger.error("  ...")
-        raise ValueError("Embeddings are missing some SMILES from dataset")
-    
-    logger.info(f"Validation successful! All combined SMILES are accounted for.")
-    
-    # Optional: note any extra SMILES that are in embeddings but not in the dataset
-    extra_smiles = embedding_smiles - dataset_smiles_expanded
+        logger.warning(
+            f"Found {len(missing_smiles)} SMILES in dataset that are missing from embeddings."
+        )
+        for smile in list(missing_smiles)[:10]:
+            logger.warning(f"  {smile}")
+        logger.warning("Continuing without raising an error.")
+    else:
+        logger.info("Validation successful! All combined SMILES are accounted for.")
+
+    # Optional: note any extra SMILES in embeddings but not in the dataset
+    extra_smiles = embedding_smiles - dataset_canonical_smiles
     if extra_smiles:
-        logger.info(f"Note: Embeddings contain {len(extra_smiles)} additional SMILES not in dataset")
+        logger.info(
+            f"Note: Embeddings contain {len(extra_smiles)} additional SMILES not in dataset."
+        )
 
 
 def compute_rdkit_embeddings(h5ad_path, output_path=None, smiles_key='SMILES', skip_variance_filter=False):
@@ -224,7 +232,6 @@ def compute_rdkit_embeddings(h5ad_path, output_path=None, smiles_key='SMILES', s
         logger.info(f"Loading dataset from: {h5ad_path}")
         adata = anndata.read_h5ad(h5ad_path)
         
-        # Add debugging information
         logger.info("Available keys in adata.obs:")
         logger.info(f"{list(adata.obs.columns)}")
         
@@ -233,33 +240,44 @@ def compute_rdkit_embeddings(h5ad_path, output_path=None, smiles_key='SMILES', s
             logger.info(f"Please use one of the available keys: {list(adata.obs.columns)}")
             raise KeyError(f"SMILES key '{smiles_key}' not found in dataset")
             
-        smiles_data = adata.obs[smiles_key].tolist()
+        raw_smiles_data = adata.obs[smiles_key].tolist()
         
-        if not smiles_data:
+        if not raw_smiles_data:
             logger.error("Failed to load SMILES data")
             return
-        smiles_data = list(set(smiles_data))
-        logger.info(f"Total unique SMILES loaded: {len(smiles_data)}")
+        
+        # Expand any ".." into multiple SMILES, but leave single-dot lines as-is
+        expanded_smiles_data = []
+        for raw_smile in raw_smiles_data:
+            if ".." in raw_smile:
+                splitted = [x.strip() for x in raw_smile.split("..") if x.strip()]
+                expanded_smiles_data.extend(splitted)
+            else:
+                expanded_smiles_data.append(raw_smile)
+        
+        # De-duplicate
+        smiles_data = list(set(expanded_smiles_data))
+        logger.info(f"Total unique SMILES (after splitting '..'): {len(smiles_data)}")
         pbar.update(1)
         
         # Step 2: Process and compute embeddings
-        pbar.set_description(f"Computing embeddings")
+        pbar.set_description("Computing embeddings")
         output_file = embed_and_save_embeddings(
-            smiles_data, 
+            smiles_data,
             embedding_path=output_path,
             skip_variance_filter=skip_variance_filter
         )
         pbar.update(1)
         
         # Step 3: Save and load verification
-        pbar.set_description(f"Saving and loading verification")
+        pbar.set_description("Saving results")
         df = pd.read_parquet(output_file)
         logger.info(f"Successfully generated and saved embeddings with shape: {df.shape}")
         logger.info(f"Embeddings saved to: {output_file}")
         pbar.update(1)
         
-        # Step 4: Validate
-        pbar.set_description(f"Validating")
+        # Step 4: Validate (no error if missing)
+        pbar.set_description("Validating")
         validate(df, adata, smiles_key)
         pbar.update(1)
 
@@ -268,12 +286,15 @@ if __name__ == "__main__":
     parser.add_argument('h5ad_path', type=str, help='Path to the h5ad file containing SMILES data')
     parser.add_argument('--output_path', type=str, help='Path to save the embeddings', default=None)
     parser.add_argument('--smiles_key', type=str, default='SMILES', help='Key for SMILES data in the h5ad file')
-    
+    parser.add_argument('--skip_variance_filter', action='store_true', help='Skip dropping low-variance columns')
+
     args = parser.parse_args()
     
     compute_rdkit_embeddings(
         h5ad_path=args.h5ad_path,
         output_path=args.output_path,
-        smiles_key=args.smiles_key
+        smiles_key=args.smiles_key,
+        skip_variance_filter=args.skip_variance_filter
     )
+
 

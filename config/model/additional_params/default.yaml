@@ -1,4 +1,4 @@
 patience: 50 # patience for early stopping. Effective epochs: patience * checkpoint_freq.
 decoder_activation: ReLU # last layer of the decoder 'linear' or 'ReLU'
-doser_type: mlp # non-linearity for doser function
+doser_type: amortized # non-linearity for doser function
 seed: 1337

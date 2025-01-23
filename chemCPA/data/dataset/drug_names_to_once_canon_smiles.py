@@ -62,3 +62,4 @@ def drug_names_to_once_canon_smiles(
 
     return result
 
+

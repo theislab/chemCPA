@@ -62,8 +62,8 @@ import pandas as pd
 import scanpy as sc
 from rdkit import Chem
 from chemCPA.paths import DATA_DIR, PROJECT_DIR
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import os
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import sys
 sys.path.append(root_dir)
 import raw_data.datasets as datasets

@@ -1,10 +1,10 @@
 defaults: 
   - _self_
-  - model: finetune_combinatorial 
-  - dataset: combinatorial 
+  - model:  finetune_2000_genes 
+  - dataset: sciplex_2000_genes 
   - training: default 
   - wandb: default
   - hydra: default
 
 profiling.run_profiler: False
-profiling.outdir: "./" 
+profiling.outdir: "./"

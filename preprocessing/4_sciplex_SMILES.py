@@ -85,7 +85,7 @@ with suppress_output():
 
 # +
 # Switch between 977 (True) and 2000 (False) gene set 
-LINCS_GENES = True 
+LINCS_GENES = False 
 
 adata_cpa = sc.read(DATA_DIR/f"sciplex3_{'matched_genes_lincs' if not LINCS_GENES else 'lincs_genes'}.h5ad") 
 adata_cpi = sc.read(datasets.trapnell_final_v7())

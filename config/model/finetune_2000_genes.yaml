@@ -5,7 +5,7 @@ defaults:
 
 enable_cpa_mode: False
 load_pretrained: True
-append_ae_layer: False
+append_ae_layer: True 
 pretrained_model_path: ${training.save_dir}
 pretrained_model_hashes: 
   model: omon82fh   

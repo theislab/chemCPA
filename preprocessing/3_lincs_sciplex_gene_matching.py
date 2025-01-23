@@ -41,7 +41,7 @@
 #
 # 1. **Gene ID Assignment**: SciPlex gene names are standardized to Ensembl gene IDs by extracting the primary identifier and using either **sfaira** or a predefined mapping (`symbols_dict.json`). The LINCS dataset is already standardized.
 #
-# 2. **Identifying Shared Genes**: We then compute the intersection of the gene IDs (`gene_id`) inside LINCS and SciPlex. Both datasets are then filtered to retain only these shared genes.
+# 2. **Identifying Shared Genes**: We then compute the intersection of the gene IDs (`gene_id`) inside LINCS and SciPlex. Both datasets are then filtered to ggvG$retain only these shared genes.
 #
 # 3. **Reindexing**: The LINCS dataset is reindexed to match the order of genes in the SciPlex dataset.
 #
@@ -62,7 +62,7 @@ from chemCPA.paths import DATA_DIR, PROJECT_DIR
 pd.set_option('display.max_columns', 100)
 
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(PROJECT_DIR)
+sys.path.append(root_dir)
 import raw_data.datasets as datasets
 import logging
 
@@ -486,6 +486,13 @@ adata_lincs.var_names
 
 adata_sciplex.var_names
 
+
+# Print some stats about the gene matching
+print("\nGene matching statistics:")
+print(f"Number of genes in LINCS: {adata_lincs.shape[1]}")
+print(f"Number of genes in combinatorial sciplex: {adata_sciplex.shape[1]}")
+print(f"Number of shared genes: {sum(adata_sciplex.var.in_lincs)}")
+
 # ## Save adata objects with shared genes only
 # Index of lincs has also been reordered accordingly
 
@@ -502,5 +509,6 @@ fname_lincs = PROJECT_DIR/'datasets'/'lincs_full_smiles_sciplex_genes.h5ad'
 
 sc.write(fname_lincs, adata_lincs)
 # -
+
 
 
