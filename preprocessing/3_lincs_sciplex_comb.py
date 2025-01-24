@@ -16,50 +16,43 @@
 #
 # **Requires**
 # * `'lincs_full_smiles.h5ad'`
-# * `'combo_sciplex_prep_hvg_filtered.h5ad'`
+# * `'sciplex_combinatorial.h5ad'` (previously `'combo_sciplex_prep_hvg_filtered.h5ad'`)
 #
 # **Output**
 # * `'combo_sciplex_matched_genes_lincs.h5ad'`
-# * `lincs`: `'combo_sciplex_lincs_genes.h5ad'`
-# * `sciplex`: `'lincs_full_smiles_combo_sciplex_genes.h5ad'`
+# * `'combo_sciplex_lincs_genes.h5ad'`
+# * `'lincs_full_smiles_combo_sciplex_genes.h5ad'`
 #
 # ## Description 
 #
 # The goal of this notebook is to match and merge genes between the LINCS and combinatorial SciPlex datasets, resulting in the creation of three new datasets:
 #
-# ### Created datasets
-#
-# - **`combo_sciplex_matched_genes_lincs.h5ad`**: Contains **combinatorial SciPlex observations**. **Genes are limited to the intersection** of the genes found in both LINCS and SciPlex datasets.
-#
-# - **`combo_sciplex_lincs_genes.h5ad`**: Contains **combinatorial SciPlex data**, but filtered to include **only the genes that are shared with the LINCS dataset**.
-#
-# - **`lincs_full_smiles_combo_sciplex_genes.h5ad`**: Contains **LINCS data**, but filtered to include **only the genes that are shared with the combinatorial SciPlex dataset**.
-#
-# To create these datasets, we need to match the genes between the two datasets, which is done as follows:
+# - **`combo_sciplex_matched_genes_lincs.h5ad`**: Contains **combinatorial SciPlex observations**. Genes limited to the intersection of genes in both LINCS and SciPlex.
+# - **`combo_sciplex_lincs_genes.h5ad`**: Same combinatorial SciPlex data, but only the shared genes.
+# - **`lincs_full_smiles_combo_sciplex_genes.h5ad`**: LINCS data filtered to those shared genes as well.
 #
 # ### Gene Matching
 #
 # 1. **Gene ID Assignment**: SciPlex gene names are standardized to Ensembl gene IDs by extracting the primary identifier and using either **sfaira** or a predefined mapping (`symbols_dict.json`). The LINCS dataset is already standardized.
-#
-# 2. **Identifying Shared Genes**: We then compute the intersection of the gene IDs (`gene_id`) inside LINCS and SciPlex. Both datasets are then filtered to retain only these shared genes.
-#
+# 2. **Identifying Shared Genes**: We then compute the intersection of the gene IDs (`gene_id`) inside LINCS and SciPlex.
 # 3. **Reindexing**: The LINCS dataset is reindexed to match the order of genes in the SciPlex dataset.
 
-import os
-import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sfaira
 import warnings
-os.getcwd()
+import logging
 
 from chemCPA.paths import DATA_DIR, PROJECT_DIR
-pd.set_option('display.max_columns', 100)
 
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath('')))
-sys.path.append(PROJECT_DIR)
-import logging
+# Ensure we can import from the project directory
+import os
+import sys
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(root_dir)
+
+pd.set_option('display.max_columns', 100)
 
 logging.basicConfig(level=logging.INFO)
 from notebook_utils import suppress_output
@@ -70,81 +63,137 @@ with suppress_output():
     sc.logging.print_header()
     warnings.filterwarnings('ignore')
 
-#%load_ext autoreload
-#%autoreload 2
+# If using within a Jupyter environment:
+# %load_ext autoreload
+# %autoreload 2
 
-# ## Load data
+############################################################
+# 1) Load LINCS
+############################################################
+lincs_path = DATA_DIR / 'lincs_full_smiles.h5ad'
+logging.info(f"Loading LINCS from {lincs_path}")
+adata_lincs = sc.read(lincs_path)
+logging.info("LINCS data loaded")
 
-# Load lincs
-adata_lincs = sc.read(DATA_DIR/'lincs_full_smiles.h5ad')
+############################################################
+# 2) Load combinatorial sciplex dataset
+#    from raw_data.datasets import sciplex_combinatorial
+#    ensuring it downloads if missing
+############################################################
+from raw_data.datasets import sciplex_combinatorial
 
-# Load combinatorial sciplex
-logging.info("Loading combinatorial sciplex data")
-adata_sciplex = sc.read(DATA_DIR/'combo_sciplex_prep_hvg_filtered.h5ad')
+sciplex_path = sciplex_combinatorial()  # This triggers a download if not present
+logging.info(f"Loading combinatorial sciplex data from {sciplex_path}")
+adata_sciplex = sc.read(sciplex_path)
 logging.info("Combinatorial sciplex data loaded")
 
-# Add gene_id to sciplex if not already present
+# Add gene_id if missing
 if 'gene_id' not in adata_sciplex.var:
     adata_sciplex.var['gene_id'] = adata_sciplex.var.index.str.split('.').str[0]
 
-# ### Get gene ids from symbols via sfaira
-
-# Load genome container with sfaira
-try: 
-    # load json file with symbol to id mapping
+############################################################
+# 3) Map gene symbols to Ensembl IDs (if needed)
+############################################################
+try:
     import json
-    with open(DATA_DIR/ 'symbols_dict.json') as json_file:
+    with open(DATA_DIR / 'symbols_dict.json') as json_file:
         symbols_dict = json.load(json_file)
-except: 
-    logging.info("No symbols_dict.json found, falling back to sfaira")
-    genome_container = sfaira.versions.genomes.GenomeContainer(organism="homo_sapiens", release="82")
+except FileNotFoundError:
+    logging.info("No symbols_dict.json found, falling back to sfaira.")
+    genome_container = sfaira.versions.genomes.GenomeContainer(
+        organism="homo_sapiens", release="82"
+    )
     symbols_dict = genome_container.symbol_to_id_dict
-    # Extend symbols dict with unknown symbol
-    symbols_dict.update({'PLSCR3':'ENSG00000187838'})
+    symbols_dict.update({'PLSCR3':'ENSG00000187838'})  # Example addition
 
-# Identify genes that are shared between lincs and combinatorial sciplex
-
-# For lincs
+# Convert var_names in LINCS to gene_id if not already done
 adata_lincs.var['gene_id'] = adata_lincs.var_names.map(symbols_dict)
-adata_lincs.var['in_sciplex'] = adata_lincs.var.gene_id.isin(adata_sciplex.var.gene_id)
 
-# For combinatorial sciplex
-adata_sciplex.var['in_lincs'] = adata_sciplex.var.gene_id.isin(adata_lincs.var.gene_id)
+############################################################
+# 4) Identify shared genes
+############################################################
+adata_lincs.var['in_sciplex'] = adata_lincs.var['gene_id'].isin(adata_sciplex.var['gene_id'])
+adata_sciplex.var['in_lincs'] = adata_sciplex.var['gene_id'].isin(adata_lincs.var['gene_id'])
 
-# ## Preprocess sciplex dataset if needed
-# Note: The combinatorial dataset is already preprocessed, so we skip preprocessing steps
-
-# Reindex the datasets to match gene order
-sciplex_ids = pd.Index(adata_sciplex.var.gene_id)
-lincs_idx = [sciplex_ids.get_loc(_id) for _id in adata_lincs.var.gene_id[adata_lincs.var.in_sciplex]]
-non_lincs_idx = [sciplex_ids.get_loc(_id) for _id in adata_sciplex.var.gene_id if not adata_lincs.var.gene_id.isin([_id]).any()]
+############################################################
+# 5) Reindex sciplex to match gene order
+############################################################
+sciplex_ids = pd.Index(adata_sciplex.var['gene_id'])
+lincs_idx = [sciplex_ids.get_loc(_id) for _id in adata_lincs.var['gene_id'][adata_lincs.var['in_sciplex']]]
+non_lincs_idx = [
+    sciplex_ids.get_loc(_id)
+    for _id in adata_sciplex.var['gene_id']
+    if not adata_lincs.var['gene_id'].isin([_id]).any()
+]
 lincs_idx.extend(non_lincs_idx)
-
 adata_sciplex = adata_sciplex[:, lincs_idx].copy()
 
-# Save the matched genes dataset
-fname = PROJECT_DIR/'datasets'/'combo_sciplex_matched_genes_lincs.h5ad'
-sc.write(fname, adata_sciplex)
+############################################################
+# 6) Save combined, matched dataset
+############################################################
+fname_matched = PROJECT_DIR / 'datasets' / 'combo_sciplex_matched_genes_lincs.h5ad'
+sc.write(fname_matched, adata_sciplex)
+logging.info(f"Matched genes dataset saved to {fname_matched}")
 
-# Check that it worked
-sc.read(fname)
+############################################################
+# 7) Filter each dataset to *only* the shared genes
+############################################################
+adata_lincs_filtered = adata_lincs[:, adata_lincs.var['in_sciplex']].copy()
+adata_sciplex_filtered = adata_sciplex[:, adata_sciplex.var['in_lincs']].copy()
 
-# ## Subselect to shared only shared genes
-adata_lincs = adata_lincs[:, adata_lincs.var.in_sciplex].copy() 
-adata_sciplex = adata_sciplex[:, adata_sciplex.var.in_lincs].copy()
+logging.info("Filtering each dataset to only the shared genes.")
 
-# Print some stats about the gene matching
+############################################################
+# 8) Print gene matching stats
+############################################################
+shared_count = adata_sciplex_filtered.var['in_lincs'].sum()
 print("\nGene matching statistics:")
-print(f"Number of genes in LINCS: {adata_lincs.shape[1]}")
-print(f"Number of genes in combinatorial sciplex: {adata_sciplex.shape[1]}")
-print(f"Number of shared genes: {sum(adata_sciplex.var.in_lincs)}")
+print(f"Number of genes in LINCS: {adata_lincs_filtered.shape[1]}")
+print(f"Number of genes in combinatorial sciplex: {adata_sciplex_filtered.shape[1]}")
+print(f"Number of shared genes: {shared_count}")
 
-# ## Save adata objects with shared genes only
-# Save combinatorial sciplex with LINCS genes
-fname = PROJECT_DIR/'datasets'/'combo_sciplex_lincs_genes.h5ad'
-sc.write(fname, adata_sciplex)
+############################################################
+# 9) Save final output files
+############################################################
+fname_sciplex = PROJECT_DIR / 'datasets' / 'combo_sciplex_lincs_genes.h5ad'
+sc.write(fname_sciplex, adata_sciplex_filtered)
+logging.info(f"Combinatorial SciPlex (shared genes) saved to {fname_sciplex}")
 
-# Save LINCS with combinatorial sciplex genes
-fname_lincs = PROJECT_DIR/'datasets'/'lincs_full_smiles_combo_sciplex_genes.h5ad'
+fname_lincs = PROJECT_DIR / 'datasets' / 'lincs_full_smiles_combo_sciplex_genes.h5ad'
+sc.write(fname_lincs, adata_lincs_filtered)
+logging.info(f"LINCS (shared genes) saved to {fname_lincs}")
 
-sc.write(fname_lincs, adata_lincs) 
+############################################################
+# 10) Log summary info for all three outputs
+############################################################
+logging.info("----- Final Dataset Summaries -----")
+
+# 1) combo_sciplex_matched_genes_lincs.h5ad
+logging.info("Summary of combo_sciplex_matched_genes_lincs.h5ad:")
+logging.info(f"Path: {fname_matched}")
+logging.info(f"Shape: {adata_sciplex.shape}")
+logging.info(f"Observations (cells): {adata_sciplex.n_obs}")
+logging.info(f"Genes (columns): {adata_sciplex.n_vars}")
+if 'gene_id' in adata_sciplex.var:
+    logging.info(f"Unique gene_ids: {adata_sciplex.var['gene_id'].nunique()}")
+
+# 2) combo_sciplex_lincs_genes.h5ad
+logging.info("Summary of combo_sciplex_lincs_genes.h5ad:")
+logging.info(f"Path: {fname_sciplex}")
+logging.info(f"Shape: {adata_sciplex_filtered.shape}")
+logging.info(f"Observations (cells): {adata_sciplex_filtered.n_obs}")
+logging.info(f"Genes (columns): {adata_sciplex_filtered.n_vars}")
+if 'gene_id' in adata_sciplex_filtered.var:
+    logging.info(f"Unique gene_ids: {adata_sciplex_filtered.var['gene_id'].nunique()}")
+
+# 3) lincs_full_smiles_combo_sciplex_genes.h5ad
+logging.info("Summary of lincs_full_smiles_combo_sciplex_genes.h5ad:")
+logging.info(f"Path: {fname_lincs}")
+logging.info(f"Shape: {adata_lincs_filtered.shape}")
+logging.info(f"Observations (cells): {adata_lincs_filtered.n_obs}")
+logging.info(f"Genes (columns): {adata_lincs_filtered.n_vars}")
+if 'gene_id' in adata_lincs_filtered.var:
+    logging.info(f"Unique gene_ids: {adata_lincs_filtered.var['gene_id'].nunique()}")
+
+logging.info("----- End of Summaries -----")
+

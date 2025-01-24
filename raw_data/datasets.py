@@ -1,5 +1,3 @@
-# datasets.py
-
 import os
 # Forgive me for this
 try:
@@ -36,7 +34,6 @@ DATASETS_INFO = {
         "is_tar": False,
         "use_gdown": True,
     },
-    
     "lincs_full": {
         "url": "https://f003.backblazeb2.com/file/chemCPA-datasets/lincs_full.h5ad.gz",
         "relative_path": "datasets/lincs_full.h5ad",
@@ -73,6 +70,13 @@ DATASETS_INFO = {
         "is_tar": False,
         "use_gdown": True,
     },
+    "sciplex_combinatorial": {
+        "url": "https://drive.google.com/uc?export=download&id=1RRV0_qYKGTvD3oCklKfoZQFYqKJy4l6t",
+        "relative_path": "datasets/sciplex_combinatorial.h5ad",
+        "is_gzip": False,
+        "is_tar": False,
+        "use_gdown": True,
+    },
 }
 
 
@@ -88,7 +92,6 @@ def ensure_dataset(dataset_key):
     relative_path = dataset["relative_path"]
     full_path = get_dataset_path(relative_path)
 
-    # Add check here
     if not os.path.exists(full_path):
         print(f"\n❌ Dataset '{dataset_key}' not found at {full_path}. Prompting download.")
 
@@ -97,16 +100,12 @@ def ensure_dataset(dataset_key):
     use_gdown = dataset["use_gdown"]
     extract_to = dataset.get("extract_to")
 
-    # Ensure the directory exists
     os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-    # Download and extract based on file type
     if is_gzip:
         download_and_extract_gzip(url, full_path)
     elif is_tar:
-        # Download tar file if it doesn't exist
         download_file(url, full_path, use_gdown=use_gdown)
-        # Extract if the tar file exists
         if os.path.exists(full_path):
             if extract_to is not None:
                 if os.path.isabs(extract_to):
@@ -115,7 +114,6 @@ def ensure_dataset(dataset_key):
                     extract_dir = os.path.join(PROJECT_FOLDER, extract_to)
             else:
                 extract_dir = os.path.dirname(full_path)
-            # Ensure the extraction directory exists
             os.makedirs(extract_dir, exist_ok=True)
             extract_tar(full_path, extract_dir)
     else:
@@ -124,15 +122,12 @@ def ensure_dataset(dataset_key):
     return full_path
 
 
-
 def adata_biolord_split_30():
     """Return the path to the adata_biolord_split_30 dataset."""
     dataset_key = "adata_biolord_split_30"
     dataset_path = get_dataset_path(DATASETS_INFO[dataset_key]["relative_path"])
     if not os.path.exists(dataset_path):
         ensure_dataset(dataset_key)
-    # Reading logic to be added later
-    # For now, return the path
     return dataset_path
 
 
@@ -142,7 +137,6 @@ def rdkit2D_embedding_biolord():
     dataset_path = get_dataset_path(DATASETS_INFO[dataset_key]["relative_path"])
     if not os.path.exists(dataset_path):
         ensure_dataset(dataset_key)
-    # Reading logic to be added later
     return dataset_path
 
 
@@ -152,7 +146,6 @@ def lincs_full():
     dataset_path = get_dataset_path(DATASETS_INFO[dataset_key]["relative_path"])
     if not os.path.exists(dataset_path):
         ensure_dataset(dataset_key)
-    # Reading logic to be added later
     return dataset_path
 
 
@@ -161,10 +154,8 @@ def cpa_binaries():
     dataset_key = "cpa_binaries"
     tar_path = get_dataset_path(DATASETS_INFO[dataset_key]["relative_path"])
     output_dir = os.path.dirname(tar_path)
-    # The tar file would have been extracted to output_dir
     if not os.path.exists(output_dir):
         ensure_dataset(dataset_key)
-    # Reading logic to be added later
     return output_dir
 
 
@@ -207,8 +198,6 @@ def _ensure_cpa_binaries():
     return PROJECT_FOLDER
 
 
-
-
 def sciplex():
     """Return a list of paths to all ScipLex dataset chunks.
     
@@ -220,8 +209,10 @@ def sciplex():
     for i in range(5):
         chunk_path = os.path.join(base_dir, 'datasets', f'sciplex_raw_chunk_{i}.h5ad')
         if not os.path.exists(chunk_path):
-            raise FileNotFoundError(f"ScipLex chunk {i} not found at {chunk_path}. "
-                                  "The CPA binaries might be corrupted.")
+            raise FileNotFoundError(
+                f"ScipLex chunk {i} not found at {chunk_path}. "
+                "The CPA binaries might be corrupted."
+            )
         chunk_paths.append(chunk_path)
     return chunk_paths
 
@@ -234,14 +225,25 @@ def norman():
     base_dir = _ensure_cpa_binaries()
     dataset_path = os.path.join(base_dir, 'datasets', 'norman.h5ad')
     if not os.path.exists(dataset_path):
-        raise FileNotFoundError(f"Norman dataset not found at {dataset_path}. "
-                              "The CPA binaries might be corrupted.")
+        raise FileNotFoundError(
+            f"Norman dataset not found at {dataset_path}. "
+            "The CPA binaries might be corrupted."
+        )
     return dataset_path
 
 
 def trapnell_final_v7():
     """Return the path to the Trapnell final V7 dataset."""
     dataset_key = "trapnell_final_v7"
+    dataset_path = get_dataset_path(DATASETS_INFO[dataset_key]["relative_path"])
+    if not os.path.exists(dataset_path):
+        ensure_dataset(dataset_key)
+    return dataset_path
+
+
+def sciplex_combinatorial():
+    """Return the path to the sciplex_combinatorial dataset."""
+    dataset_key = "sciplex_combinatorial"
     dataset_path = get_dataset_path(DATASETS_INFO[dataset_key]["relative_path"])
     if not os.path.exists(dataset_path):
         ensure_dataset(dataset_key)
@@ -278,3 +280,4 @@ if __name__ == "__main__":
     else:
         print("Please specify a dataset to download using --dataset or use --list to see available datasets")
         parser.print_help()
+
