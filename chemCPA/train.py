@@ -5,10 +5,12 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 from torchmetrics import R2Score
+from tqdm.auto import tqdm
 
-import chemCPA.data
-from chemCPA.data import SubDataset
+import chemCPA.data.data
+from chemCPA.data.data import SubDataset
 from chemCPA.model import MLP, ComPert
 
 
@@ -41,7 +43,8 @@ def compute_prediction(autoencoder: ComPert, genes, emb_drugs, emb_covs):
     Computes the prediction of a ComPert `autoencoder` and
     directly splits into `mean` and `variance` predictions
     """
-    if autoencoder.use_drugs_idx:
+    # Check if the attribute exists before accessing it
+    if hasattr(autoencoder, 'use_drugs_idx') and autoencoder.use_drugs_idx:
         assert len(emb_drugs) == 2
         genes_pred = autoencoder.predict(
             genes=genes,
@@ -50,9 +53,7 @@ def compute_prediction(autoencoder: ComPert, genes, emb_drugs, emb_covs):
             covariates=emb_covs,
         )[0].detach()
     else:
-        genes_pred = autoencoder.predict(
-            genes=genes, drugs=emb_drugs, covariates=emb_covs
-        )[0].detach()
+        genes_pred = autoencoder.predict(genes=genes, drugs=emb_drugs, covariates=emb_covs)[0].detach()
     dim = genes.size(1)
     mean = genes_pred[:, :dim]
     var = genes_pred[:, dim:]
@@ -70,27 +71,20 @@ def compute_r2(y_true, y_pred):
     return metric.compute().item()
 
 
-def evaluate_logfold_r2(
-    autoencoder: ComPert, ds_treated: SubDataset, ds_ctrl: SubDataset
-):
+def evaluate_logfold_r2(autoencoder: ComPert, ds_treated: SubDataset, ds_ctrl: SubDataset):
     logfold_score = []
     signs_score = []
     # assumes that `pert_categories` where constructed with first covariate type
     cov_type = ds_treated.covariate_keys[0]
     treated_pert_cat_index = pd.Index(ds_treated.pert_categories, dtype="category")
     ctrl_cov_cat_index = pd.Index(ds_ctrl.covariate_names[cov_type], dtype="category")
-    for cell_drug_dose_comb, category_count in zip(
-        *np.unique(ds_treated.pert_categories, return_counts=True)
-    ):
+    for cell_drug_dose_comb, category_count in zip(*np.unique(ds_treated.pert_categories, return_counts=True)):
         # estimate metrics only for reasonably-sized drug/cell-type combos
         if category_count <= 5:
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if (
-            "dmso" in cell_drug_dose_comb.lower()
-            or "control" in cell_drug_dose_comb.lower()
-        ):
+        if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
             continue
 
         covariate = cell_drug_dose_comb.split("_")[0]
@@ -106,9 +100,7 @@ def evaluate_logfold_r2(
         idx_ctrl_all = bool2idx(bool_ctrl_all)
         n_idx_ctrl = len(idx_ctrl_all)
 
-        bool_de = ds_treated.var_names.isin(
-            np.array(ds_treated.de_genes[cell_drug_dose_comb])
-        )
+        bool_de = ds_treated.var_names.isin(np.array(ds_treated.de_genes[cell_drug_dose_comb]))
         idx_de = bool2idx(bool_de)
 
         if n_idx_ctrl == 1:
@@ -117,9 +109,7 @@ def evaluate_logfold_r2(
             )
             continue
 
-        emb_covs = [
-            repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates
-        ]
+        emb_covs = [repeat_n(cov[idx_treated], n_idx_ctrl) for cov in ds_treated.covariates]
         if ds_treated.use_drugs_idx:
             emb_drugs = (
                 repeat_n(ds_treated.drugs_idx[idx_treated], n_idx_ctrl).squeeze(),
@@ -155,7 +145,7 @@ def evaluate_logfold_r2(
     return mean(logfold_score), mean(signs_score)
 
 
-def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
+def evaluate_disentanglement(autoencoder: ComPert, dataloader: DataLoader):
     """
     Given a ComPert model, this function measures the correlation between
     its latent space and 1) a dataset's drug vectors 2) a datasets covariate
@@ -164,24 +154,38 @@ def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
     """
 
     # generate random indices to subselect the dataset
-    print(f"Size of disentanglement testdata: {len(data)}")
-
+    print(f"Size of disentanglement testdata: {len(dataloader)*dataloader.batch_size}")
+    data = dataloader.dataset
     with torch.no_grad():
-        if data.use_drugs_idx:
-            _, _, latent_basal = autoencoder.predict(
-                genes=data.genes,
-                drugs_idx=data.drugs_idx,
-                dosages=data.dosages,
-                covariates=data.covariates,
+        autoencoder.to(autoencoder.device)
+        latent_basal = []
+        for batch in dataloader:
+            genes, drugs_idx, dosages, degs, covariates = (
+                batch[0],
+                batch[1],
+                batch[2],
+                batch[3],
+                batch[4:],
+            )
+
+            _, _, _latents = autoencoder.predict(
+                genes=genes,
+                drugs=None,
+                drugs_idx=drugs_idx,
+                dosages=dosages,
+                covariates=covariates,
                 return_latent_basal=True,
             )
-        else:
-            _, _, latent_basal = autoencoder.predict(
-                genes=data.genes,
-                drugs=data.drugs,
-                covariates=data.covariates,
-                return_latent_basal=True,
-            )
+            _latent_basal = _latents[0]
+            latent_basal.append(_latent_basal)
+        latent_basal = torch.cat(latent_basal, dim=0)
+        # _, _, latent_basal = autoencoder.predict(
+        #     genes=data.genes,
+        #     drugs_idx=data.drugs_idx,
+        #     dosages=data.dosages,
+        #     covariates=data.covariates,
+        #     return_latent_basal=True,
+        # )
 
     mean = latent_basal.mean(dim=0, keepdim=True)
     stddev = latent_basal.std(0, unbiased=False, keepdim=True)
@@ -193,9 +197,7 @@ def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
     def compute_score(labels):
         unique_labels = set(labels)
         label_to_idx = {labels: idx for idx, labels in enumerate(unique_labels)}
-        labels_tensor = torch.tensor(
-            [label_to_idx[label] for label in labels], dtype=torch.long, device="cuda"
-        )
+        labels_tensor = torch.tensor([label_to_idx[label] for label in labels], dtype=torch.long, device="cuda")
         assert normalized_basal.size(0) == len(labels_tensor)
         dataset = torch.utils.data.TensorDataset(normalized_basal, labels_tensor)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
@@ -203,13 +205,11 @@ def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
         # 2 non-linear layers of size <input_dimension>
         # followed by a linear layer.
         disentanglement_classifier = MLP(
-            [normalized_basal.size(1)]
-            + [normalized_basal.size(1) for _ in range(2)]
-            + [len(unique_labels)]
-        ).to(autoencoder.device)
+            [normalized_basal.size(1)] + [normalized_basal.size(1) for _ in range(2)] + [len(unique_labels)]
+        ).to("cuda")
         optimizer = torch.optim.Adam(disentanglement_classifier.parameters(), lr=1e-2)
 
-        for epoch in range(400):
+        for epoch in tqdm(range(400)):
             for X, y in data_loader:
                 pred = disentanglement_classifier(X)
                 loss = criterion(pred, y)
@@ -234,7 +234,7 @@ def evaluate_disentanglement(autoencoder, data: chemCPA.data.Dataset):
         return [pert_score] + cov_scores
 
 
-def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.Tensor):
+def evaluate_r2(model: ComPert, dataset: SubDataset, genes_control: torch.Tensor):
     """
     Measures different quality metrics about an ComPert `autoencoder`, when
     tasked to translate some `genes_control` into each of the drug/covariates
@@ -246,37 +246,50 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
     """
     mean_score, var_score, mean_score_de, var_score_de = [], [], [], []
     n_rows = genes_control.size(0)
-    genes_control = genes_control.to(autoencoder.device)
+    genes_control = genes_control.to(model.device)
 
-    # dataset.pert_categories contains: 'celltype_perturbation_dose' info
+    # Determine the key format by checking the first key in de_genes
+    if len(dataset.de_genes) > 0:
+        sample_key = next(iter(dataset.de_genes))
+        key_parts = len(sample_key.split('_'))
+        use_cell_drug_only = (key_parts == 2)  # True if keys are cell_drug format
+    else:
+        use_cell_drug_only = True  # Default to cell_drug if no keys exist
+
     pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
-    for cell_drug_dose_comb, category_count in zip(
-        *np.unique(dataset.pert_categories, return_counts=True)
-    ):
+    unique_categories, category_counts = np.unique(dataset.pert_categories, return_counts=True)
+    
+    total_combinations = 0
+    missing_combinations = 0
+    missing_keys = set()
+
+    for cell_drug_dose_comb, category_count in zip(unique_categories, category_counts):
         if dataset.perturbation_key is None:
             break
 
-        # estimate metrics only for reasonably-sized drug/cell-type combos
         if category_count <= 5:
             continue
 
-        # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if (
-            "dmso" in cell_drug_dose_comb.lower()
-            or "control" in cell_drug_dose_comb.lower()
-        ):
+        if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
             continue
 
-        # dataset.var_names is the list of gene names
-        # dataset.de_genes is a dict, containing a list of all differentiably-expressed
-        # genes for every cell_drug_dose combination.
-        bool_de = dataset.var_names.isin(
-            np.array(dataset.de_genes[cell_drug_dose_comb])
-        )
-        idx_de = bool2idx(bool_de)
+        # Get the appropriate key based on de_genes format
+        if use_cell_drug_only:
+            lookup_key = '_'.join(cell_drug_dose_comb.split('_')[:2])  # Just cell_drug
+        else:
+            lookup_key = cell_drug_dose_comb  # Full cell_drug_dose
 
+        total_combinations += 1
+        
+        if lookup_key not in dataset.de_genes:
+            missing_combinations += 1
+            missing_keys.add(lookup_key)
+            continue
+
+        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[lookup_key]))
+        
         # need at least two genes to be able to calc r2 score
-        if len(idx_de) < 2:
+        if len(bool_de) < 2:
             continue
 
         bool_category = pert_categories_index.get_loc(cell_drug_dose_comb)
@@ -292,7 +305,7 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         else:
             emb_drugs = repeat_n(dataset.drugs[idx], n_rows)
         mean_pred, var_pred = compute_prediction(
-            autoencoder,
+            model,
             genes_control,
             emb_drugs,
             emb_covs,
@@ -303,16 +316,16 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         y_true = dataset.genes[idx_all, :].to(device="cuda")
 
         # true means and variances
-        yt_m = y_true.mean(dim=0)
-        yt_v = y_true.var(dim=0)
+        y_true_mean = y_true.mean(dim=0)
+        y_true_variance = y_true.var(dim=0)
         # predicted means and variances
-        yp_m = mean_pred.mean(dim=0)
-        yp_v = var_pred.mean(dim=0)
+        y_predicted_mean = mean_pred.mean(dim=0)
+        y_predicted_variance = var_pred.mean(dim=0)
 
-        r2_m = compute_r2(yt_m, yp_m)
-        r2_v = compute_r2(yt_v, yp_v)
-        r2_m_de = compute_r2(yt_m[idx_de], yp_m[idx_de])
-        r2_v_de = compute_r2(yt_v[idx_de], yp_v[idx_de])
+        r2_m = compute_r2(y_true_mean, y_predicted_mean)
+        r2_v = compute_r2(y_true_variance, y_predicted_variance)
+        r2_m_de = compute_r2(y_true_mean[bool_de], y_predicted_mean[bool_de])
+        r2_v_de = compute_r2(y_true_variance[bool_de], y_predicted_variance[bool_de])
 
         # to be investigated
         if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
@@ -322,10 +335,13 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         var_score.append(max(r2_v, 0.0))
         mean_score_de.append(max(r2_m_de, 0.0))
         var_score_de.append(max(r2_v_de, 0.0))
+
+    if missing_combinations > 0:
+        print(f"\nWarning: Missing DE genes for {missing_combinations} out of {total_combinations} combinations")
+        print("Example missing combinations:", list(missing_keys)[:3])
+        
     if len(mean_score) > 0:
-        return [
-            np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]
-        ]
+        return [np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]]
     else:
         return []
 
@@ -344,9 +360,7 @@ def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
     # dataset.pert_categories contains: 'celltype_perturbation_dose' info
     pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
     inf_combinations = set()
-    for cell_drug_dose_comb, category_count in zip(
-        *np.unique(dataset.pert_categories, return_counts=True)
-    ):
+    for cell_drug_dose_comb, category_count in zip(*np.unique(dataset.pert_categories, return_counts=True)):
         if dataset.perturbation_key is None:
             break
 
@@ -355,18 +369,13 @@ def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if (
-            "dmso" in cell_drug_dose_comb.lower()
-            or "control" in cell_drug_dose_comb.lower()
-        ):
+        if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
             continue
 
         # dataset.var_names is the list of gene names
         # dataset.de_genes is a dict, containing a list of all differentiably-expressed
         # genes for every cell_drug_dose combination.
-        bool_de = dataset.var_names.isin(
-            np.array(dataset.de_genes[cell_drug_dose_comb])
-        )
+        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[cell_drug_dose_comb]))
         idx_de = bool2idx(bool_de)
 
         # need at least two genes to be able to calc r2 score
@@ -399,12 +408,8 @@ def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
         )
 
         # mean of r2 scores for current cell_drug_dose_comb
-        r2_m = torch.Tensor(
-            [compute_r2(y_true[i], mean_pred[i]) for i in range(n_obs)]
-        ).mean()
-        r2_m_de = torch.Tensor(
-            [compute_r2(y_true[i, idx_de], mean_pred[i, idx_de]) for i in range(n_obs)]
-        ).mean()
+        r2_m = torch.Tensor([compute_r2(y_true[i], mean_pred[i]) for i in range(n_obs)]).mean()
+        r2_m_de = torch.Tensor([compute_r2(y_true[i, idx_de], mean_pred[i, idx_de]) for i in range(n_obs)]).mean()
         # r2 score for predicted variance of obs in current cell_drug_dose_comb
         yt_v = y_true.var(dim=0)
         yp_v = var_pred.mean(dim=0)
@@ -414,26 +419,13 @@ def evaluate_r2_sc(autoencoder: ComPert, dataset: SubDataset):
         # if r2_m_de == float("-inf") or r2_v_de == float("-inf"):
         #     continue
 
-        mean_score.append(r2_m) if not r2_m == float("-inf") else inf_combinations.add(
-            cell_drug_dose_comb
-        )
-        var_score.append(r2_v) if not r2_v == float("-inf") else inf_combinations.add(
-            cell_drug_dose_comb
-        )
-        mean_score_de.append(r2_m_de) if not r2_m_de == float(
-            "-inf"
-        ) else inf_combinations.add(cell_drug_dose_comb)
-        var_score_de.append(r2_v_de) if not r2_v_de == float(
-            "-inf"
-        ) else inf_combinations.add(cell_drug_dose_comb)
-    print(
-        f"{len(inf_combinations)} combinations had '-inf' R2 scores:\n\t {inf_combinations}"
-    )
+        mean_score.append(r2_m) if not r2_m == float("-inf") else inf_combinations.add(cell_drug_dose_comb)
+        var_score.append(r2_v) if not r2_v == float("-inf") else inf_combinations.add(cell_drug_dose_comb)
+        mean_score_de.append(r2_m_de) if not r2_m_de == float("-inf") else inf_combinations.add(cell_drug_dose_comb)
+        var_score_de.append(r2_v_de) if not r2_v_de == float("-inf") else inf_combinations.add(cell_drug_dose_comb)
+    print(f"{len(inf_combinations)} combinations had '-inf' R2 scores:\n\t {inf_combinations}")
     if len(mean_score) > 0:
-        return [
-            np.mean(s, dtype=float)
-            for s in [mean_score, mean_score_de, var_score, var_score_de]
-        ]
+        return [np.mean(s, dtype=float) for s in [mean_score, mean_score_de, var_score, var_score_de]]
     else:
         return []
 
@@ -444,8 +436,8 @@ def evaluate(
     eval_stats,
     run_disentangle=False,
     run_r2=True,
-    run_r2_sc=False,
-    run_logfold=False,
+    # run_r2_sc=False,
+    # run_logfold=False,
 ):
     """
     Measure quality metrics using `evaluate()` on the training, test, and
@@ -457,9 +449,7 @@ def evaluate(
     autoencoder.eval()
     if run_disentangle:
         logging.info("Running disentanglement evaluation")
-        drug_names, drug_counts = np.unique(
-            datasets["test"].drugs_names, return_counts=True
-        )
+        drug_names, drug_counts = np.unique(datasets["test"].drugs_names, return_counts=True)
         disent_scores = evaluate_disentanglement(autoencoder, datasets["test"])
         stats_disent_pert = disent_scores[0]
         # optimal score == always predicting the most common drug
@@ -475,11 +465,13 @@ def evaluate(
             "perturbation disentanglement": stats_disent_pert,
             "optimal for perturbations": optimal_disent_score,
             "covariate disentanglement": stats_disent_cov,
-            "optimal for covariates": [
-                max(cov.mean(axis=0)).item() for cov in datasets["test"].covariates
-            ]  # mean over OHE embedding of covariates
-            if datasets["test"].num_covariates[0] > 0
-            else None,
+            "optimal for covariates": (
+                [
+                    max(cov.mean(axis=0)).item() for cov in datasets["test"].covariates
+                ]  # mean over OHE embedding of covariates
+                if datasets["test"].num_covariates[0] > 0
+                else None
+            ),
         }
 
         if run_r2:
@@ -503,36 +495,36 @@ def evaluate(
                 datasets["test_control"].genes,
             )
 
-        if run_r2_sc:
-            logging.info("Running single-cell R2 evaluation")
-            evaluation_stats["training_sc"] = evaluate_r2_sc(
-                autoencoder, datasets["training_treated"]
-            )
-            if "test_sc" in eval_stats:
-                evaluation_stats["test_sc"] = eval_stats["test_sc"]
-            else:
-                evaluation_stats["test_sc"] = evaluate_r2_sc(
-                    autoencoder, datasets["test_treated"]
-                )
-            evaluation_stats["ood_sc"] = (evaluate_r2_sc(autoencoder, datasets["ood"]),)
+        # if run_r2_sc:
+        #     logging.info("Running single-cell R2 evaluation")
+        #     evaluation_stats["training_sc"] = evaluate_r2_sc(
+        #         autoencoder, datasets["training_treated"]
+        #     )
+        #     if "test_sc" in eval_stats:
+        #         evaluation_stats["test_sc"] = eval_stats["test_sc"]
+        #     else:
+        #         evaluation_stats["test_sc"] = evaluate_r2_sc(
+        #             autoencoder, datasets["test_treated"]
+        #         )
+        #     evaluation_stats["ood_sc"] = (evaluate_r2_sc(autoencoder, datasets["ood"]),)
 
-        if run_logfold:
-            logging.info("Running logfold evaluation")
-            evaluation_stats["training_logfold"] = evaluate_logfold_r2(
-                autoencoder,
-                datasets["training_treated"],
-                datasets["training_control"],
-            )
-            evaluation_stats["test_logfold"] = evaluate_logfold_r2(
-                autoencoder,
-                datasets["test_treated"],
-                datasets["test_control"],
-            )
-            evaluation_stats["ood_logfold"] = evaluate_logfold_r2(
-                autoencoder,
-                datasets["ood"],
-                datasets["test_control"],
-            )
+        # if run_logfold:
+        #     logging.info("Running logfold evaluation")
+        #     evaluation_stats["training_logfold"] = evaluate_logfold_r2(
+        #         autoencoder,
+        #         datasets["training_treated"],
+        #         datasets["training_control"],
+        #     )
+        #     evaluation_stats["test_logfold"] = evaluate_logfold_r2(
+        #         autoencoder,
+        #         datasets["test_treated"],
+        #         datasets["test_control"],
+        #     )
+        #     evaluation_stats["ood_logfold"] = evaluate_logfold_r2(
+        #         autoencoder,
+        #         datasets["ood"],
+        #         datasets["test_control"],
+        #     )
 
     autoencoder.train()
     ellapsed_minutes = (time.time() - start_time) / 60

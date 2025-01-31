@@ -4,22 +4,27 @@ repos:
     hooks:
       - id: black
         language_version: python3
+        args: ["--line-length", "120"]
+
   - repo: https://github.com/pycqa/isort
     rev: 5.11.5
     hooks:
-     - id: isort
-       args: ["--profile", "black", "--filter-files"]
-       verbose: true
+      - id: isort
+        args: ["--profile", "black", "--filter-files"]
+        verbose: true
+
   - repo: https://github.com/mwouts/jupytext
     rev: v1.14.1
     hooks:
-     - id: jupytext
-       args:
-         - --from=ipynb
-         - --to=py:percent
-         - --pipe=black
-         - --pipe=isort - --profile black --filter-files
-         - --opt=notebook_metadata_filter=-kernelspec
-       additional_dependencies:
-         - black==22.10.0 # Matches hook
-         - isort==5.11.5
+      - id: jupytext
+        args:
+          - --from=ipynb
+          - --to=py:percent
+          - --pipe
+          - black --line-length 120 -
+          - --pipe
+          - isort --profile black --filter-files -
+          - --opt=notebook_metadata_filter=-kernelspec
+        additional_dependencies:
+          - black==22.10.0 # Matches hook
+          - isort==5.11.5

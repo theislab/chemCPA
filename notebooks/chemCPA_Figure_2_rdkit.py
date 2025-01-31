@@ -70,7 +70,8 @@ sns.set_context("poster")
 # * Define `seml_collection` and `model_hash` to load data and model
 
 # %%
-seml_collection = "multi_task"
+# seml_collection = "multi_task"
+seml_collection = "chemCPA_configs"
 
 # # RDKit
 model_hash_pretrained = "c824e42f7ce751cf9a8ed26f0d9e0af7"  # Fine-tuned
@@ -78,6 +79,28 @@ model_hash_scratch = "59bdaefb1c1adfaf2976e3fdf62afa21"  # Non-pretrained
 
 # %% [markdown]
 # ## Load config and SMILES
+
+# %%
+import json
+
+from tqdm.auto import tqdm
+
+from chemCPA.paths import PROJECT_DIR
+
+
+def load_config(seml_collection, model_hash):
+    file_path = PROJECT_DIR / f"{seml_collection}.json"  # Provide path to json
+
+    with open(file_path) as f:
+        file_data = json.load(f)
+
+    for _config in tqdm(file_data):
+        if _config["config_hash"] == model_hash:
+            # print(config)
+            config = _config["config"]
+            config["config_hash"] = _config["config_hash"]
+    return config
+
 
 # %%
 config = load_config(seml_collection, model_hash_pretrained)
@@ -105,6 +128,9 @@ ood_drugs = (
     .unique()
     .to_list()
 )
+
+# %%
+ood_drugs
 
 # %% [markdown]
 # ## Load dataset splits
@@ -172,7 +198,7 @@ drug_r2_pretrained_degs, _ = compute_pred(
     verbose=False,
 )
 
-drug_r2_pretrained_all, _ = compute_pred(
+drug_r2_pretrained_all, pred = compute_pred(
     model_pretrained,
     datasets["ood"],
     genes_control=datasets["test_control"].genes,
@@ -181,6 +207,65 @@ drug_r2_pretrained_all, _ = compute_pred(
     use_DEGs=False,
     verbose=False,
 )
+
+# %%
+predictions = []
+targets = []
+cl_p = []
+cl_t = []
+d_p = []
+d_t = []
+for key, vals in pred.items():
+    cl, drug, _ = key.split("_")
+    if "1.0" in key:
+        print(key)
+        control = vals[0]
+        predictions.append(vals[1])
+        targets.append(vals[2])
+        cl_p.extend(vals[1].shape[0] * [cl])
+        cl_t.extend(vals[2].shape[0] * [cl])
+        d_p.extend(vals[1].shape[0] * [drug])
+        d_t.extend(vals[2].shape[0] * [drug])
+
+# %%
+import anndata as ad
+
+adata_c = ad.AnnData(control)
+adata_p = ad.AnnData(np.concatenate(predictions, axis=0))
+adata_t = ad.AnnData(np.concatenate(targets, axis=0))
+
+adata_c.obs["condition"] = "control"
+adata_c.obs["cell_line"] = "control"
+adata_c.obs["perturbation"] = "control"
+adata_p.obs["condition"] = "prediction"
+adata_p.obs["cell_line"] = cl_p
+adata_p.obs["perturbation"] = d_p
+adata_t.obs["condition"] = "target"
+adata_t.obs["cell_line"] = cl_t
+adata_t.obs["perturbation"] = d_t
+
+adata = ad.concat([adata_c, adata_p, adata_t])
+
+import scanpy as sc
+
+sc.pp.pca(adata)
+sc.pp.neighbors(adata)
+sc.tl.umap(adata)
+
+# %%
+adata.obs
+
+# %%
+# cl = "MCF7"
+# pert = "Tanespimycin"
+# cond = (adata.obs["condition"] == "control") + ((adata.obs["cell_line"] == cl) * (adata.obs["perturbation"] == pert))
+fig, ax = plt.subplots(3, 3, figsize=(10, 10))
+for i, pert in enumerate(ood_drugs):
+    axis = ax[i // 3, i % 3]
+    cond = (adata.obs["condition"] == "control") + (adata.obs["perturbation"] == pert)
+    sc.pl.umap(adata[cond], color="condition", ax=axis, show=False)
+    axis.set_title(f"{pert}")
+plt.tight_layout()
 
 # %% [markdown]
 # ## Non-pretrained model
@@ -268,7 +353,7 @@ df_all = create_df(drug_r2_baseline_all, drug_r2_pretrained_all, drug_r2_scratch
 # # Plot Figure 2 with RDKit
 
 # %%
-SAVEFIG = True
+SAVEFIG = False
 
 # %%
 fig, ax = plt.subplots(1, 2, figsize=(21, 6))
@@ -290,7 +375,7 @@ if BLACK:
         whis=1.5,
         ax=ax[0],
         palette="tab10",
-        **PROPS
+        **PROPS,
     )  # [(df.r2_de > 0) & (df.delta != 0)]
     sns.boxplot(
         data=df_degs,
@@ -300,7 +385,7 @@ if BLACK:
         whis=1.5,
         ax=ax[1],
         palette="tab10",
-        **PROPS
+        **PROPS,
     )  # [(df.r2_de > 0) & (df.delta != 0)]
 else:
     sns.boxplot(data=df_all, x="dose", y="r2_de", hue="type", whis=1.5, ax=ax[0])

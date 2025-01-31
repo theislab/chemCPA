@@ -11,7 +11,9 @@ git-lfs-folders/*
 cpa_binaries.tar
 notebooks/*.pth
 embeddings/*/data/*
-
+outputs/*
+lightning_logs/*
+wandb/*
 # embeddings
 *.parquet
 
@@ -152,3 +154,5 @@ dmypy.json
 settings.json
 scripts/*.yaml  
 embeddings_dir
+training_output
+training_output.zip

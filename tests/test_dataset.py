@@ -1,7 +1,7 @@
 import numpy
 import torch.testing
 
-from chemCPA.data import Dataset
+from chemCPA.data.data import Dataset
 
 
 def test_dataset_idx_ohe():

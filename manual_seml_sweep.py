@@ -9,8 +9,9 @@ if __name__ == "__main__":
     exp = ExperimentWrapper(init_all=False)
 
     # this is how seml loads the config file internally
-    assert Path("manual_run.yaml").exists(), "config file not found"
-    seml_config, slurm_config, experiment_config = read_config("manual_run.yaml")
+    config = "test_config_biolord.yaml"
+    assert Path(config).exists(), "config file not found"
+    seml_config, slurm_config, experiment_config = read_config(config)
     # we take the first config generated
     configs = generate_configs(experiment_config)
     if len(configs) > 1:

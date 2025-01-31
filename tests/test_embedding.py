@@ -1,7 +1,7 @@
 import pandas as pd
 import torch.testing
 
-from chemCPA.data import Dataset
+from chemCPA.data.data import Dataset
 from chemCPA.embedding import get_chemical_representation
 from chemCPA.model import ComPert
 

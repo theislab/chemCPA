@@ -1,0 +1,10 @@
+checkpoint_freq: 50 # checkpoint frequency to run evaluate, and maybe save checkpoint
+num_epochs: 201 # maximum epochs for training. One epoch updates either autoencoder, or adversary, depending on adversary_steps.
+max_minutes: 00:20:00:00 # maximum computation time, DD:hh:MM:SS
+full_eval_during_train: False
+run_eval_disentangle: True # whether to calc the disentanglement loss when running the full eval
+run_eval_r2: True 
+run_eval_r2_sc: False 
+run_eval_logfold: False 
+save_checkpoints: True # checkpoints tend to be ~250MB large for LINCS.
+save_dir: ./training_output

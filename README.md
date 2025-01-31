@@ -10,17 +10,6 @@ Code for this previous version can be found under the `v1.0` git tag.
 
 ## Codebase overview
 
-For the final models, we provide [weight checkpoints](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip) as well as the [hyperparameter configuration](https://f003.backblazeb2.com/file/chemCPA-models/finetuning_num_genes.json).
-The raw datasets can be downloaded from a [FAIR server](https://dl.fbaipublicfiles.com/dlp/cpa_binaries.tar).
-We also provide our processed datasets for reproducibility: sci-Plex [shared gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset_lincs_genes.h5ad) & [extended gene set](https://f003.backblazeb2.com/file/chemCPA-datasets/sciplex_complete_middle_subset.h5ad), [LINCS](https://f003.backblazeb2.com/file/chemCPA-datasets/lincs_full.h5ad.gz). Embeddings can be downloaded [here](https://drive.google.com/drive/folders/1KzkhYptcW3uT3j4GQpDdAC1DXEuXe49J?usp=share_link).
-
-To setup the environment, install conda and run:
-
-```python
-conda env create -f environment.yml
-python setup.py install -e .
-```
-
 - `chemCPA/`: contains the code for the model, the data, and the training loop.
 - `embeddings`: There is one folder for each molecular embedding model we benchmarked. Each contains an `environment.yml` with dependencies. We generated the embeddings using the provided notebooks and saved them to disk, to load them during the main training loop.
 - `experiments`: Each folder contains a `README.md` with the experiment description, a `.yaml` file with the seml configuration, and a notebook to analyze the results.
@@ -35,7 +24,57 @@ The script expects a `manual_run.yaml` file containing the experiment configurat
 
 All notebooks also exist as Python scripts (converted through [jupytext](https://github.com/mwouts/jupytext)) to make them easier to review.
 
+## Getting started
+
+#### Environment
+The easiest way to get started is to use a docker image we provide
+```
+docker run -it -p 8888:8888 --platform=linux/amd64 registry.hf.space/b1ro-chemcpa:latest
+```
+this image contains the source code and all dependencies to run the experiments.
+By default it runs a jupyter server on port 8888.
+
+Alternatively you may clone this repository and setup your own environment by running:
+
+```python
+conda env create -f environment.yml
+python setup.py install -e .
+```
+
+
+
+#### Datasets
+The datasets are not included in the docker image, but get automatically downloaded when you run the notebooks that require them. The datasets may alternatively be downloaded manually using the python tool in the `raw_data/dataset.py` folder. Usage is:
+```
+python raw_data/dataset.py --list
+python raw_data/dataset.py --dataset <dataset_name>
+```
+
+or you may use the following links:
+- [weight checkpoints](https://f003.backblazeb2.com/file/chemCPA-models/chemCPA_models.zip)
+- [hyperparameter configuration](https://f003.backblazeb2.com/file/chemCPA-models/finetuning_num_genes.json)
+- [raw datasets](https://dl.fbaipublicfiles.com/dlp/cpa_binaries.tar)
+- [processed datasets](https://f003.backblazeb2.com/file/chemCPA-datasets/)
+- [embeddings](https://drive.google.com/drive/folders/1KzkhYptcW3uT3j4GQpDdAC1DXEuXe49J?usp=share_link)
+
 Some of the notebooks use a *drugbank_all.csv* file, which can be downloaded from [here](https://go.drugbank.com/) (registration needed).
+
+#### Data preparation
+To train the models, first the raw data needs to be processed.
+This can be done by running the notebooks inside the `preprocessing/` folder in a sequential order.
+Alternatively, you may run 
+
+```
+python preprocessing/run_notebooks.py
+```
+A description of the preprocessing steps is given in the `preprocessing/README.md` file and in the headers
+of individual notebooks. Section 4 of the paper is also highly relevant.
+
+#### Training the models
+Run 
+```
+python chemCPA/train_hydra.py
+```
 
 ## Citation
 

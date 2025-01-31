@@ -1,0 +1,2 @@
+datapath: project_folder/embeddings/rdkit/data/embeddings/rdkit2D_embedding_biolord.parquet
+model: rdkit

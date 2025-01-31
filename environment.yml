@@ -1,8 +1,10 @@
-name: chemical_CPA
+name: chemCPA
 channels:
+  - pytorch
+  - defaults
   - conda-forge
 dependencies:
-  - python=3.7
+  - python=3.9
   - adjusttext
   - matplotlib
   - numpy
@@ -14,18 +16,21 @@ dependencies:
   - submitit
   - jupyter
   - jupytext
-  - pytorch::pytorch
-  - torchmetrics
-  - h5py<3.2
+  - pytorch::pytorch=1.12.1
   - cudatoolkit=11.3
+  - lightning
+  - torchmetrics
+  - h5py
   - dglteam::dgl-cuda11.3
   - deepchem
   - rdkit=2021.09.2
   - pytest
-  - pyarrow
   - pre-commit
   - seml
   - py-spy
+  - fastparquet
+  - wandb
+  - hydra-core
   # UMAP
   - umap-learn
   - datashader
@@ -35,6 +40,8 @@ dependencies:
   - scikit-image
   - pip
   - pip:
+      - pyarrow
       - tensorflow
       - dgllife
       - scgen
+      - wandb

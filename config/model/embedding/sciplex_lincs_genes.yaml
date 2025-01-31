@@ -1,0 +1,2 @@
+datapath: project_folder/embeddings/rdkit/sciplex_complete_lincs_genes_v2_rdkit2D_embedding.parquet
+model: rdkit

@@ -97,7 +97,7 @@ def load_model(config, canon_smiles_unique_sorted):
         embedding = get_chemical_representation(
             smiles=canon_smiles_unique_sorted,
             embedding_model=config["model"]["embedding"]["model"],
-            data_dir=config["model"]["embedding"]["directory"],
+            data_path=config["model"]["embedding"]["directory"],
             device="cuda",
         )
     dumped_model = torch.load(model_checkp)
@@ -127,27 +127,20 @@ def load_model(config, canon_smiles_unique_sorted):
 
     if embedding_model != "vanilla":
         state_dict.pop("drug_embeddings.weight")
-    model = ComPert(
-        **init_args, drug_embeddings=embedding, append_layer_width=append_layer_width
-    )
+    model = ComPert(**init_args, drug_embeddings=embedding, append_layer_width=append_layer_width)
     model = model.eval()
     if COV_EMB_AVAILABLE:
-        for embedding_cov, state_dict_cov in zip(
-            model.covariates_embeddings, cov_emb_state_dicts
-        ):
+        for embedding_cov, state_dict_cov in zip(model.covariates_embeddings, cov_emb_state_dicts):
             embedding_cov.load_state_dict(state_dict_cov)
 
     incomp_keys = model.load_state_dict(state_dict, strict=False)
     if embedding_model == "vanilla":
-        assert (
-            len(incomp_keys.unexpected_keys) == 0 and len(incomp_keys.missing_keys) == 0
-        )
+        assert len(incomp_keys.unexpected_keys) == 0 and len(incomp_keys.missing_keys) == 0
     else:
         # make sure we didn't accidentally load the embedding from the state_dict
         torch.testing.assert_allclose(model.drug_embeddings.weight, embedding.weight)
         assert (
-            len(incomp_keys.missing_keys) == 1
-            and "drug_embeddings.weight" in incomp_keys.missing_keys
+            len(incomp_keys.missing_keys) == 1 and "drug_embeddings.weight" in incomp_keys.missing_keys
         ), incomp_keys.missing_keys
         # assert len(incomp_keys.unexpected_keys) == 0, incomp_keys.unexpected_keys
 
@@ -160,9 +153,7 @@ def compute_drug_embeddings(model, embedding, dosage=1e4):
     # dosages = torch.ones((len(embedding.weight),))
     with torch.no_grad():
         # scaled the drug embeddings using the doser
-        transf_embeddings = model.compute_drug_embeddings_(
-            drugs_idx=all_drugs_idx, dosages=dosages
-        )
+        transf_embeddings = model.compute_drug_embeddings_(drugs_idx=all_drugs_idx, dosages=dosages)
         # apply drug embedder
         # transf_embeddings = model.drug_embedding_encoder(transf_embeddings)
     return transf_embeddings
@@ -195,9 +186,7 @@ def compute_pred(
 
     predictions_dict = {}
     drug_r2 = {}
-    for cell_drug_dose_comb, category_count in tqdm(
-        zip(*np.unique(dataset.pert_categories, return_counts=True))
-    ):
+    for cell_drug_dose_comb, category_count in tqdm(zip(*np.unique(dataset.pert_categories, return_counts=True))):
         if dataset.perturbation_key is None:
             break
 
@@ -206,18 +195,13 @@ def compute_pred(
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if (
-            "dmso" in cell_drug_dose_comb.lower()
-            or "control" in cell_drug_dose_comb.lower()
-        ):
+        if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
             continue
 
         # dataset.var_names is the list of gene names
         # dataset.de_genes is a dict, containing a list of all differentiably-expressed
         # genes for every cell_drug_dose combination.
-        bool_de = dataset.var_names.isin(
-            np.array(dataset.de_genes[cell_drug_dose_comb])
-        )
+        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[cell_drug_dose_comb]))
         idx_de = bool2idx(bool_de)
 
         # need at least two genes to be able to calc r2 score
@@ -280,18 +264,24 @@ def compute_pred(
                 emb_covs,
             )
 
-        y_pred = mean_pred.mean(0)
-        y_true = y_true.mean(0)
+        y_pred = mean_pred
+        _y_pred = mean_pred.mean(0)
+        _y_true = y_true.mean(0)
         if use_DEGs:
-            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            r2_m_de = compute_r2(_y_true[idx_de].cuda(), _y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
-            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            r2_m = compute_r2(_y_true.cuda(), _y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
-        predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
+        # predictions_dict[cell_drug_dose_comb] = [_y_true, _y_pred, idx_de]
+        predictions_dict[cell_drug_dose_comb] = [
+            genes_control.detach().cpu().numpy(),
+            y_pred.detach().cpu().numpy(),
+            y_true.detach().cpu().numpy(),
+        ]
     return drug_r2, predictions_dict
 
 
@@ -321,9 +311,7 @@ def compute_pred_ctrl(
 
     predictions_dict = {}
     drug_r2 = {}
-    for cell_drug_dose_comb, category_count in tqdm(
-        zip(*np.unique(dataset.pert_categories, return_counts=True))
-    ):
+    for cell_drug_dose_comb, category_count in tqdm(zip(*np.unique(dataset.pert_categories, return_counts=True))):
         if dataset.perturbation_key is None:
             break
 
@@ -332,18 +320,13 @@ def compute_pred_ctrl(
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if (
-            "dmso" in cell_drug_dose_comb.lower()
-            or "control" in cell_drug_dose_comb.lower()
-        ):
+        if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
             continue
 
         # dataset.var_names is the list of gene names
         # dataset.de_genes is a dict, containing a list of all differentiably-expressed
         # genes for every cell_drug_dose combination.
-        bool_de = dataset.var_names.isin(
-            np.array(dataset.de_genes[cell_drug_dose_comb])
-        )
+        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[cell_drug_dose_comb]))
         idx_de = bool2idx(bool_de)
 
         # need at least two genes to be able to calc r2 score
@@ -386,18 +369,24 @@ def compute_pred_ctrl(
         else:
             emb_drugs = repeat_n(dataset.drugs[idx], n_obs)
 
-        y_pred = genes_control.mean(0)
-        y_true = y_true.mean(0)
+        y_pred = genes_control
+        _y_pred = genes_control.mean(0)
+        _y_true = y_true.mean(0)
         if use_DEGs:
-            r2_m_de = compute_r2(y_true[idx_de].cuda(), y_pred[idx_de].cuda())
+            r2_m_de = compute_r2(_y_true[idx_de].cuda(), _y_pred[idx_de].cuda())
             print(f"{cell_drug_dose_comb}: {r2_m_de:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m_de, 0.0)
         else:
-            r2_m = compute_r2(y_true.cuda(), y_pred.cuda())
+            r2_m = compute_r2(_y_true.cuda(), _y_pred.cuda())
             print(f"{cell_drug_dose_comb}: {r2_m:.2f}") if verbose else None
             drug_r2[cell_drug_dose_comb] = max(r2_m, 0.0)
 
-        predictions_dict[cell_drug_dose_comb] = [y_true, y_pred, idx_de]
+        # predictions_dict[cell_drug_dose_comb] = [_y_true, _y_pred, idx_de]
+        predictions_dict[cell_drug_dose_comb] = [
+            genes_control.detach().cpu().numpy(),
+            y_pred.detach().cpu().numpy(),
+            y_true.detach().cpu().numpy(),
+        ]
     return drug_r2, predictions_dict
 
 
@@ -417,9 +406,7 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
 
     # dataset.pert_categories contains: 'celltype_perturbation_dose' info
     pert_categories_index = pd.Index(dataset.pert_categories, dtype="category")
-    for cell_drug_dose_comb, category_count in zip(
-        *np.unique(dataset.pert_categories, return_counts=True)
-    ):
+    for cell_drug_dose_comb, category_count in zip(*np.unique(dataset.pert_categories, return_counts=True)):
         if dataset.perturbation_key is None:
             break
 
@@ -428,18 +415,13 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
             continue
 
         # doesn't make sense to evaluate DMSO (=control) as a perturbation
-        if (
-            "dmso" in cell_drug_dose_comb.lower()
-            or "control" in cell_drug_dose_comb.lower()
-        ):
+        if "dmso" in cell_drug_dose_comb.lower() or "control" in cell_drug_dose_comb.lower():
             continue
 
         # dataset.var_names is the list of gene names
         # dataset.de_genes is a dict, containing a list of all differentiably-expressed
         # genes for every cell_drug_dose combination.
-        bool_de = dataset.var_names.isin(
-            np.array(dataset.de_genes[cell_drug_dose_comb])
-        )
+        bool_de = dataset.var_names.isin(np.array(dataset.de_genes[cell_drug_dose_comb]))
         idx_de = bool2idx(bool_de)
 
         # need at least two genes to be able to calc r2 score
@@ -491,8 +473,6 @@ def evaluate_r2(autoencoder: ComPert, dataset: SubDataset, genes_control: torch.
         var_score_de.append(r2_v_de)
     print(f"Number of different r2 computations: {len(mean_score)}")
     if len(mean_score) > 0:
-        return [
-            np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]
-        ]
+        return [np.mean(s) for s in [mean_score, mean_score_de, var_score, var_score_de]]
     else:
         return []

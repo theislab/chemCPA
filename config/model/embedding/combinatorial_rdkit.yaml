@@ -1,0 +1,2 @@
+model: rdkit
+datapath: project_folder/embeddings/rdkit/combo_sciplex_prep_hvg_filtered_rdkit2D_embedding.parquet 

@@ -1,0 +1,2 @@
+datapath: project_folder/embeddings/rdkit/lincs_full_smiles_rdkit2D_embedding.parquet
+model: rdkit

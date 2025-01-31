@@ -1,0 +1,11 @@
+defaults:
+  - hparams: default
+  - embedding: combinatorial_rdkit 
+  - additional_params: default
+
+enable_cpa_mode: False
+load_pretrained: True
+append_ae_layer: False
+pretrained_model_path: ${training.save_dir}
+pretrained_model_hashes: 
+  model: szhlrfyl   
