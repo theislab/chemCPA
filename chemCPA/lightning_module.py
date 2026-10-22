@@ -302,11 +302,14 @@ class ChemCPA(L.LightningModule):
                 self.trainer.datamodule.ood_control_dataset.genes,
             )
 
-            # Log or print final results
-            # 'final_train_R2_mean', etc...
-            self.log("final_train_R2_mean", _train_eval[0])
-            self.log("final_test_R2_mean", _test_eval[0])
-            self.log("final_ood_R2_mean", _ood_eval[0])
+            final_metrics = {
+                "final_train_R2_mean": float(_train_eval[0]),
+                "final_test_R2_mean": float(_test_eval[0]),
+                "final_ood_R2_mean": float(_ood_eval[0]),
+            }
+            if self.trainer.is_global_zero:
+                for logger in self.loggers:
+                    logger.log_metrics(final_metrics, step=self.global_step)
         self.train()
 
     def configure_optimizers(self):
